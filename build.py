@@ -5,7 +5,7 @@ Uso:  python build.py
 """
 import os, re
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v2'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v3'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:

@@ -59,6 +59,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 .chosen .nm{font-weight:600;font-size:14px}
 .chosen .cod{font-family:monospace;font-size:12px;color:#0c6a97}
 .chosen button{background:none;border:none;color:#0c6a97;font-size:20px;cursor:pointer;padding:0 4px}
+.suggest{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#faeeda;border:1px solid #f0d9a8;border-radius:10px;padding:9px 11px;margin-bottom:8px}
+.suggest .slbl{display:block;font-size:11px;color:#854f0b;font-weight:600}
+.suggest .snm{display:block;font-size:13px;color:#282828;font-weight:600}
+.suggest .sbtn{background:#854f0b;color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;flex:0 0 auto}
 .thumb{width:100%;max-height:180px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:#fafbfc;margin-bottom:12px}
 .progress{text-align:center;padding:40px 0}
 .spin{width:48px;height:48px;border:4px solid #dfe4e8;border-top-color:var(--acc);border-radius:50%;margin:0 auto 18px;animation:sp 1s linear infinite}
@@ -149,6 +153,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
     </div>
     <div class="card">
       <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Asignar a cliente</label>
+      <div id="cliSuggest"></div>
       <div id="cliPick">
         <div class="searchbox">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -157,6 +162,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
         <div class="results" id="cliResults" style="display:none"></div>
       </div>
       <div id="cliChosen"></div>
+    </div>
+    <div class="card">
+      <div class="field" style="margin-bottom:6px"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 00012345" autocomplete="off"></div>
+      <div class="hint" style="text-align:left;margin:0">Próximamente se listarán las facturas pendientes del cliente.</div>
     </div>
     <button class="btn btn-ok" id="btnSave" onclick="saveCobranza()" style="margin-bottom:10px">Guardar cobranza</button>
     <button class="btn btn-ghost" onclick="resetAndHome()">Descartar</button>
@@ -236,6 +245,36 @@ const BANCOS=[
    dest:grab(t,/cuenta a acreditar[^\d*]*([\d*]{4,})/i)};}}
 ];
 function detectBank(t){return BANCOS.find(b=>b.detect.test(t))||null;}
+
+/* ---------- sugerir cliente por el nombre del archivo ---------- */
+const FN_STOP=new Set(['pago','pagos','comprobante','comprobantes','transferencia','transf','recibo','deposito','abono','abonos','bs','bolivares','banco','banesco','bancaribe','bdv','venezuela','provincial','mercantil','bnc','bicentenario','tesoro','banplus','bod','sofitasa','exterior','factura','fact','fac','ref','referencia','screenshot','captura','pantalla','img','image','imagen','foto','whatsapp','doc','pdf','ca','cia','sa','srl','rif','de','del','la','el','los','las','y','e','cliente','copy','copia','final','nuevo','nota','saldo','total','monto','soporte','anexo','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','setiembre','octubre','noviembre','diciembre']);
+function cleanFileName(name){
+  let s=name.replace(/\.[a-z0-9]{2,5}$/i,'');
+  s=stripAcc(s).toLowerCase().replace(/[_\-.,;:()\[\]#]+/g,' ').replace(/\s+/g,' ').trim();
+  return s;
+}
+function suggestClientFromName(name){
+  if(!name)return null;
+  const toks=cleanFileName(name).split(' ').filter(w=>w.length>=3 && !FN_STOP.has(w) && !/^\d+$/.test(w));
+  if(!toks.length)return null;
+  let best=null;
+  for(let i=0;i<CLIENTES.length;i++){
+    const nom=stripAcc(CLIENTES[i][1]).toLowerCase();
+    let score=0,mlen=0;
+    for(const t of toks){if(nom.includes(t)){score++;mlen+=t.length;}}
+    if(score>0 && (!best || score>best.score || (score===best.score && mlen>best.mlen))){
+      best={cod:CLIENTES[i][0],nom:CLIENTES[i][1],score:score,mlen:mlen};
+    }
+  }
+  if(best && (best.score>=2 || best.mlen>=5)) return best;
+  return null;
+}
+function renderCliSuggest(){
+  const el=document.getElementById('cliSuggest');
+  const b=chosenCli?null:suggestClientFromName(lastFileName);
+  if(!b){el.innerHTML='';return;}
+  el.innerHTML='<div class="suggest"><div class="stxt"><span class="slbl">Sugerido por el nombre del archivo</span><span class="snm">'+esc(b.nom)+'</span></div><button class="sbtn" onclick="pickCli(\''+b.cod+'\')">Usar</button></div>';
+}
 function genericExtract(t){return{
   ref:grab(t,/referencia[^\d]*(\d{5,})/i),
   fecha:normFecha(t),
@@ -245,9 +284,11 @@ function genericExtract(t){return{
 /* ---------- carga y OCR ---------- */
 let current=null;
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
+let lastFileName='';
 function onFile(ev){
   const file=ev.target.files[0];ev.target.value='';
   if(!file)return;
+  lastFileName=file.name||'';
   if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
     if(typeof pdfjsLib==='undefined'){alert('No se pudo cargar el lector de PDF. Revisa tu conexión e intenta de nuevo.');return;}
     const r=new FileReader();r.onload=e=>processPdf(e.target.result);r.readAsArrayBuffer(file);
@@ -328,6 +369,8 @@ function fillResult(bank,d,img){
   document.getElementById('fDest').value=d.dest||'';
   chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';
   document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';
+  document.getElementById('fFactura').value='';
+  renderCliSuggest();
   calcUsd();
 }
 
@@ -369,10 +412,11 @@ function searchCli(){
 function pickCli(cod){
   const c=CLIENTES.find(x=>x[0]===cod);if(!c)return;
   chosenCli={cod:c[0],nom:c[1]};
+  document.getElementById('cliSuggest').innerHTML='';
   document.getElementById('cliPick').style.display='none';
   document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(c[1])+'</div><div class="cod">'+c[0]+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
 }
-function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';}
+function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';renderCliSuggest();}
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- guardar ---------- */
@@ -386,6 +430,7 @@ function saveCobranza(){
     monto:monto,
     usd:document.getElementById('fUsd').value.trim(),
     ref:document.getElementById('fRef').value.trim(),
+    factura:document.getElementById('fFactura').value.trim(),
     orig:document.getElementById('fOrig').value.trim(),
     dest:document.getElementById('fDest').value.trim(),
     banco:current&&current.bank?current.bank.nombre:'',
@@ -408,13 +453,13 @@ function openList(){renderList();go('scList');}
 function renderList(){
   const db=loadDb();const body=document.getElementById('listBody');
   if(!db.length){body.innerHTML='<div class="empty-big"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><div>Aún no hay cobranzas registradas.</div></div>';return;}
-  body.innerHTML=db.map(r=>'<div class="saved-it"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+'</div><div class="meta">Ref: <span class="ref">'+esc(r.ref||'—')+'</span>'+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="delRec('+r.id+')" style="float:right">Eliminar</button></div></div>').join('');
+  body.innerHTML=db.map(r=>'<div class="saved-it"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+'</div><div class="meta">Ref: <span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="delRec('+r.id+')" style="float:right">Eliminar</button></div></div>').join('');
 }
 function delRec(id){if(!confirm('¿Eliminar esta cobranza?'))return;saveDb(loadDb().filter(r=>r.id!==id));renderList();}
 function exportCsv(){
   const db=loadDb();if(!db.length){alert('No hay cobranzas para exportar.');return;}
-  const head=['Fecha','Banco','Monto Bs','Monto $','Referencia','Cuenta Origen','Cuenta Destino','Codigo Cliente','Nombre Cliente','Registrado'];
-  const rows=db.map(r=>[r.fecha,r.banco,r.monto!=null?String(r.monto).replace('.',','):'',r.usd,r.ref,r.orig,r.dest,r.cliCod,r.cliNom,r.creado]);
+  const head=['Fecha','Banco','Monto Bs','Monto $','Referencia','N Factura','Cuenta Origen','Cuenta Destino','Codigo Cliente','Nombre Cliente','Registrado'];
+  const rows=db.map(r=>[r.fecha,r.banco,r.monto!=null?String(r.monto).replace('.',','):'',r.usd,r.ref,r.factura||'',r.orig,r.dest,r.cliCod,r.cliNom,r.creado]);
   const csv=[head].concat(rows).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
