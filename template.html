@@ -148,8 +148,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
       <div class="field"><label>Número de referencia</label><input id="fRef"></div>
       <div class="row2">
         <div class="field"><label>Cuenta origen</label><input id="fOrig"></div>
-        <div class="field"><label>Cuenta destino</label><input id="fDest"></div>
+        <div class="field"><label>Cuenta destino</label><input id="fDest" oninput="updateOficaInfo()"></div>
       </div>
+      <div class="usd" id="oficaInfo"></div>
     </div>
     <div class="card">
       <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Asignar a cliente</label>
@@ -310,6 +311,27 @@ function extractFactura(t){
   return '';
 }
 
+/* ---------- cuentas de OFICA (identificar a donde llego el pago) ---------- */
+const OFICA_CUENTAS=[
+  {banco:'Provincial',moneda:'Bs.',num:'01080027710100056434'},
+  {banco:'Provincial',moneda:'Divisas',num:'01080956850100015704'},
+  {banco:'Banesco',moneda:'Bs.',num:'01340031820313234827'},
+  {banco:'Banesco',moneda:'Divisas',num:'01341740720021479101'},
+  {banco:'Banco de Venezuela',moneda:'Bs.',num:'01020501880006165020'},
+  {banco:'Bancaribe',moneda:'Bs.',num:'01140166071665000067'},
+  {banco:'Bancaribe',moneda:'Divisas',num:'01140166081664002376'}
+];
+function matchOficaCuenta(dest){
+  if(!dest)return null;
+  const lead=(dest.match(/^(\d+)/)||[])[1]||'';   // digitos al inicio (antes de la mascara)
+  const tail=(dest.match(/(\d+)$/)||[])[1]||'';   // digitos al final
+  if(!lead && !tail)return null;
+  const cands=OFICA_CUENTAS.filter(c=>(!lead||c.num.startsWith(lead))&&(!tail||c.num.endsWith(tail)));
+  if(cands.length===1)return cands[0];
+  if(cands.length>1 && cands.every(c=>c.banco===cands[0].banco))return {banco:cands[0].banco,moneda:'',ambig:true};
+  return null;
+}
+
 /* ---------- carga y OCR ---------- */
 let current=null;
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
@@ -403,6 +425,15 @@ function fillResult(bank,d,img){
   document.getElementById('fFactura').value='';
   renderCliSuggest();
   calcUsd();
+  updateOficaInfo();
+}
+function updateOficaInfo(){
+  const el=document.getElementById('oficaInfo');
+  const dest=document.getElementById('fDest').value.trim();
+  const m=matchOficaCuenta(dest);
+  if(m && !m.ambig){el.innerHTML='<span style="color:var(--ok)">&#10003; Recibido en cuenta OFICA: <b>'+m.banco+' ('+m.moneda+')</b></span>';}
+  else if(m && m.ambig){el.innerHTML='Cuenta OFICA: <b>'+m.banco+'</b>';}
+  else{el.innerHTML=dest?'<span style="color:var(--danger)">&#9888; La cuenta destino no coincide con una cuenta de OFICA</span>':'';}
 }
 
 /* ---------- tasa / USD ---------- */
@@ -465,6 +496,8 @@ function saveCobranza(){
     orig:document.getElementById('fOrig').value.trim(),
     dest:document.getElementById('fDest').value.trim(),
     banco:current&&current.bank?current.bank.nombre:'',
+    oficaBanco:(matchOficaCuenta(document.getElementById('fDest').value.trim())||{}).banco||'',
+    oficaMoneda:(matchOficaCuenta(document.getElementById('fDest').value.trim())||{}).moneda||'',
     cliCod:chosenCli?chosenCli.cod:'',
     cliNom:chosenCli?chosenCli.nom:'',
     img:current?current.img:'',
@@ -484,13 +517,13 @@ function openList(){renderList();go('scList');}
 function renderList(){
   const db=loadDb();const body=document.getElementById('listBody');
   if(!db.length){body.innerHTML='<div class="empty-big"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><div>Aún no hay cobranzas registradas.</div></div>';return;}
-  body.innerHTML=db.map(r=>'<div class="saved-it"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+'</div><div class="meta">Ref: <span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="delRec('+r.id+')" style="float:right">Eliminar</button></div></div>').join('');
+  body.innerHTML=db.map(r=>'<div class="saved-it"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+(r.oficaBanco?' &rarr; OFICA '+esc(r.oficaBanco)+(r.oficaMoneda?' '+esc(r.oficaMoneda):''):'')+'</div><div class="meta">Ref: <span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="delRec('+r.id+')" style="float:right">Eliminar</button></div></div>').join('');
 }
 function delRec(id){if(!confirm('¿Eliminar esta cobranza?'))return;saveDb(loadDb().filter(r=>r.id!==id));renderList();}
 function exportCsv(){
   const db=loadDb();if(!db.length){alert('No hay cobranzas para exportar.');return;}
-  const head=['Fecha','Banco','Monto Bs','Monto $','Referencia','N Factura','Cuenta Origen','Cuenta Destino','Codigo Cliente','Nombre Cliente','Registrado'];
-  const rows=db.map(r=>[r.fecha,r.banco,r.monto!=null?String(r.monto).replace('.',','):'',r.usd,r.ref,r.factura||'',r.orig,r.dest,r.cliCod,r.cliNom,r.creado]);
+  const head=['Fecha','Banco Emisor','Monto Bs','Monto $','Referencia','N Factura','Cuenta Origen','Cuenta Destino','Cuenta OFICA','Moneda','Codigo Cliente','Nombre Cliente','Registrado'];
+  const rows=db.map(r=>[r.fecha,r.banco,r.monto!=null?String(r.monto).replace('.',','):'',r.usd,r.ref,r.factura||'',r.orig,r.dest,r.oficaBanco||'',r.oficaMoneda||'',r.cliCod,r.cliNom,r.creado]);
   const csv=[head].concat(rows).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
