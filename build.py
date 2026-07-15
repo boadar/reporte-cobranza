@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Arma la app Reporte de Cobranza (PWA instalable) inyectando datos en template.html.
-Genera: index.html, manifest.webmanifest, sw.js. Los iconos ya existen (icon-*.png).
+"""Arma la app Reporte de Cobranza (PWA instalable).
+1) Regenera clientes.json y tasas.json desde data/*.csv (si existen).
+2) Inyecta los datos en template.html -> index.html.
+3) Genera manifest.webmanifest y sw.js. Los iconos ya existen (icon-*.png).
 Uso:  python build.py
+Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr build.py.
 """
-import os, re
+import os, re, csv, json
 D = os.path.dirname(os.path.abspath(__file__))
 CACHE_NAME = 'reporte-cobranza-v3'  # subir el numero en cada despliegue para refrescar cache
 
@@ -14,6 +17,29 @@ def read(p):
 def write(p, s):
     with open(os.path.join(D, p), 'w', encoding='utf-8') as f:
         f.write(s)
+
+def gen_data():
+    """Regenera clientes.json / tasas.json desde data/*.csv cuando existan."""
+    cli_csv = os.path.join(D, 'data', 'clientes.csv')
+    tas_csv = os.path.join(D, 'data', 'tasas_bcv.csv')
+    if os.path.exists(cli_csv):
+        cli = []
+        with open(cli_csv, encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                cli.append([r['Codigo'], r['Nombre']])
+        write('clientes.json', json.dumps(cli, ensure_ascii=False, separators=(',', ':')))
+        print('  clientes.json regenerado:', len(cli))
+    if os.path.exists(tas_csv):
+        tas = {}
+        with open(tas_csv, encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                usd = float(r['USD']) if r['USD'] else None
+                eur = float(r['EUR']) if r['EUR'] else None
+                tas[r['Fecha']] = [usd, eur]
+        write('tasas.json', json.dumps(tas, ensure_ascii=False, separators=(',', ':')))
+        print('  tasas.json regenerado:', len(tas))
+
+gen_data()
 
 PWA_HEAD = (
     '<link rel="manifest" href="manifest.webmanifest">\n'
