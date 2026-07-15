@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#282828">
+<title>Reporte de Cobranza</title>
+__PWA_HEAD__
+<style>
+:root{--ofica:#282828;--acc:#009DDC;--ok:#1d9e75;--bg:#eef1f4;--card:#fff;--line:#e2e6ea;--txt:#282828;--mut:#6b7280;--danger:#c0392b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:16px;line-height:1.4}
+.hdr{background:var(--ofica);color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;text-align:center;position:sticky;top:0;z-index:10}
+.hdr h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
+.hdr .sub{font-size:12px;opacity:.7;margin-top:2px}
+.wrap{max-width:520px;margin:0 auto;padding:16px}
+.screen{display:none}
+.screen.active{display:block}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-primary{background:var(--ofica);color:#fff}
+.btn-acc{background:var(--acc);color:#fff}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-ghost{background:#fff;color:var(--ofica);border:1px solid var(--line)}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.5}
+.hero{text-align:center;padding:32px 0 20px}
+.hero .circ{width:96px;height:96px;border-radius:50%;background:#e6f4fb;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.hero .circ svg{width:46px;height:46px;stroke:var(--acc)}
+.hero p{color:var(--mut);font-size:15px;margin:0 auto 26px;max-width:300px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.opt{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px;cursor:pointer;background:#fff}
+.opt:active{background:#f6f8fa}
+.opt svg{width:30px;height:30px;stroke:var(--acc);flex:0 0 auto}
+.opt .t{font-weight:600;font-size:15px}
+.opt .d{font-size:12px;color:var(--mut)}
+.sheet-title{font-weight:600;text-align:center;margin:4px 0 16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--mut);margin-bottom:5px;font-weight:500}
+.field input,.field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px;font-family:inherit;background:#fff;color:var(--txt)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--acc)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:8px;font-weight:600}
+.badge-ok{background:#e1f5ee;color:var(--ok)}
+.badge-bank{background:#e6f4fb;color:#0c6a97}
+.badge-warn{background:#faeeda;color:#854f0b}
+.usd{font-size:13px;color:var(--mut);margin-top:4px}
+.usd b{color:var(--ofica)}
+.searchbox{position:relative}
+.searchbox svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--mut)}
+.searchbox input{padding-left:38px}
+.results{border:1px solid var(--line);border-radius:10px;margin-top:6px;max-height:230px;overflow-y:auto;background:#fff}
+.results .it{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
+.results .it:last-child{border-bottom:none}
+.results .it:active,.results .it.sel{background:#e6f4fb}
+.results .it .cod{color:var(--mut);font-size:12px;font-family:monospace}
+.results .empty{padding:14px;color:var(--mut);font-size:13px;text-align:center}
+.chosen{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#e6f4fb;border:1px solid #bfe3f5;border-radius:10px;padding:10px 12px;margin-top:6px}
+.chosen .nm{font-weight:600;font-size:14px}
+.chosen .cod{font-family:monospace;font-size:12px;color:#0c6a97}
+.chosen button{background:none;border:none;color:#0c6a97;font-size:20px;cursor:pointer;padding:0 4px}
+.thumb{width:100%;max-height:180px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:#fafbfc;margin-bottom:12px}
+.progress{text-align:center;padding:40px 0}
+.spin{width:48px;height:48px;border:4px solid #dfe4e8;border-top-color:var(--acc);border-radius:50%;margin:0 auto 18px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.progress .msg{color:var(--mut);font-size:14px}
+.bar{height:6px;background:#dfe4e8;border-radius:4px;margin:16px auto 0;max-width:260px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .2s}
+.toolbar{display:flex;gap:10px;margin-bottom:14px}
+.toolbar .btn{padding:12px}
+.saved-it{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.saved-it .top{display:flex;justify-content:space-between;align-items:baseline}
+.saved-it .cli{font-weight:600;font-size:14px}
+.saved-it .mto{font-weight:700;font-size:15px}
+.saved-it .meta{font-size:12px;color:var(--mut);margin-top:3px}
+.saved-it .ref{font-family:monospace}
+.empty-big{text-align:center;color:var(--mut);padding:50px 20px}
+.empty-big svg{width:54px;height:54px;stroke:#c3cad1;margin-bottom:12px}
+.tabbar{position:sticky;bottom:0;display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;background:none;border:none;padding:10px 0 12px;font-size:11px;color:var(--mut);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor}
+.tabbar button.on{color:var(--acc)}
+.hint{font-size:12px;color:var(--mut);text-align:center;margin-top:14px;line-height:1.5}
+.link{color:var(--acc);background:none;border:none;font:inherit;cursor:pointer;text-decoration:underline;padding:0}
+</style>
+</head>
+<body>
+<div class="hdr"><h1>Reporte de Cobranza</h1><div class="sub" id="hdrsub">OFICA Representaciones</div></div>
+
+<div class="wrap">
+
+  <!-- PANTALLA 1: INICIO -->
+  <div class="screen active" id="scInicio">
+    <div class="hero">
+      <div class="circ"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg></div>
+      <p>Registra el pago de un cliente desde una imagen o una foto del comprobante.</p>
+      <button class="btn btn-primary" onclick="showChoice()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:22px;height:22px"><path d="M12 5v14M5 12h14"/></svg>
+        Cargar archivo o tomar foto
+      </button>
+    </div>
+    <div class="hint">Bancos reconocidos: Banesco, Banco de Venezuela, Bancaribe.<br>Los datos se pueden corregir antes de guardar.</div>
+  </div>
+
+  <!-- PANTALLA 2: ELEGIR ORIGEN -->
+  <div class="screen" id="scChoice">
+    <div class="sheet-title">¿Cómo quieres agregar el pago?</div>
+    <label class="opt">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 8a2 2 0 0 1 2-2h1.5l1-2h5l1 2H16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="11" cy="12.5" r="3"/></svg>
+      <div><div class="t">Tomar foto</div><div class="d">Usar la cámara del teléfono</div></div>
+      <input type="file" accept="image/*" capture="environment" style="display:none" onchange="onFile(event)">
+    </label>
+    <label class="opt">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v6h6"/></svg>
+      <div><div class="t">Cargar imagen o archivo</div><div class="d">Desde la galería o archivos</div></div>
+      <input type="file" accept="image/*,.pdf" style="display:none" onchange="onFile(event)">
+    </label>
+    <button class="btn btn-ghost" onclick="go('scInicio')" style="margin-top:6px">Cancelar</button>
+  </div>
+
+  <!-- PANTALLA 3: PROCESANDO -->
+  <div class="screen" id="scProc">
+    <div class="progress">
+      <div class="spin"></div>
+      <div class="msg" id="procMsg">Leyendo el comprobante…</div>
+      <div class="bar"><i id="procBar"></i></div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 4: RESULTADO -->
+  <div class="screen" id="scResult">
+    <img id="thumb" class="thumb" alt="Comprobante">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span class="badge badge-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg> Datos extraídos</span>
+      <span class="badge badge-bank" id="bankBadge">Banco</span>
+    </div>
+    <div class="card">
+      <div class="field"><label>Fecha</label><input id="fFecha" placeholder="dd/mm/aaaa" oninput="onFechaChange()"></div>
+      <div class="row2">
+        <div class="field"><label>Monto Bs.</label><input id="fMonto" inputmode="decimal" oninput="calcUsd()"></div>
+        <div class="field"><label>Monto $</label><input id="fUsd" readonly style="background:#f6f8fa"></div>
+      </div>
+      <div class="usd" id="tasaInfo"></div>
+      <div class="field"><label>Número de referencia</label><input id="fRef"></div>
+      <div class="row2">
+        <div class="field"><label>Cuenta origen</label><input id="fOrig"></div>
+        <div class="field"><label>Cuenta destino</label><input id="fDest"></div>
+      </div>
+    </div>
+    <div class="card">
+      <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Asignar a cliente</label>
+      <div id="cliPick">
+        <div class="searchbox">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="cliSearch" placeholder="Buscar por nombre o código" oninput="searchCli()" autocomplete="off">
+        </div>
+        <div class="results" id="cliResults" style="display:none"></div>
+      </div>
+      <div id="cliChosen"></div>
+    </div>
+    <button class="btn btn-ok" id="btnSave" onclick="saveCobranza()" style="margin-bottom:10px">Guardar cobranza</button>
+    <button class="btn btn-ghost" onclick="resetAndHome()">Descartar</button>
+  </div>
+
+  <!-- PANTALLA 5: GUARDADAS -->
+  <div class="screen" id="scList">
+    <div class="toolbar">
+      <button class="btn btn-acc" onclick="showChoice()">+ Nuevo pago</button>
+      <button class="btn btn-ghost" onclick="exportCsv()" style="flex:0 0 auto;width:auto;padding:12px 16px">Exportar</button>
+    </div>
+    <div id="listBody"></div>
+  </div>
+
+</div>
+
+<div class="tabbar">
+  <button id="tabHome" class="on" onclick="go('scInicio');setTab('tabHome')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Inicio</button>
+  <button id="tabList" onclick="openList();setTab('tabList')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Cobranzas</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const CLIENTES = __CLIENTES__;
+const TASAS = __TASAS__;
+const APPVER = "v1";
+
+/* ---------- navegacion ---------- */
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function setTab(id){document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('on'));document.getElementById(id).classList.add('on');}
+function showChoice(){go('scChoice');setTab('tabHome');}
+function resetAndHome(){current=null;go('scInicio');setTab('tabHome');}
+
+/* ---------- plantillas por banco ---------- */
+function parseMonto(s){
+  if(!s) return null;
+  s=s.replace(/[^\d.,]/g,'');
+  if(s.indexOf(',')>-1 && s.indexOf('.')>-1){s=s.replace(/\./g,'').replace(',', '.');}
+  else if(s.indexOf(',')>-1){s=s.replace(',', '.');}
+  else if((s.match(/\./g)||[]).length>=1 && /\.\d{3}\b/.test(s)){s=s.replace(/\./g,'');}
+  const n=parseFloat(s);return isNaN(n)?null:n;
+}
+const MESES={ENE:1,ENERO:1,FEB:2,FEBRERO:2,MAR:3,MARZO:3,ABR:4,ABRIL:4,MAY:5,MAYO:5,JUN:6,JUNIO:6,JUL:7,JULIO:7,AGO:8,AGOSTO:8,SEP:9,SET:9,SEPTIEMBRE:9,OCT:10,OCTUBRE:10,NOV:11,NOVIEMBRE:11,DIC:12,DICIEMBRE:12,JAN:1,APR:4,AUG:8,DEC:12};
+function stripAcc(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function normFecha(s){
+  if(!s) return '';
+  let m=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){let d=+m[1],mo=+m[2],y=+m[3];if(y<100)y+=2000;return pad(d)+'/'+pad(mo)+'/'+y;}
+  m=s.match(/(\d{1,2})-([A-Za-zÁÉÍÓÚáéíóú]{3,})-(\d{2,4})/);
+  if(m){let mo=MESES[stripAcc(m[2]).toUpperCase()];if(mo){let y=+m[3];if(y<100)y+=2000;return pad(+m[1])+'/'+pad(mo)+'/'+y;}}
+  m=s.match(/(\d{1,2})\s+de\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s+(?:del?\s+)?(\d{4})/i);
+  if(m){let mo=MESES[stripAcc(m[2]).toUpperCase()];if(mo)return pad(+m[1])+'/'+pad(mo)+'/'+m[3];}
+  return '';
+}
+function pad(n){return String(n).padStart(2,'0');}
+function grab(text,re){const m=text.match(re);return m?(m[1]||m[0]):'';}
+
+const BANCOS=[
+ {id:'banesco',nombre:'Banesco',detect:/banesco/i,extract(t){return{
+   ref:grab(t,/referencia[^\d]*(\d[\d\s]{5,})/i).replace(/\s/g,''),
+   fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)),
+   monto:parseMonto(grab(t,/monto[^\d]*(?:bs\.?\s*)?([\d.,]+)/i)),
+   orig:grab(t,/desde mi cuenta[^\d*]*([\d*]{4,})/i),
+   dest:grab(t,/n[uú]mero de cuenta[^\d*]*([\d*]{4,})/i)};}},
+ {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|terceros bdv|bdv/i,extract(t){return{
+   ref:grab(t,/referencia es[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i),
+   fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)),
+   monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
+   orig:grab(t,/instrumento origen[:\s]*([\d*]{4,})/i),
+   dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)};}},
+ {id:'bancaribe',nombre:'Bancaribe',detect:/bancaribe/i,extract(t){return{
+   ref:grab(t,/referencia[:\s]*(\d{4,})/i)||grab(t,/clave de confirmaci[oó]n[:\s]*(\d{4,})/i),
+   fecha:normFecha(grab(t,/(\d{1,2}-[A-Za-z]{3,}-\d{2,4})/)||grab(t,/(\d{1,2}\s+de\s+[A-Za-zÁÉÍÓÚáéíóú]+\s+del?\s+\d{4})/i)),
+   monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
+   orig:grab(t,/cuenta a debitar[^\d*]*([\d*]{4,})/i),
+   dest:grab(t,/cuenta a acreditar[^\d*]*([\d*]{4,})/i)};}}
+];
+function detectBank(t){return BANCOS.find(b=>b.detect.test(t))||null;}
+function genericExtract(t){return{
+  ref:grab(t,/referencia[^\d]*(\d{5,})/i),
+  fecha:normFecha(t),
+  monto:parseMonto(grab(t,/monto[^\d]*([\d.,]{4,})/i)),
+  orig:'',dest:''};}
+
+/* ---------- carga y OCR ---------- */
+let current=null;
+function onFile(ev){
+  const file=ev.target.files[0];ev.target.value='';
+  if(!file)return;
+  if(file.type==='application/pdf'){alert('Los PDF aún no se procesan en el teléfono. Por ahora usa una foto o captura de pantalla del comprobante.');return;}
+  const reader=new FileReader();
+  reader.onload=e=>processImage(e.target.result);
+  reader.readAsDataURL(file);
+}
+function setProg(p,msg){document.getElementById('procBar').style.width=Math.round(p*100)+'%';if(msg)document.getElementById('procMsg').textContent=msg;}
+async function processImage(dataUrl){
+  go('scProc');setProg(.05,'Leyendo el comprobante…');
+  current={img:dataUrl};
+  let text='';
+  try{
+    const res=await Tesseract.recognize(dataUrl,'spa',{logger:m=>{if(m.status==='recognizing text')setProg(.1+m.progress*.85,'Reconociendo texto… '+Math.round(m.progress*100)+'%');}});
+    text=res.data.text||'';
+  }catch(err){console.error(err);alert('No se pudo leer la imagen. Intenta con una foto más nítida.');resetAndHome();return;}
+  setProg(1,'Listo');
+  const bank=detectBank(text);
+  const data=bank?bank.extract(text):genericExtract(text);
+  current.text=text;current.bank=bank;current.data=data;
+  fillResult(bank,data,dataUrl);
+  go('scResult');setTab('tabHome');
+}
+function fillResult(bank,d,img){
+  document.getElementById('thumb').src=img;
+  const bb=document.getElementById('bankBadge');
+  if(bank){bb.textContent=bank.nombre;bb.className='badge badge-bank';}
+  else{bb.textContent='Banco no reconocido';bb.className='badge badge-warn';}
+  document.getElementById('fFecha').value=d.fecha||'';
+  document.getElementById('fMonto').value=d.monto!=null?fmtBs(d.monto):'';
+  document.getElementById('fRef').value=d.ref||'';
+  document.getElementById('fOrig').value=d.orig||'';
+  document.getElementById('fDest').value=d.dest||'';
+  chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';
+  document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';
+  calcUsd();
+}
+
+/* ---------- tasa / USD ---------- */
+function fechaToIso(f){const m=f.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?m[3]+'-'+pad(+m[2])+'-'+pad(+m[1]):null;}
+function fmtBs(n){return n.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function onFechaChange(){calcUsd();}
+function calcUsd(){
+  const monto=parseMonto(document.getElementById('fMonto').value);
+  const iso=fechaToIso(document.getElementById('fFecha').value);
+  const info=document.getElementById('tasaInfo');
+  if(monto==null||!iso||!TASAS[iso]||TASAS[iso][0]==null){
+    document.getElementById('fUsd').value='';
+    info.innerHTML=iso&&monto!=null?'<span style="color:var(--danger)">No hay tasa registrada para esa fecha</span>':'';
+    return;
+  }
+  const tasa=TASAS[iso][0];
+  document.getElementById('fUsd').value=(monto/tasa).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  info.innerHTML='Tasa BCV '+iso.split('-').reverse().join('/')+': <b>'+tasa.toLocaleString('es-VE',{minimumFractionDigits:4})+' Bs/$</b>';
+}
+
+/* ---------- buscador de clientes ---------- */
+let chosenCli=null;
+function searchCli(){
+  const q=document.getElementById('cliSearch').value.trim().toLowerCase();
+  const box=document.getElementById('cliResults');
+  if(q.length<2){box.style.display='none';return;}
+  const words=q.split(/\s+/);
+  const hits=[];
+  for(let i=0;i<CLIENTES.length && hits.length<40;i++){
+    const cod=CLIENTES[i][0],nom=CLIENTES[i][1].toLowerCase();
+    const hay=cod.toLowerCase()+' '+nom;
+    if(words.every(w=>hay.includes(w)))hits.push(CLIENTES[i]);
+  }
+  if(!hits.length){box.innerHTML='<div class="empty">Sin coincidencias</div>';box.style.display='';return;}
+  box.innerHTML=hits.map(c=>'<div class="it" onclick="pickCli(\''+c[0]+'\')"><span class="cod">'+c[0]+'</span> · '+esc(c[1])+'</div>').join('');
+  box.style.display='';
+}
+function pickCli(cod){
+  const c=CLIENTES.find(x=>x[0]===cod);if(!c)return;
+  chosenCli={cod:c[0],nom:c[1]};
+  document.getElementById('cliPick').style.display='none';
+  document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(c[1])+'</div><div class="cod">'+c[0]+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
+}
+function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---------- guardar ---------- */
+function loadDb(){try{return JSON.parse(localStorage.getItem('cobranzas')||'[]');}catch(e){return[];}}
+function saveDb(a){localStorage.setItem('cobranzas',JSON.stringify(a));}
+function saveCobranza(){
+  const monto=parseMonto(document.getElementById('fMonto').value);
+  const rec={
+    id:Date.now(),
+    fecha:document.getElementById('fFecha').value.trim(),
+    monto:monto,
+    usd:document.getElementById('fUsd').value.trim(),
+    ref:document.getElementById('fRef').value.trim(),
+    orig:document.getElementById('fOrig').value.trim(),
+    dest:document.getElementById('fDest').value.trim(),
+    banco:current&&current.bank?current.bank.nombre:'',
+    cliCod:chosenCli?chosenCli.cod:'',
+    cliNom:chosenCli?chosenCli.nom:'',
+    img:current?current.img:'',
+    creado:new Date().toISOString()
+  };
+  if(!rec.cliCod){alert('Selecciona el cliente al que se aplica el pago.');return;}
+  if(!rec.ref){if(!confirm('No hay número de referencia. ¿Guardar de todos modos?'))return;}
+  const db=loadDb();
+  if(rec.ref && db.some(x=>x.ref===rec.ref)){if(!confirm('Ya existe una cobranza con la referencia '+rec.ref+'. ¿Guardar otra igual?'))return;}
+  db.unshift(rec);saveDb(db);
+  current=null;
+  openList();setTab('tabList');
+}
+
+/* ---------- lista ---------- */
+function openList(){renderList();go('scList');}
+function renderList(){
+  const db=loadDb();const body=document.getElementById('listBody');
+  if(!db.length){body.innerHTML='<div class="empty-big"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><div>Aún no hay cobranzas registradas.</div></div>';return;}
+  body.innerHTML=db.map(r=>'<div class="saved-it"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+'</div><div class="meta">Ref: <span class="ref">'+esc(r.ref||'—')+'</span>'+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="delRec('+r.id+')" style="float:right">Eliminar</button></div></div>').join('');
+}
+function delRec(id){if(!confirm('¿Eliminar esta cobranza?'))return;saveDb(loadDb().filter(r=>r.id!==id));renderList();}
+function exportCsv(){
+  const db=loadDb();if(!db.length){alert('No hay cobranzas para exportar.');return;}
+  const head=['Fecha','Banco','Monto Bs','Monto $','Referencia','Cuenta Origen','Cuenta Destino','Codigo Cliente','Nombre Cliente','Registrado'];
+  const rows=db.map(r=>[r.fecha,r.banco,r.monto!=null?String(r.monto).replace('.',','):'',r.usd,r.ref,r.orig,r.dest,r.cliCod,r.cliNom,r.creado]);
+  const csv=[head].concat(rows).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='cobranzas_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+document.getElementById('hdrsub').textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER;
+</script>
+__PWA_HOOK__
+</body>
+</html>
