@@ -99,7 +99,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
         Cargar archivo o tomar foto
       </button>
     </div>
-    <div class="hint">Bancos reconocidos: Banesco, Banco de Venezuela, Bancaribe.<br>Los datos se pueden corregir antes de guardar.</div>
+    <div class="hint">Acepta fotos, capturas de pantalla e imágenes, y también archivos PDF.<br>Bancos reconocidos: Banesco, Banco de Venezuela, Bancaribe.<br>Los datos se pueden corregir antes de guardar.</div>
   </div>
 
   <!-- PANTALLA 2: ELEGIR ORIGEN -->
@@ -179,6 +179,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const CLIENTES = __CLIENTES__;
 const TASAS = __TASAS__;
@@ -243,29 +244,77 @@ function genericExtract(t){return{
 
 /* ---------- carga y OCR ---------- */
 let current=null;
+if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
 function onFile(ev){
   const file=ev.target.files[0];ev.target.value='';
   if(!file)return;
-  if(file.type==='application/pdf'){alert('Los PDF aún no se procesan en el teléfono. Por ahora usa una foto o captura de pantalla del comprobante.');return;}
+  if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
+    if(typeof pdfjsLib==='undefined'){alert('No se pudo cargar el lector de PDF. Revisa tu conexión e intenta de nuevo.');return;}
+    const r=new FileReader();r.onload=e=>processPdf(e.target.result);r.readAsArrayBuffer(file);
+    return;
+  }
   const reader=new FileReader();
   reader.onload=e=>processImage(e.target.result);
   reader.readAsDataURL(file);
 }
 function setProg(p,msg){document.getElementById('procBar').style.width=Math.round(p*100)+'%';if(msg)document.getElementById('procMsg').textContent=msg;}
+async function ocr(img,base,span){
+  const res=await Tesseract.recognize(img,'spa',{logger:m=>{if(m.status==='recognizing text')setProg(base+m.progress*span,'Reconociendo texto… '+Math.round(m.progress*100)+'%');}});
+  return res.data.text||'';
+}
+function finishExtract(text,bank,img){
+  const data=bank?bank.extract(text):genericExtract(text);
+  current={img:img,text:text,bank:bank,data:data};
+  fillResult(bank,data,img);
+  go('scResult');setTab('tabHome');
+}
 async function processImage(dataUrl){
   go('scProc');setProg(.05,'Leyendo el comprobante…');
-  current={img:dataUrl};
   let text='';
-  try{
-    const res=await Tesseract.recognize(dataUrl,'spa',{logger:m=>{if(m.status==='recognizing text')setProg(.1+m.progress*.85,'Reconociendo texto… '+Math.round(m.progress*100)+'%');}});
-    text=res.data.text||'';
-  }catch(err){console.error(err);alert('No se pudo leer la imagen. Intenta con una foto más nítida.');resetAndHome();return;}
+  try{text=await ocr(dataUrl,.1,.85);}
+  catch(err){console.error(err);alert('No se pudo leer la imagen. Intenta con una foto más nítida.');resetAndHome();return;}
   setProg(1,'Listo');
+  finishExtract(text,detectBank(text),dataUrl);
+}
+const PDF_PLACEHOLDER='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="150"><rect width="220" height="150" fill="#f6f8fa"/><rect x="80" y="38" width="60" height="74" rx="4" fill="#fff" stroke="#c3cad1"/><text x="110" y="86" font-family="Arial" font-size="20" font-weight="bold" fill="#6b7280" text-anchor="middle">PDF</text></svg>');
+function renderPdfPage(page,timeoutMs){
+  return new Promise((resolve,reject)=>{
+    let done=false;
+    const to=setTimeout(()=>{if(!done){done=true;reject(new Error('render timeout'));}},timeoutMs);
+    (async()=>{
+      try{
+        const vp=page.getViewport({scale:2});
+        const canvas=document.createElement('canvas');canvas.width=vp.width;canvas.height=vp.height;
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+        if(done)return;done=true;clearTimeout(to);
+        resolve(canvas.toDataURL('image/jpeg',0.85));
+      }catch(e){if(!done){done=true;clearTimeout(to);reject(e);}}
+    })();
+  });
+}
+async function processPdf(buf){
+  go('scProc');setProg(.1,'Abriendo el PDF…');
+  let page;
+  try{const pdf=await pdfjsLib.getDocument({data:buf}).promise;page=await pdf.getPage(1);}
+  catch(e){console.error(e);alert('No se pudo abrir el PDF. Puede estar dañado o protegido.');resetAndHome();return;}
+  setProg(.35,'Leyendo el PDF…');
+  let text='';
+  try{const tc=await page.getTextContent();text=tc.items.map(i=>i.str).join('\n');}catch(e){}
   const bank=detectBank(text);
-  const data=bank?bank.extract(text):genericExtract(text);
-  current.text=text;current.bank=bank;current.data=data;
-  fillResult(bank,data,dataUrl);
-  go('scResult');setTab('tabHome');
+  if(bank && text.replace(/\s/g,'').length>40){
+    setProg(1,'Listo');
+    finishExtract(text,bank,PDF_PLACEHOLDER);
+    return;
+  }
+  setProg(.45,'Convirtiendo el PDF…');
+  let img='';
+  try{img=await renderPdfPage(page,15000);}catch(e){console.error(e);}
+  if(!img){alert('No pudimos leer este PDF automáticamente (viene como imagen). Por favor envía una captura de pantalla del comprobante.');resetAndHome();return;}
+  setProg(.55,'Leyendo con OCR…');
+  let otext='';
+  try{otext=await ocr(img,.55,.4);}catch(e){console.error(e);}
+  setProg(1,'Listo');
+  finishExtract(otext,detectBank(otext),img);
 }
 function fillResult(bank,d,img){
   document.getElementById('thumb').src=img;
