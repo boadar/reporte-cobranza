@@ -144,6 +144,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
       <span class="badge badge-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg> Datos extraídos</span>
       <span class="badge badge-bank" id="bankBadge">Banco</span>
     </div>
+    <div id="dupWarn"></div>
     <div class="card">
       <div class="field"><label>Fecha</label><input id="fFecha" placeholder="dd/mm/aaaa" oninput="onFechaChange()"></div>
       <div class="row2">
@@ -151,7 +152,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
         <div class="field"><label>Monto $</label><input id="fUsd" readonly style="background:#f6f8fa"></div>
       </div>
       <div class="usd" id="tasaInfo"></div>
-      <div class="field"><label>Número de referencia</label><input id="fRef"></div>
+      <div class="field"><label>Número de referencia</label><input id="fRef" oninput="updateDupWarn()"></div>
       <div class="row2">
         <div class="field"><label>Cuenta origen</label><input id="fOrig"></div>
         <div class="field"><label>Cuenta destino</label><input id="fDest" oninput="updateOficaInfo()"></div>
@@ -377,19 +378,35 @@ function findOficaDest(t){
 /* ---------- carga y OCR ---------- */
 let current=null;
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
-let lastFileName='';
-function onFile(ev){
+let lastFileName='', currentFileHash='';
+async function sha256(buf){
+  try{const h=await crypto.subtle.digest('SHA-256',buf);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+  catch(e){return '';}
+}
+function bufToDataUrl(buf,mime){
+  let bin='';const bytes=new Uint8Array(buf);const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));}
+  return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(bin);
+}
+async function onFile(ev){
   const file=ev.target.files[0];ev.target.value='';
   if(!file)return;
   lastFileName=file.name||'';
-  if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
+  let buf=null;
+  try{buf=await file.arrayBuffer();}catch(e){}
+  if(buf){
+    currentFileHash=await sha256(buf);
+    const dup=currentFileHash?loadDb().find(r=>r.fileHash===currentFileHash):null;
+    if(dup){alert('Este archivo ya fue procesado.\n\nCobranza registrada: '+(dup.cliNom||'—')+'\nRef: '+(dup.ref||'—')+(dup.fecha?' · '+dup.fecha:'')+'\n\nNo se procesará de nuevo.');return;}
+  }else{currentFileHash='';}
+  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
+  if(isPdf){
     if(typeof pdfjsLib==='undefined'){alert('No se pudo cargar el lector de PDF. Revisa tu conexión e intenta de nuevo.');return;}
-    const r=new FileReader();r.onload=e=>processPdf(e.target.result);r.readAsArrayBuffer(file);
+    if(buf){processPdf(buf);}else{const r=new FileReader();r.onload=e=>processPdf(e.target.result);r.readAsArrayBuffer(file);}
     return;
   }
-  const reader=new FileReader();
-  reader.onload=e=>processImage(e.target.result);
-  reader.readAsDataURL(file);
+  if(buf){processImage(bufToDataUrl(buf,file.type));}
+  else{const reader=new FileReader();reader.onload=e=>processImage(e.target.result);reader.readAsDataURL(file);}
 }
 function setProg(p,msg){document.getElementById('procBar').style.width=Math.round(p*100)+'%';if(msg)document.getElementById('procMsg').textContent=msg;}
 async function ocr(img,base,span){
@@ -401,12 +418,13 @@ function finishExtract(text,bank,img){
   const bm=bestMonto(text);
   if(bm!=null)data.monto=bm;
   if(!matchOficaCuenta(data.dest)){const od=findOficaDest(text);if(od)data.dest=od;}
-  current={img:img,text:text,bank:bank,data:data,empresa:(data.empresa||'').trim()};
+  current={img:img,text:text,bank:bank,data:data,empresa:(data.empresa||'').trim(),fileHash:currentFileHash};
   editingId=null;editingCreado=null;
   document.getElementById('btnSave').textContent='Guardar cobranza';
   fillResult(bank,data,img);
   const fac=extractFactura(text);
   if(fac)document.getElementById('fFactura').value=fac;
+  updateDupWarn();
   go('scResult');setTab('tabHome');
 }
 async function processImage(dataUrl){
@@ -548,14 +566,27 @@ function compressImg(dataUrl,maxDim,q){
     im.src=dataUrl;
   });
 }
+function findDup(){
+  const ref=document.getElementById('fRef').value.trim();
+  const db=loadDb();
+  if(ref){const d=db.find(x=>x.ref===ref && x.id!==editingId);if(d)return d;}
+  if(!editingId && currentFileHash){const d=db.find(x=>x.fileHash===currentFileHash);if(d)return d;}
+  return null;
+}
+function updateDupWarn(){
+  const el=document.getElementById('dupWarn');if(!el)return;
+  const d=findDup();
+  el.innerHTML=d?'<div style="background:#fcebeb;border:1px solid #f0c0c0;color:#a32d2d;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:500">&#9888; Esta cobranza ya fue registrada (ref '+esc(d.ref||'—')+', cliente '+esc(d.cliNom||'—')+'). No se puede duplicar.</div>':'';
+}
 async function saveCobranza(){
   const dest=document.getElementById('fDest').value.trim();
   const cliCod=chosenCli?chosenCli.cod:'';
   if(!cliCod){alert('Selecciona el cliente al que se aplica el pago.');return;}
   const ref=document.getElementById('fRef').value.trim();
+  const dup=findDup();
+  if(dup){alert('Esta cobranza ya fue registrada (ref '+(dup.ref||'—')+', cliente '+(dup.cliNom||'—')+(dup.fecha?' · '+dup.fecha:'')+').\n\nNo se puede duplicar el registro.');return;}
   if(!ref){if(!confirm('No hay número de referencia. ¿Guardar de todos modos?'))return;}
   const db=loadDb();
-  if(ref && db.some(x=>x.ref===ref && x.id!==editingId)){if(!confirm('Ya existe una cobranza con la referencia '+ref+'. ¿Guardar de todos modos?'))return;}
   const btn=document.getElementById('btnSave');const lbl=btn.textContent;btn.textContent='Guardando…';btn.disabled=true;
   const oc=matchOficaCuenta(dest)||{};
   let img=await compressImg(current?current.img:'',1000,0.6);
@@ -572,6 +603,7 @@ async function saveCobranza(){
     oficaBanco:oc.banco||'', oficaMoneda:oc.moneda||'',
     cliCod:cliCod, cliNom:chosenCli?chosenCli.nom:'',
     img:img,
+    fileHash:(current&&current.fileHash)||currentFileHash||'',
     creado:editingId?editingCreado:new Date().toISOString(),
     actualizado:new Date().toISOString()
   };
@@ -609,8 +641,8 @@ function updateSelUi(){
 function delRec(id){if(!confirm('¿Eliminar esta cobranza?'))return;selected.delete(id);saveDb(loadDb().filter(r=>r.id!==id));renderList();}
 function openEdit(id){
   const rec=loadDb().find(x=>x.id===id);if(!rec)return;
-  editingId=id;editingCreado=rec.creado;
-  current={img:rec.img,bank:{nombre:rec.banco},empresa:''};
+  editingId=id;editingCreado=rec.creado;currentFileHash='';
+  current={img:rec.img,bank:{nombre:rec.banco},empresa:'',fileHash:rec.fileHash||''};
   document.getElementById('thumb').src=rec.img||PDF_PLACEHOLDER;
   const bb=document.getElementById('bankBadge');bb.textContent=rec.banco||'Banco';bb.className='badge badge-bank';
   document.getElementById('fFecha').value=rec.fecha||'';
@@ -626,7 +658,7 @@ function openEdit(id){
     document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(rec.cliNom)+'</div><div class="cod">'+esc(rec.cliCod)+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
   }else{document.getElementById('cliPick').style.display='';document.getElementById('cliChosen').innerHTML='';}
   document.getElementById('btnSave').textContent='Actualizar cobranza';
-  calcUsd();updateOficaInfo();
+  calcUsd();updateOficaInfo();updateDupWarn();
   go('scResult');setTab('tabList');
 }
 
