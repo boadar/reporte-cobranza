@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v14'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v15'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -38,6 +38,28 @@ def gen_data():
                 tas[r['Fecha']] = [usd, eur]
         write('tasas.json', json.dumps(tas, ensure_ascii=False, separators=(',', ':')))
         print('  tasas.json regenerado:', len(tas))
+    cxc_csv = os.path.join(D, 'data', 'cxc.csv')
+    if os.path.exists(cxc_csv):
+        fac = {}
+        n = 0
+        with open(cxc_csv, encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                cod = (r['Codigo'] or '').strip()
+                if not cod:
+                    continue
+                def fnum(x):
+                    try:
+                        return float(x)
+                    except Exception:
+                        return 0.0
+                fac.setdefault(cod, []).append({
+                    'f': r['Factura'], 't': r['Tipo'], 'v': r['Vencimiento'],
+                    'b': fnum(r['Base']), 'i': fnum(r['IVA']),
+                    'p': fnum(r['TotalPorPagar']), 'o': r['Observacion'],
+                })
+                n += 1
+        write('facturas.json', json.dumps(fac, ensure_ascii=False, separators=(',', ':')))
+        print('  facturas.json regenerado:', n, 'facturas /', len(fac), 'clientes')
 
 gen_data()
 
@@ -56,6 +78,7 @@ tpl = read('template.html')
 html = (tpl
         .replace('__CLIENTES__', read('clientes.json'))
         .replace('__TASAS__', read('tasas.json'))
+        .replace('__FACTURAS__', read('facturas.json'))
         .replace('__PWA_HEAD__', PWA_HEAD)
         .replace('__PWA_HOOK__', PWA_HOOK))
 # sincroniza APPVER con el numero de cache

@@ -59,6 +59,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 .chosen .nm{font-weight:600;font-size:14px}
 .chosen .cod{font-family:monospace;font-size:12px;color:#0c6a97}
 .chosen button{background:none;border:none;color:#0c6a97;font-size:20px;cursor:pointer;padding:0 4px}
+.ftbl-wrap{border:1px solid var(--line);border-radius:10px;overflow-x:auto;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+table.ftbl{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+table.ftbl th{background:#f4f6f8;color:var(--mut);font-weight:600;font-size:11px;text-align:left;padding:7px 8px;position:sticky;top:0;border-bottom:1px solid var(--line)}
+table.ftbl td{padding:7px 8px;border-bottom:1px solid var(--line)}
+table.ftbl tr:last-child td{border-bottom:none}
+table.ftbl tbody tr{cursor:pointer}
+table.ftbl tbody tr.on{background:#e6f4fb}
+table.ftbl tbody tr:active{background:#eef4f8}
+table.ftbl .num{text-align:right;font-variant-numeric:tabular-nums}
+table.ftbl .nc{color:var(--danger)}
+.fnone{border:1px dashed var(--line);border-radius:10px;padding:12px;text-align:center;color:var(--mut);font-size:12px}
+.saldo-box{background:#e1f5ee;border:1px solid #b6e3d3;border-radius:10px;padding:9px 11px;margin-top:8px;font-size:13px;color:#0f6e56}
+.saldo-box b{font-size:15px}
+.saldo-neg{background:#fcebeb;border-color:#f0c0c0;color:#a32d2d}
 .suggest{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#faeeda;border:1px solid #f0d9a8;border-radius:10px;padding:9px 11px;margin-bottom:8px}
 .suggest .slbl{display:block;font-size:11px;color:#854f0b;font-weight:600}
 .suggest .snm{display:block;font-size:13px;color:#282828;font-weight:600}
@@ -172,8 +186,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
       <div id="cliChosen"></div>
     </div>
     <div class="card">
-      <div class="field" style="margin-bottom:6px"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 00012345" autocomplete="off"></div>
-      <div class="hint" style="text-align:left;margin:0">Próximamente se listarán las facturas pendientes del cliente.</div>
+      <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Facturas pendientes del cliente</label>
+      <div id="factList"></div>
+      <div class="field" style="margin:10px 0 0"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 992505" autocomplete="off" oninput="onFacturaInput()"></div>
+      <div class="usd" id="saldoInfo"></div>
     </div>
     <button class="btn btn-ok" id="btnSave" onclick="saveCobranza()" style="margin-bottom:10px">Guardar cobranza</button>
     <button class="btn btn-ghost" onclick="resetAndHome()">Descartar</button>
@@ -205,6 +221,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 <script>
 const CLIENTES = __CLIENTES__;
 const TASAS = __TASAS__;
+const FACTURAS = __FACTURAS__;
 const APPVER = "v1";
 const REPORT_EMAIL = "cobranzas@ofica.com";
 
@@ -496,6 +513,7 @@ function fillResult(bank,d,img){
   document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';
   document.getElementById('fFactura').value='';
   renderCliSuggest();
+  renderFacturas();
   calcUsd();
   updateOficaInfo();
 }
@@ -519,11 +537,13 @@ function calcUsd(){
   if(monto==null||!iso||!TASAS[iso]||TASAS[iso][0]==null){
     document.getElementById('fUsd').value='';
     info.innerHTML=iso&&monto!=null?'<span style="color:var(--danger)">No hay tasa registrada para esa fecha</span>':'';
+    updateSaldo();
     return;
   }
   const tasa=TASAS[iso][0];
   document.getElementById('fUsd').value=(monto/tasa).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
   info.innerHTML='Tasa BCV '+iso.split('-').reverse().join('/')+': <b>'+tasa.toLocaleString('es-VE',{minimumFractionDigits:4})+' Bs/$</b>';
+  updateSaldo();
 }
 
 /* ---------- buscador de clientes ---------- */
@@ -549,8 +569,52 @@ function pickCli(cod){
   document.getElementById('cliSuggest').innerHTML='';
   document.getElementById('cliPick').style.display='none';
   document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(c[1])+'</div><div class="cod">'+c[0]+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
+  renderFacturas();
 }
-function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';renderCliSuggest();}
+function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';renderCliSuggest();renderFacturas();}
+
+/* ---------- facturas pendientes del cliente ---------- */
+let selFactura=null;
+function fmtUsd(n){return n.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function facturasDe(cod){return (FACTURAS[cod]||[]);}
+function renderFacturas(){
+  const el=document.getElementById('factList');if(!el)return;
+  selFactura=null;
+  if(!chosenCli){el.innerHTML='<div class="fnone">Selecciona primero el cliente para ver sus facturas pendientes.</div>';updateSaldo();return;}
+  const arr=facturasDe(chosenCli.cod);
+  if(!arr.length){el.innerHTML='<div class="fnone">Este cliente no tiene facturas pendientes en el listado.</div>';updateSaldo();return;}
+  let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base</th><th class="num">IVA</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
+  arr.forEach((f,i)=>{
+    const nc=f.b<0?' nc':'';
+    h+='<tr id="frow'+i+'" onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td><td class="num">'+fmtUsd(f.i)+'</td><td class="num'+nc+'">'+fmtUsd(f.p)+'</td><td>'+esc(f.o||'')+'</td></tr>';
+  });
+  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Montos en $. Toca una fila para asignarle el pago.</div>';
+  el.innerHTML=h;
+  updateSaldo();
+}
+function pickFactura(i){
+  if(!chosenCli)return;
+  const arr=facturasDe(chosenCli.cod);const f=arr[i];if(!f)return;
+  selFactura=f;
+  document.getElementById('fFactura').value=f.f;
+  arr.forEach((_,j)=>{const r=document.getElementById('frow'+j);if(r)r.className=(j===i?'on':'');});
+  updateSaldo();
+}
+function onFacturaInput(){
+  const v=document.getElementById('fFactura').value.trim();
+  const arr=chosenCli?facturasDe(chosenCli.cod):[];
+  const i=arr.findIndex(f=>String(f.f)===v);
+  selFactura=i>=0?arr[i]:null;
+  arr.forEach((_,j)=>{const r=document.getElementById('frow'+j);if(r)r.className=(j===i?'on':'');});
+  updateSaldo();
+}
+function pagoUsd(){const v=parseMonto(document.getElementById('fUsd').value);return v==null?0:v;}
+function updateSaldo(){
+  const el=document.getElementById('saldoInfo');if(!el)return;
+  if(!selFactura){el.innerHTML='';return;}
+  const pago=pagoUsd(), base=selFactura.b, saldo=base-pago;
+  el.innerHTML='<div class="saldo-box'+(saldo<0?' saldo-neg':'')+'">Factura '+esc(selFactura.f)+' · Base <b>$'+fmtUsd(base)+'</b> &minus; Pago <b>$'+fmtUsd(pago)+'</b><br>Saldo final: <b>$'+fmtUsd(saldo)+'</b>'+(saldo<0?' (el pago excede la base)':'')+'</div>';
+}
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- guardar ---------- */
@@ -604,6 +668,8 @@ async function saveCobranza(){
     usd:document.getElementById('fUsd').value.trim(),
     ref:ref,
     factura:document.getElementById('fFactura').value.trim(),
+    facturaBase:selFactura?selFactura.b:null,
+    facturaSaldo:selFactura?Math.round((selFactura.b-pagoUsd())*100)/100:null,
     orig:document.getElementById('fOrig').value.trim(),
     dest:dest,
     banco:current&&current.bank?current.bank.nombre:'',
@@ -664,6 +730,9 @@ function openEdit(id){
     document.getElementById('cliPick').style.display='none';
     document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(rec.cliNom)+'</div><div class="cod">'+esc(rec.cliCod)+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
   }else{document.getElementById('cliPick').style.display='';document.getElementById('cliChosen').innerHTML='';}
+  renderFacturas();
+  document.getElementById('fFactura').value=rec.factura||'';
+  onFacturaInput();
   document.getElementById('btnSave').textContent='Actualizar cobranza';
   calcUsd();updateOficaInfo();updateDupWarn();
   go('scResult');setTab('tabList');
@@ -673,8 +742,8 @@ function openEdit(id){
 function loadScriptOnce(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=()=>res();s.onerror=()=>rej(new Error('no se pudo cargar '+url));document.head.appendChild(s);});}
 let xlsxLoading=null;
 function ensureXLSX(){if(window.XLSX)return Promise.resolve();if(!xlsxLoading)xlsxLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return xlsxLoading;}
-const REP_HEAD=['Fecha','Banco Emisor','Monto Bs','Monto $','Referencia','N Factura','Cuenta Origen','Cuenta Destino','Cuenta OFICA','Moneda','Codigo Cliente','Nombre Cliente','Registrado'];
-function repRow(r){return [r.fecha||'',r.banco||'',r.monto!=null?r.monto:'',r.usd||'',r.ref||'',r.factura||'',r.orig||'',r.dest||'',r.oficaBanco||'',r.oficaMoneda||'',r.cliCod||'',r.cliNom||'',r.creado||''];}
+const REP_HEAD=['Fecha','Banco Emisor','Monto Bs','Monto $','Referencia','N Factura','Monto Original $','Monto Resultante $','Cuenta Origen','Cuenta Destino','Cuenta OFICA','Moneda','Codigo Cliente','Nombre Cliente','Registrado'];
+function repRow(r){return [r.fecha||'',r.banco||'',r.monto!=null?r.monto:'',r.usd||'',r.ref||'',r.factura||'',r.facturaBase!=null?r.facturaBase:'',r.facturaSaldo!=null?r.facturaSaldo:'',r.orig||'',r.dest||'',r.oficaBanco||'',r.oficaMoneda||'',r.cliCod||'',r.cliNom||'',r.creado||''];}
 async function buildReportFile(sel){
   try{
     await ensureXLSX();

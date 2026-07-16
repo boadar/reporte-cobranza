@@ -1,0 +1,441 @@
+Codigo,Cliente,Factura,Tipo,Vencimiento,Base,IVA,TotalPorPagar,Observacion
+002352,Auto Acrilicos Urdaneta C.A,983313,Factura,13/06/2022,5361.08,857.77,2145.17,DIF BASE
+002350,"Inversiones Pintu K´sas, C.A",983305,Factura,13/06/2022,4189.66,670.35,4189.66,DIF IVA + BASE
+002239,Bodegon Avilanes 2017 C.A,985193,Factura,26/07/2023,949.63,127.13,849.06,dif base + IVA
+002268,Farmedica C.A,985281,Factura,05/08/2023,201.68,21.83,201.68,FACT.COMPLETA
+002268,Farmedica C.A,985273,Factura,05/08/2023,20.04,0.0,20.04,FACT.COMPLETA
+002268,Farmedica C.A,985277,Factura,05/08/2023,195.78,31.32,195.78,FACT.COMPLETA
+002378,Creaciones Quintero Foami C.A,985506,Factura,17/09/2023,1250.69,149.55,618.99,dif base + IVA
+001253,Ronald Luis Boada Martinez,985935,Factura,23/08/2023,12.93,2.07,12.93,FACT.COMPLETA
+002912,"Bodegon La Canaima, C.A",986201,Factura,07/10/2023,1573.57,209.11,1573.57,FACT.COMPLETA
+001253,Ronald Luis Boada Martinez,986923,Factura,03/12/2023,35.59,5.69,35.59,FACT.COMPLETA
+002737,Redvital Comercializadora C.A,981371,Nota de Crédito,23/02/2024,-0.57,-0.09,-0.57,NC
+002737,Redvital Comercializadora C.A,981378,Nota de Crédito,27/02/2024,-3.42,-0.55,-3.42,NC
+000867,Antonio Hernández,987340,Factura,01/03/2024,20.0,3.2,20.0,FACT.COMPLETA
+000530,Juan Carlos Ruiz,987343,Factura,01/03/2024,40.0,6.4,40.0,FACT.COMPLETA
+003001,Maria Alejandra Hernandez Diaz,987347,Factura,02/03/2024,80.0,12.8,80.0,FACT.COMPLETA
+001632,Alfredo Jose Ollarve Carballo,987371,Factura,14/03/2024,40.0,6.4,40.0,FACT.COMPLETA
+002976,"Distribuidora Siham JD, C.A.",987502,Factura,08/06/2024,2180.08,290.86,2180.08,BASE + 25% IVA
+002976,"Distribuidora Siham JD, C.A.",987520,Factura,08/06/2024,1423.69,208.48,1423.69,BASE + 25% IVA
+002976,"Distribuidora Siham JD, C.A.",987529,Factura,08/06/2024,1077.88,160.55,353.36,DIF BASE
+002737,Redvital Comercializadora C.A,981419,Nota de Crédito,09/04/2024,-5.7,-0.91,-5.7,NC
+000562,Stefan Bonacker,987619,Factura,24/05/2024,27.0,4.32,27.0,FACT.COMPLETA
+000436,"Farmatodo, C.A",981440,Nota de Crédito,24/05/2024,-5.78,-0.92,-5.78,NC
+000436,"Farmatodo, C.A",981453,Nota de Crédito,20/06/2024,-513.6,-58.61,-513.6,NC
+000436,"Farmatodo, C.A",981459,Nota de Crédito,17/07/2024,-595.74,-95.32,-595.74,NC
+002668,"Shalom Libreria Y Papeleria C,A",988413,Factura,10/10/2024,121.46,19.43,121.46,FACT.COMPLETA
+002976,"Distribuidora Siham JD, C.A.",981500,Nota de Crédito,11/09/2024,-890.66,-142.51,-890.66,NC
+002976,"Distribuidora Siham JD, C.A.",981501,Nota de Crédito,11/09/2024,-719.13,-105.88,-719.13,NC
+002660,"Inversiones Artigos II 2020, C.A",981517,Nota de Crédito,26/09/2024,-1.69,-0.27,-1.69,NC
+002660,"Inversiones Artigos II 2020, C.A",981518,Nota de Crédito,26/09/2024,-3.6,-0.52,-3.6,NC
+002660,"Inversiones Artigos II 2020, C.A",981519,Nota de Crédito,26/09/2024,-1.69,-0.27,-1.69,NC
+002808,"Inversiones Artigos, C.A",981520,Nota de Crédito,28/09/2024,-4.8,-0.77,-4.8,NC
+002808,"Inversiones Artigos, C.A",981521,Nota de Crédito,28/09/2024,-1.2,-0.19,-1.2,NC
+000248,Papeleria La Nube Azul C A,981515,Nota de Crédito,26/09/2024,-154.8,-24.77,0.0,RETENCION
+002737,Redvital Comercializadora C.A,981539,Nota de Crédito,01/10/2024,-79.55,-11.63,-79.55,NC
+000436,"Farmatodo, C.A",981543,Nota de Crédito,09/10/2024,-473.19,-57.87,0.0,RETENCION
+000149,Libreria El Nuevo Saber. C.A.,981546,Nota de Crédito,15/10/2024,-70.0,-11.2,-28.36,NC
+000436,"Farmatodo, C.A",981561,Nota de Crédito,26/10/2024,-14.41,-2.31,-14.41,NC
+000436,"Farmatodo, C.A",981573,Nota de Crédito,01/11/2024,-0.71,-0.11,-0.71,NC
+000436,"Farmatodo, C.A",981592,Nota de Crédito,08/12/2024,-68.03,-10.88,0.0,RETENCION
+000436,"Farmatodo, C.A",981593,Nota de Crédito,08/12/2024,-127.57,-20.41,0.0,RETENCION
+000436,"Farmatodo, C.A",981594,Nota de Crédito,08/12/2024,-4.89,-0.78,0.0,RETENCION
+000436,"Farmatodo, C.A",981612,Nota de Crédito,19/01/2025,-1.19,-0.16,-1.19,NC
+000436,"Farmatodo, C.A",981652,Nota de Crédito,27/03/2025,-0.13,-0.02,-0.13,NC
+000436,"Farmatodo, C.A",981654,Nota de Crédito,27/03/2025,-15.35,-2.46,0.0,RETENCION
+000436,"Farmatodo, C.A",981691,Nota de Crédito,09/05/2025,-76.96,-12.31,-76.96,NC
+000436,"Farmatodo, C.A",981712,Nota de Crédito,30/05/2025,-0.8,-0.13,-0.8,NC
+002188,Profimatica C.A,981725,Nota de Crédito,10/06/2025,-360.44,-49.85,0.0,IVA COMPLETO
+000436,"Farmatodo, C.A",981728,Nota de Crédito,16/06/2025,-2.54,-0.41,-2.54,NC
+000436,"Farmatodo, C.A",981729,Nota de Crédito,16/06/2025,-58.17,-9.31,-58.17,NC
+000436,"Farmatodo, C.A",981730,Nota de Crédito,16/06/2025,-21.16,-3.39,-21.16,NC
+003003,"Todo Baratiiico, C.A.",981736,Nota de Crédito,22/06/2025,-1.06,-0.17,-1.06,NC
+000262,Bazar y Libreria Araira J.F.. C.A.,990309,Factura,23/09/2025,3065.28,490.44,3065.28,BASE
+000262,Bazar y Libreria Araira J.F.. C.A.,990322,Factura,23/09/2025,2417.16,43.55,2417.16,BASE
+000262,Bazar y Libreria Araira J.F.. C.A.,990324,Factura,24/08/2025,2280.0,364.8,1548.4,DIF BASE
+002414,Libreria Horizonte Lecheria C.A,990421,Factura,06/10/2025,585.01,93.6,585.01,FACT.COMPLETA
+002414,Libreria Horizonte Lecheria C.A,990422,Factura,06/10/2025,659.1,105.46,359.11,DIF BASE + IVA COMPLETO
+000436,"Farmatodo, C.A",981771,Nota de Crédito,14/07/2025,-43.23,-5.55,0.0,RETENCION
+000436,"Farmatodo, C.A",981772,Nota de Crédito,14/07/2025,-83.43,-6.44,0.0,RETENCION
+003214,"El Rincon Del Doral, C.A",990643,Factura,23/07/2025,359.04,57.45,0.0,RETENCION
+000177,Papeleria Esteva. C.A.,990658,Factura,20/08/2025,793.28,18.92,0.0,25% IVA
+000328,Recorca. C.A.,981778,Nota de Crédito,02/08/2025,-202.5,-32.4,0.0,RETENCION
+002123,San Miguel De Todo un Poco C.A,990670,Factura,19/10/2025,745.74,65.32,0.0,RETENCION
+002188,Profimatica C.A,991085,Factura,14/09/2025,42.9,6.86,0.0,RETENCION
+000029,Corporacion Gran Import. C.A.,981830,Nota de Crédito,19/08/2025,-71.64,-11.46,-71.64,NC
+000029,Corporacion Gran Import. C.A.,981831,Nota de Crédito,19/08/2025,-3.88,-0.62,-3.88,NC
+000436,"Farmatodo, C.A",981827,Nota de Crédito,19/08/2025,-4.28,-0.68,-4.28,NC
+000328,Recorca. C.A.,981839,Nota de Crédito,05/09/2025,-224.64,-35.94,0.0,RETENCION
+000328,Recorca. C.A.,981840,Nota de Crédito,05/09/2025,-87.12,-13.94,0.0,RETENCION
+003192,"Supercenter 168, C.A",991117,Factura,25/08/2025,683.97,50.04,-0.0,RETENCION
+000436,"Farmatodo, C.A",981849,Nota de Crédito,22/08/2025,-11.18,-1.67,-11.18,BASE + 25% IVA
+002627,"Inside Market, Supermercado Rio C.A",991216,Factura,03/10/2025,180.12,12.52,0.0,RETENCION
+002627,"Inside Market, Supermercado Rio C.A",991218,Factura,03/10/2025,180.12,12.52,0.0,RETENCION
+002627,"Inside Market, Supermercado Rio C.A",991219,Factura,03/10/2025,180.12,12.52,0.0,RETENCION
+002627,"Inside Market, Supermercado Rio C.A",991220,Factura,03/10/2025,180.12,12.52,0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),991297,Factura,15/10/2025,161.64,25.86,-0.0,IVA COMPLETO
+003066,"L C Paper, C.A",991406,Factura,30/10/2025,2913.42,342.19,913.42,DIF BASE + IVA COMPLETO
+003228,"Inversiones Recorcholis, C.A",981909,Nota de Crédito,19/09/2025,-14.34,-2.29,0.0,RETENCION
+003228,"Inversiones Recorcholis, C.A",981910,Nota de Crédito,19/09/2025,-187.9,-16.45,0.0,RETENCION
+000103,La Reunion C.A.,981911,Nota de Crédito,19/09/2025,-143.55,-22.97,0.0,RETENCION
+000157,Libreria  Punto y Coma Caribe. C.A.,991530,Factura,23/10/2025,424.81,38.05,-0.0,RETENCION
+000157,Libreria  Punto y Coma Caribe. C.A.,991531,Factura,23/10/2025,279.5,44.72,0.0,RETENCION
+000157,Libreria  Punto y Coma Caribe. C.A.,991532,Factura,23/10/2025,296.64,47.46,0.0,RETENCION
+000157,Libreria  Punto y Coma Caribe. C.A.,991534,Factura,23/10/2025,306.01,48.96,-0.0,RETENCION
+000157,Libreria  Punto y Coma Caribe. C.A.,991535,Factura,23/10/2025,626.95,100.31,-0.0,RETENCION
+000029,Corporacion Gran Import. C.A.,991594,Factura,23/10/2025,296.0,47.36,0.0,RETENCION
+000157,Libreria  Punto y Coma Caribe. C.A.,991536,Factura,23/10/2025,416.07,66.57,-0.0,RETENCION
+000152,Libreria  Punto y Coma. C.A.,991573,Factura,23/10/2025,306.01,48.96,-0.0,RETENCION
+000152,Libreria  Punto y Coma. C.A.,991563,Factura,23/10/2025,416.07,66.57,0.0,RETENCION
+000152,Libreria  Punto y Coma. C.A.,991565,Factura,23/10/2025,601.95,96.31,-0.0,RETENCION
+000152,Libreria  Punto y Coma. C.A.,991555,Factura,23/10/2025,399.67,34.03,-0.0,RETENCION
+000152,Libreria  Punto y Coma. C.A.,991559,Factura,23/10/2025,371.0,59.36,-0.0,RETENCION
+000152,Libreria  Punto y Coma. C.A.,991560,Factura,23/10/2025,446.58,71.45,-0.0,RETENCION
+000268,Libreria  Tecnica  El Quijote. C.A.,991537,Factura,23/10/2025,424.81,38.05,-0.0,RETENCION
+000268,Libreria  Tecnica  El Quijote. C.A.,991538,Factura,23/10/2025,470.04,75.21,0.0,RETENCION
+000268,Libreria  Tecnica  El Quijote. C.A.,991539,Factura,23/10/2025,409.24,65.48,-0.0,RETENCION
+000268,Libreria  Tecnica  El Quijote. C.A.,991540,Factura,23/10/2025,318.35,50.94,-0.0,RETENCION
+000268,Libreria  Tecnica  El Quijote. C.A.,991541,Factura,23/10/2025,651.95,104.31,0.0,RETENCION
+000268,Libreria  Tecnica  El Quijote. C.A.,991543,Factura,23/10/2025,416.07,66.57,-0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991552,Factura,23/10/2025,601.95,96.31,-0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991554,Factura,23/10/2025,410.27,65.64,0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991545,Factura,23/10/2025,408.61,35.46,-0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991546,Factura,23/10/2025,294.94,47.19,-0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991547,Factura,23/10/2025,292.74,46.84,-0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991548,Factura,23/10/2025,446.58,71.45,-0.0,RETENCION
+000154,Libreria Punto y Coma Unicentro. C.A.,991549,Factura,23/10/2025,306.01,48.96,-0.0,RETENCION
+002974,Super Interplast C.A.,991544,Factura,24/10/2025,575.08,92.01,0.0,RETENCION
+003192,"Supercenter 168, C.A",991568,Factura,23/09/2025,180.0,28.8,-0.0,RETENCION
+003192,"Supercenter 168, C.A",991566,Factura,23/09/2025,4915.2,479.62,0.0,RETENCION
+002841,"Aula 313, C.A",991607,Factura,22/10/2025,121.3,19.41,0.0,25% IVA
+003192,"Supercenter 168, C.A",991603,Factura,22/11/2025,213.3,34.13,-0.0,RETENCION
+003192,"Supercenter 168, C.A",991596,Factura,22/11/2025,95.16,15.23,95.16,FACT.COMPLETA
+003192,"Supercenter 168, C.A",991600,Factura,22/11/2025,489.08,54.78,186.1,DIF BASE + IVA COMPLETO
+003192,"Supercenter 168, C.A",991601,Factura,22/11/2025,211.32,33.81,0.0,RETENCION
+003081,"Book & House Inversiones, C.A",981923,Nota de Crédito,25/09/2025,-8.54,-1.37,0.0,RETENCION
+003081,"Book & House Inversiones, C.A",981924,Nota de Crédito,25/09/2025,-1.57,-0.25,0.0,RETENCION
+003081,"Book & House Inversiones, C.A",981925,Nota de Crédito,25/09/2025,-1.53,-0.24,0.0,RETENCION
+000008,Sumiof 1956. C.A.,981928,Nota de Crédito,25/09/2025,-581.4,-93.02,0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),991642,Factura,31/10/2025,880.9,107.13,-0.0,IVA COMPLETO
+002393,Escolares C.A,991638,Factura,29/10/2025,645.6,39.94,0.0,IVA COMPLETO
+002393,Escolares C.A,991647,Factura,29/10/2025,124.8,15.84,0.0,IVA COMPLETO
+000837,"""Papeleria Latina Oriente, Compañia Anonima""",981946,Nota de Crédito,11/10/2025,-100.0,-16.0,0.0,RETENCION
+000025,Bazar Mikelan. C.A.,991666,Factura,29/10/2025,4918.2,533.47,-0.0,RETENCION
+003127,"Comercial Popular HM, C.A",981936,Nota de Crédito,28/09/2025,-31.96,-1.89,-31.96,NC
+000103,La Reunion C.A.,981938,Nota de Crédito,28/09/2025,-75.85,-2.85,0.0,RETENCION
+003157,"Productos Aldaba, C.A",981951,Nota de Crédito,28/09/2025,-50.0,-8.0,-50.0,NC
+003003,"Todo Baratiiico, C.A.",981962,Nota de Crédito,31/10/2025,-1.42,-0.23,-1.42,NC
+000092,Distribuidora Brando. C.A.,981972,Nota de Crédito,08/10/2025,-122.2,-19.55,0.0,RETENCION
+002939,Libreria Independencia C.A,991778,Factura,20/11/2025,389.06,41.21,389.06,BASE + 25% IVA
+003266,"Surtiven 2020, C.A",991785,Factura,19/11/2025,664.8,106.37,-0.0,RETENCION
+002079,"Excelsior Gama Supermercados, C,A.",982001,Nota de Crédito,06/11/2025,-3.04,0.0,-3.04,NC
+000498,"Importadora Japonesa II, C.A.",982012,Nota de Crédito,24/10/2025,-85.34,-13.65,0.0,RETENCION
+002188,Profimatica C.A,991842,Factura,28/11/2025,663.48,106.16,188.69,DIF BASE
+000081,Carvajal Romero C.A.,982021,Nota de Crédito,30/10/2025,-18.75,-3.0,-18.75,NC
+000081,Carvajal Romero C.A.,982022,Nota de Crédito,30/10/2025,-220.8,-35.33,-220.8,NC
+000081,Carvajal Romero C.A.,982026,Nota de Crédito,30/10/2025,-242.76,-38.84,-242.76,NC
+002754,Offishop II C.A,982018,Nota de Crédito,30/10/2025,-61.5,-9.84,-61.5,NC
+003266,"Surtiven 2020, C.A",982017,Nota de Crédito,30/10/2025,-5.54,-0.89,-5.54,NC
+000436,"Farmatodo, C.A",982036,Nota de Crédito,29/10/2025,-0.78,-0.07,-0.78,NC
+002188,Profimatica C.A,982039,Nota de Crédito,01/11/2025,-16.1,-2.58,0.0,IVA COMPLETO
+002188,Profimatica C.A,982040,Nota de Crédito,01/11/2025,-80.38,-12.86,0.0,RETENCION
+002188,Profimatica C.A,982045,Nota de Crédito,07/11/2025,-142.01,-22.72,0.0,IVA COMPLETO
+002942,Comercial Perfecto MS C.A,991921,Factura,11/12/2025,841.92,134.71,-0.0,RETENCION
+000436,"Farmatodo, C.A",982047,Nota de Crédito,07/11/2025,-36.63,-4.6,-36.63,NC
+003214,"El Rincon Del Doral, C.A",991945,Factura,19/12/2025,240.72,3.65,0.0,RETENCION
+000436,"Farmatodo, C.A",982052,Nota de Crédito,14/11/2025,-6.31,-0.58,-6.31,NC
+000436,"Farmatodo, C.A",982062,Nota de Crédito,19/11/2025,-8.29,-0.73,-8.29,NC
+002188,Profimatica C.A,982073,Nota de Crédito,26/11/2025,-579.22,-92.68,0.0,IVA COMPLETO
+000194,Sigo. S.A.,991993,Factura,25/11/2025,33.95,4.35,-0.0,IVA COMPLETO
+000498,"Importadora Japonesa II, C.A.",982075,Nota de Crédito,26/11/2025,-498.24,-79.72,0.0,RETENCION
+000498,"Importadora Japonesa II, C.A.",982076,Nota de Crédito,26/11/2025,-13.84,-2.21,0.0,RETENCION
+000436,"Farmatodo, C.A",982077,Nota de Crédito,27/11/2025,-4.46,-0.61,-4.46,NC
+003214,"El Rincon Del Doral, C.A",982086,Nota de Crédito,05/12/2025,-277.28,-44.36,0.0,RETENCION
+000498,"Importadora Japonesa II, C.A.",982089,Nota de Crédito,05/12/2025,-80.38,-12.86,0.0,RETENCION
+000028,Libreria Santa Rosa. C.A.,982099,Nota de Crédito,10/12/2025,-232.08,-37.13,0.0,RETENCION
+001545,"Promapal, S.A",992053,Factura,12/12/2025,241.92,38.71,0.0,RETENCION
+000029,Corporacion Gran Import. C.A.,992055,Factura,14/01/2026,84.8,13.57,0.0,RETENCION
+000248,Papeleria La Nube Azul C A,982100,Nota de Crédito,13/12/2025,-36.0,-5.76,-36.0,NC
+000248,Papeleria La Nube Azul C A,982101,Nota de Crédito,13/12/2025,-3.54,-0.57,-3.54,NC
+000248,Papeleria La Nube Azul C A,982102,Nota de Crédito,13/12/2025,-28.47,-4.56,-28.47,NC
+000248,Papeleria La Nube Azul C A,982103,Nota de Crédito,13/12/2025,-32.4,-5.18,-32.4,NC
+000248,Papeleria La Nube Azul C A,982104,Nota de Crédito,13/12/2025,-46.08,-7.37,-46.08,NC
+000248,Papeleria La Nube Azul C A,982105,Nota de Crédito,13/12/2025,-29.85,-1.32,-29.85,NC
+000498,"Importadora Japonesa II, C.A.",982107,Nota de Crédito,12/12/2025,-13.0,-2.08,0.0,RETENCION
+000498,"Importadora Japonesa II, C.A.",982115,Nota de Crédito,13/01/2026,-25.39,-3.86,0.0,RETENCION
+000436,"Farmatodo, C.A",982117,Nota de Crédito,15/01/2026,-1.15,-0.04,-1.15,NC
+002188,Profimatica C.A,982122,Nota de Crédito,22/01/2026,-63.9,-10.22,0.0,25% IVA
+002188,Profimatica C.A,982123,Nota de Crédito,22/01/2026,-8.58,-1.37,0.0,IVA COMPLETO
+002188,Profimatica C.A,982124,Nota de Crédito,22/01/2026,-142.02,-22.72,-0.0,IVA COMPLETO
+002847,Tienda La Espiga De Oro C.A,982125,Nota de Crédito,22/01/2026,-20.97,-3.36,0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992155,Factura,19/02/2026,437.05,41.23,-0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992156,Factura,19/02/2026,132.2,21.15,-0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992157,Factura,19/02/2026,317.63,37.52,0.0,RETENCION
+000103,La Reunion C.A.,992160,Factura,19/02/2026,132.2,21.15,132.2,BASE + 25% IVA
+002628,"Papeleria y Libreria Total MK, C.A",992150,Factura,04/03/2026,249.12,39.86,249.12,FACT.COMPLETA
+000081,Carvajal Romero C.A.,982132,Nota de Crédito,07/02/2026,-3767.5,-602.8,-3767.5,NC
+000081,Carvajal Romero C.A.,982134,Nota de Crédito,07/02/2026,-2340.8,-374.53,-1352.05,DIF BASE + IVA COMPLETO
+001639,Libreria Latina Costa America C.A,992201,Factura,12/03/2026,8.16,1.31,8.16,BASE + 25% IVA
+000456,"Exipapel,C.A",992217,Factura,24/02/2026,3.14,0.5,3.14,FACT.COMPLETA
+003003,"Todo Baratiiico, C.A.",982146,Nota de Crédito,12/03/2026,-11.52,-1.84,0.0,RETENCION
+000456,"Exipapel,C.A",982155,Nota de Crédito,05/03/2026,-3.14,-0.5,-3.14,NC
+000456,"Exipapel,C.A",982156,Nota de Crédito,05/03/2026,-32.59,-5.21,0.0,RETENCION
+000456,"Exipapel,C.A",982157,Nota de Crédito,05/03/2026,-19.1,-2.42,0.0,RETENCION
+002609,"El Rompecabezas Fusion, C.A",992269,Factura,25/03/2026,262.95,38.06,0.0,RETENCION
+002609,"El Rompecabezas Fusion, C.A",992270,Factura,25/03/2026,255.28,39.29,0.0,RETENCION
+002609,"El Rompecabezas Fusion, C.A",992271,Factura,25/03/2026,243.86,29.72,-0.0,RETENCION
+002841,"Aula 313, C.A",992266,Factura,25/03/2026,376.9,55.02,-0.0,RETENCION
+000436,"Farmatodo, C.A",982166,Nota de Crédito,20/02/2026,-2.78,-0.15,-2.78,NC
+002188,Profimatica C.A,982168,Nota de Crédito,22/02/2026,-33.0,-5.28,-33.0,NC
+002188,Profimatica C.A,982163,Nota de Crédito,22/02/2026,-279.32,-44.69,-279.32,NC
+002188,Profimatica C.A,982164,Nota de Crédito,22/02/2026,-19.9,-1.01,-19.9,NC
+002188,Profimatica C.A,982165,Nota de Crédito,22/02/2026,-12.36,-1.98,-12.36,NC
+002627,"Inside Market, Supermercado Rio C.A",992278,Factura,22/03/2026,745.86,58.68,745.86,BASE + 25% IVA
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),982170,Nota de Crédito,25/02/2026,-26.44,-4.23,0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),982171,Nota de Crédito,25/02/2026,-87.41,-8.25,0.0,RETENCION
+002841,"Aula 313, C.A",982175,Nota de Crédito,01/04/2026,-9.3,-1.49,0.0,RETENCION
+000436,"Farmatodo, C.A",982186,Nota de Crédito,04/03/2026,-0.55,-0.04,-0.55,NC
+002757,Inversiones Oriente 20.22 C.A,982177,Nota de Crédito,03/04/2026,-36.0,-5.76,-36.0,NC
+002849,"Papeleria Estrella Oriental, C.A",992328,Factura,03/04/2026,696.96,87.71,696.96,FACT.COMPLETA
+003192,"Supercenter 168, C.A",982181,Nota de Crédito,06/03/2026,-174.39,-27.9,-174.39,NC
+003192,"Supercenter 168, C.A",982182,Nota de Crédito,06/03/2026,-84.18,-13.47,-84.18,NC
+000096,Fotocopiado y Soluciones P & Y. C.A.,992336,Factura,08/04/2026,219.48,31.1,-0.0,25% IVA
+000149,Libreria El Nuevo Saber. C.A.,992341,Factura,08/04/2026,298.62,47.78,298.62,BASE + 25% IVA
+000149,Libreria El Nuevo Saber. C.A.,992342,Factura,08/04/2026,466.41,56.69,466.41,BASE + 25% IVA
+002941,Tu Mundo Crayola C.A,992368,Factura,16/04/2026,161.4,25.82,36.39,DIF BASE + IVA COMPLETO
+002944,PC Center Margarita C.A,982196,Nota de Crédito,10/04/2026,-48.6,-7.78,-48.6,NC
+000081,Carvajal Romero C.A.,992402,Factura,16/03/2026,293.58,46.97,293.58,FACT.COMPLETA
+000157,Libreria  Punto y Coma Caribe. C.A.,992395,Factura,16/04/2026,21.6,3.46,0.0,RETENCION
+001298,La Cartoleria C.A,992375,Factura,19/04/2026,283.1,38.04,44.18,DIF BASE
+002662,El Estudiante  01 C.A,992405,Factura,15/04/2026,389.16,62.27,-0.0,RETENCION
+002944,PC Center Margarita C.A,992386,Factura,19/04/2026,459.56,73.53,0.0,RETENCION
+002944,PC Center Margarita C.A,992381,Factura,19/04/2026,1579.52,191.9,0.0,IVA COMPLETO
+002988,Distribuidora Monca CA,992385,Factura,18/04/2026,561.14,76.28,200.0,DIF BASE + IVA COMPLETO
+003299,"Espacio Creativo Diandemar, C.A",992391,Factura,19/04/2026,429.48,60.0,-0.0,IVA COMPLETO
+001763,"Diversión en Grande, C.A.",992417,Factura,14/03/2026,3047.5,487.6,0.0,RETENCION
+002627,"Inside Market, Supermercado Rio C.A",992415,Factura,16/04/2026,345.2,37.25,345.2,BASE + 25% IVA
+000436,"Farmatodo, C.A",982200,Nota de Crédito,16/03/2026,-1.02,-0.15,-1.02,NC
+000436,"Farmatodo, C.A",982206,Nota de Crédito,18/03/2026,-0.68,-0.06,-0.68,NC
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",982204,Nota de Crédito,20/03/2026,-124.56,-19.93,0.0,RETENCION
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",982210,Nota de Crédito,26/03/2026,-28.7,-4.59,0.0,RETENCION
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",982211,Nota de Crédito,26/03/2026,-27.27,-4.36,0.0,RETENCION
+002148,Casetel (Compañia Anonima de Servicios y Telecomunicaciones),992468,Factura,14/05/2026,3262.38,466.22,0.0,RETENCION
+002737,Redvital Comercializadora C.A,992466,Factura,07/04/2026,176.91,20.16,0.0,RETENCION
+002737,Redvital Comercializadora C.A,992467,Factura,07/04/2026,53.83,7.96,0.0,RETENCION
+000436,"Farmatodo, C.A",982216,Nota de Crédito,08/04/2026,-2.58,-0.35,-2.58,BASE + 25% IVA
+000436,"Farmatodo, C.A",982220,Nota de Crédito,15/04/2026,-1.45,-0.2,-1.45,NC
+000436,"Farmatodo, C.A",982221,Nota de Crédito,15/04/2026,-50.96,-6.91,0.0,RETENCION
+000436,"Farmatodo, C.A",982222,Nota de Crédito,15/04/2026,-28.45,-2.4,0.0,RETENCION
+000436,"Farmatodo, C.A",992489,Factura,15/04/2026,1070.03,145.18,0.0,RETENCION
+000436,"Farmatodo, C.A",992490,Factura,15/04/2026,597.49,50.37,-0.0,RETENCION
+000436,"Farmatodo, C.A",992491,Factura,15/04/2026,30.59,4.15,0.0,RETENCION
+000328,Recorca. C.A.,992495,Factura,06/05/2026,864.0,138.24,0.0,RETENCION
+000081,Carvajal Romero C.A.,992515,Factura,20/05/2026,1392.36,212.79,1392.36,FACT.COMPLETA
+000081,Carvajal Romero C.A.,992518,Factura,20/05/2026,2250.24,360.04,2250.24,FACT.COMPLETA
+000436,"Farmatodo, C.A",982226,Nota de Crédito,17/04/2026,-0.84,-0.08,-0.84,NC
+000436,"Farmatodo, C.A",982227,Nota de Crédito,17/04/2026,-24.04,-3.27,0.0,RETENCION
+000436,"Farmatodo, C.A",982228,Nota de Crédito,17/04/2026,-16.47,-1.32,0.0,RETENCION
+000436,"Farmatodo, C.A",992500,Factura,17/04/2026,504.69,68.63,-0.0,RETENCION
+000436,"Farmatodo, C.A",992501,Factura,17/04/2026,345.77,27.74,0.0,RETENCION
+000436,"Farmatodo, C.A",992502,Factura,17/04/2026,17.6,1.61,0.0,RETENCION
+001732,"El Mundo Del Libro 2012, C.A.",992509,Factura,20/05/2026,872.37,13.83,-0.0,25% IVA
+002148,Casetel (Compañia Anonima de Servicios y Telecomunicaciones),992505,Factura,20/05/2026,2529.8,75.65,207.85,DIF BASE + 25% IVA
+002159,"Papelpro, C.A.",992522,Factura,21/05/2026,12408.8,1985.41,4859.19,DIF BASE + 25% IVA
+003266,"Surtiven 2020, C.A",992519,Factura,21/04/2026,1796.31,57.01,-0.0,RETENCION
+003312,"Farma - Lucky, C.A",992521,Factura,06/05/2026,1089.44,86.76,0.0,RETENCION
+003312,"Farma - Lucky, C.A",992523,Factura,06/05/2026,418.83,67.01,0.0,RETENCION
+003312,"Farma - Lucky, C.A",992524,Factura,06/05/2026,126.72,20.28,0.0,RETENCION
+003312,"Farma - Lucky, C.A",992525,Factura,06/05/2026,246.24,39.4,-0.0,RETENCION
+000150,Inversiones Duri. C.A.,992538,Factura,21/05/2026,184.92,4.44,82.2,DIF BASE + 25% IVA
+000436,"Farmatodo, C.A",992533,Factura,20/04/2026,491.78,64.58,0.0,RETENCION
+000436,"Farmatodo, C.A",992534,Factura,20/04/2026,474.23,29.82,-0.0,RETENCION
+000436,"Farmatodo, C.A",992535,Factura,20/04/2026,5.12,0.4,-0.0,RETENCION
+000556,"Papeleria y Centro de Copiado El Rompecabezas, C.A",992540,Factura,21/05/2026,310.42,43.37,-0.0,RETENCION
+002082,"RPK *, C.A",992549,Factura,21/05/2026,317.38,48.77,-0.0,RETENCION
+002609,"El Rompecabezas Fusion, C.A",992542,Factura,21/05/2026,349.62,29.08,0.0,RETENCION
+002841,"Aula 313, C.A",992546,Factura,21/05/2026,415.23,47.14,0.0,RETENCION
+002841,"Aula 313, C.A",992547,Factura,21/05/2026,320.51,51.28,-0.0,RETENCION
+003102,"Ofimil Inversiones, C.A",992566,Factura,22/05/2026,670.96,107.35,240.98,DIF BASE + 25% IVA
+003192,"Supercenter 168, C.A",992529,Factura,20/04/2026,490.5,0.0,0.0,IVA COMPLETO
+003312,"Farma - Lucky, C.A",992526,Factura,06/05/2026,786.88,101.1,,RETENCION
+002609,"El Rompecabezas Fusion, C.A",992579,Factura,24/05/2026,316.49,33.35,0.0,RETENCION
+000089,Corporacion Japonesa. C.A.,992598,Factura,28/05/2026,184.54,24.25,-0.0,RETENCION
+000113,"Comercial Latina, C.A.",992606,Factura,28/05/2026,393.56,54.25,393.56,BASE + 25% IVA
+002188,Profimatica C.A,992607,Factura,27/07/2026,4446.72,0.0,493.91,DIF BASE + IVA COMPLETO
+002188,Profimatica C.A,992608,Factura,27/06/2026,2791.76,209.25,2791.76,FACT.COMPLETA
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992619,Factura,28/05/2026,1340.0,0.0,1340.0,FACT.COMPLETA
+000103,La Reunion C.A.,992620,Factura,28/05/2026,718.92,39.19,718.92,FACT.COMPLETA
+000103,La Reunion C.A.,992624,Factura,28/05/2026,178.86,28.62,178.86,FACT.COMPLETA
+000103,La Reunion C.A.,992628,Factura,28/05/2026,1010.0,0.0,1010.0,FACT.COMPLETA
+002188,Profimatica C.A,992614,Factura,28/05/2026,3390.64,528.55,3390.64,FACT.COMPLETA
+002188,Profimatica C.A,992611,Factura,28/05/2026,3029.16,484.67,3029.16,FACT.COMPLETA
+002628,"Papeleria y Libreria Total MK, C.A",992630,Factura,20/05/2026,645.29,103.25,645.29,FACT.COMPLETA
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",992618,Factura,28/05/2026,445.25,71.24,445.25,FACT.COMPLETA
+002935,Producciones Litograficas Nacionales C.A,992634,Factura,28/05/2026,31.77,5.08,-0.0,25% IVA
+002935,Producciones Litograficas Nacionales C.A,992635,Factura,28/05/2026,109.68,17.55,-0.0,25% IVA
+002935,Producciones Litograficas Nacionales C.A,992636,Factura,28/05/2026,405.0,64.8,405.0,BASE + 25% IVA
+002935,Producciones Litograficas Nacionales C.A,992637,Factura,28/05/2026,511.24,20.59,511.24,BASE + 25% IVA
+000029,Corporacion Gran Import. C.A.,992657,Factura,21/05/2026,788.17,47.36,0.0,RETENCION
+000029,Corporacion Gran Import. C.A.,992658,Factura,21/05/2026,249.19,39.87,0.0,RETENCION
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992648,Factura,28/05/2026,402.93,64.46,402.93,FACT.COMPLETA
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992649,Factura,28/05/2026,550.05,88.0,550.05,FACT.COMPLETA
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992668,Factura,28/05/2026,839.82,134.37,839.82,FACT.COMPLETA
+000101,Asociacion Civil La Gran Proveeduria Estudiantil (A.C La Prov Estud.),992669,Factura,28/05/2026,562.56,90.01,562.56,FACT.COMPLETA
+000456,"Exipapel,C.A",992660,Factura,20/05/2026,187.51,30.0,0.0,RETENCION
+002212,Carlos Alfonso Araque Hernandez,992665,Factura,27/05/2026,292.05,30.31,292.05,FACT.COMPLETA
+002212,Carlos Alfonso Araque Hernandez,992667,Factura,27/05/2026,18.6,2.98,18.6,FACT.COMPLETA
+002609,"El Rompecabezas Fusion, C.A",992653,Factura,21/05/2026,293.03,46.88,293.03,BASE
+002749,El Mundo del Libro C.A,992659,Factura,21/05/2026,196.87,10.22,196.87,BASE + 25% IVA
+003308,"Ofimayor.Com Group, C.A",992656,Factura,21/05/2026,193.94,31.03,193.94,FACT.COMPLETA
+000081,Carvajal Romero C.A.,982272,Nota de Crédito,29/04/2026,-907.61,-145.22,-907.61,NC
+000150,Inversiones Duri. C.A.,992673,Factura,21/05/2026,102.72,16.44,102.72,BASE + 25% IVA
+000436,"Farmatodo, C.A",992674,Factura,27/04/2026,2239.53,309.65,0.0,RETENCION
+000436,"Farmatodo, C.A",992675,Factura,27/04/2026,1541.81,130.97,-0.0,RETENCION
+000436,"Farmatodo, C.A",992676,Factura,27/04/2026,27.77,2.38,0.0,RETENCION
+001732,"El Mundo Del Libro 2012, C.A.",992678,Factura,20/05/2026,94.72,15.16,-0.0,25% IVA
+002148,Casetel (Compañia Anonima de Servicios y Telecomunicaciones),992672,Factura,20/05/2026,1889.8,302.37,1889.8,FACT.COMPLETA
+003102,"Ofimil Inversiones, C.A",992683,Factura,24/05/2026,758.21,121.31,758.21,BASE + 25% IVA
+003266,"Surtiven 2020, C.A",982266,Nota de Crédito,29/04/2026,-279.36,-44.7,0.0,RETENCION
+003312,"Farma - Lucky, C.A",992679,Factura,06/05/2026,155.02,24.8,155.02,FACT.COMPLETA
+002662,El Estudiante  01 C.A,982276,Nota de Crédito,30/04/2026,-286.8,-45.89,0.0,RETENCION
+000028,Libreria Santa Rosa. C.A.,982280,Nota de Crédito,01/05/2026,-17.76,-2.84,0.0,RETENCION
+000028,Libreria Santa Rosa. C.A.,982281,Nota de Crédito,01/05/2026,-186.24,-29.8,0.0,RETENCION
+000028,Libreria Santa Rosa. C.A.,982282,Nota de Crédito,01/05/2026,-420.0,-67.2,0.0,RETENCION
+000555,"Genial Group , C.A",992708,Factura,04/06/2026,91.8,14.69,-0.0,RETENCION
+003185,"Supermarket Ejercito, C.A",992706,Factura,12/05/2026,206.4,27.74,206.4,FACT.COMPLETA
+000152,Libreria  Punto y Coma. C.A.,992724,Factura,04/06/2026,359.55,40.38,359.55,FACT.COMPLETA
+000154,Libreria Punto y Coma Unicentro. C.A.,992723,Factura,04/06/2026,359.55,40.38,359.55,FACT.COMPLETA
+000157,Libreria  Punto y Coma Caribe. C.A.,992725,Factura,05/06/2026,359.55,40.38,359.55,FACT.COMPLETA
+000268,Libreria  Tecnica  El Quijote. C.A.,992726,Factura,05/06/2026,359.55,40.38,359.55,FACT.COMPLETA
+002107,J & N  Inversiones C.A,992736,Factura,05/06/2026,915.88,66.12,133.89,DIF BASE + IVA COMPLETO
+003216,"Comercial 212, C.A",992753,Factura,06/06/2026,244.34,27.22,244.34,FACT.COMPLETA
+000546,"Zsitto, C.A.",992769,Factura,11/06/2026,151.76,24.28,0.0,RETENCION
+003264,"Inversiones Evergrande 168, C.A",992778,Factura,06/06/2026,1182.22,0.0,1182.22,FACT.COMPLETA
+003264,"Inversiones Evergrande 168, C.A",992779,Factura,06/06/2026,1056.96,169.11,1056.96,FACT.COMPLETA
+000081,Carvajal Romero C.A.,992787,Factura,10/06/2026,3632.78,202.36,3632.78,FACT.COMPLETA
+000081,Carvajal Romero C.A.,992788,Factura,10/06/2026,1829.3,271.67,1829.3,FACT.COMPLETA
+000081,Carvajal Romero C.A.,992802,Factura,10/06/2026,2167.8,346.85,2167.8,FACT.COMPLETA
+001794,"Variedades Oriari 2605, C.A.",992798,Factura,28/05/2026,208.07,25.08,0.0,RETENCION
+001794,"Variedades Oriari 2605, C.A.",992794,Factura,28/05/2026,639.39,102.3,0.0,RETENCION
+001794,"Variedades Oriari 2605, C.A.",992795,Factura,28/05/2026,491.44,23.56,-0.0,RETENCION
+002913,"Papeleria Oriari 0526, C.A",992796,Factura,28/05/2026,106.17,12.06,106.17,FACT.COMPLETA
+002913,"Papeleria Oriari 0526, C.A",992797,Factura,28/05/2026,501.86,25.23,-0.0,RETENCION
+002989,"Supermercado Don Samuel, C.A.",992803,Factura,18/05/2026,0.1,0.02,0.1,FACT.COMPLETA
+000436,"Farmatodo, C.A",982304,Nota de Crédito,12/05/2026,-0.4,-0.06,-0.4,NC
+000555,"Genial Group , C.A",982302,Nota de Crédito,27/05/2026,-19.28,-3.08,0.0,RETENCION
+002941,Tu Mundo Crayola C.A,992830,Factura,17/06/2026,587.32,88.96,587.32,FACT.COMPLETA
+,"Novedades Sirena 1438, C.A",992836,Factura,18/05/2026,384.24,61.48,0.0,RETENCION
+,"Novedades Sirena 1438, C.A",992838,Factura,18/05/2026,2542.4,209.11,-0.0,RETENCION
+,"Novedades Sirena 1438, C.A",992839,Factura,18/05/2026,622.44,99.59,-0.0,RETENCION
+002212,Carlos Alfonso Araque Hernandez,982309,Nota de Crédito,18/05/2025,-18.6,-2.98,-18.6,NC
+002755,Papeleria Chacao C.A,992852,Factura,17/06/2026,178.2,28.51,178.2,FACT.COMPLETA
+,"Espacios Modernos, C.A",992844,Factura,18/05/2026,622.44,99.59,-0.0,RETENCION
+,"Espacios Modernos, C.A",992845,Factura,18/05/2026,2523.44,206.07,0.0,RETENCION
+,"Espacios Modernos, C.A",992851,Factura,18/05/2026,384.24,61.48,-0.0,RETENCION
+000081,Carvajal Romero C.A.,982311,Nota de Crédito,21/05/2026,-839.42,-134.31,-839.42,NC
+002723,Mercantil Extra C.A,992858,Factura,24/06/2026,456.0,0.0,456.0,FACT.COMPLETA
+000318,Inversiones Burbujas 21. C.A.,992859,Factura,24/06/2026,273.6,0.0,273.6,FACT.COMPLETA
+003051,"Comercial Super Heroe, C.A",992864,Factura,24/06/2026,634.1,51.62,634.1,FACT.COMPLETA
+003252,Lixian Wu (Comercializadora Wu 2025 F.P),992869,Factura,24/06/2026,306.42,30.07,306.42,FACT.COMPLETA
+002325,"Mangocenter, C.A",992885,Factura,01/07/2026,1384.8,212.04,1384.8,BASE
+002414,Libreria Horizonte Lecheria C.A,992887,Factura,01/07/2026,133.72,21.4,133.72,FACT.COMPLETA
+,"Mini Market El Perijanero, C.A",992889,Factura,02/07/2026,418.24,66.92,418.24,FACT.COMPLETA
+002109,"Multitienda Offic Max, C.A",982317,Nota de Crédito,04/06/2026,-8.16,-1.31,-8.16,NC
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",982320,Nota de Crédito,04/06/2026,-52.6,-8.42,-52.6,NC
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",982321,Nota de Crédito,04/06/2026,-439.11,0.0,-439.11,NC
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",982322,Nota de Crédito,04/06/2026,-493.5,-78.96,-493.5,NC
+002737,Redvital Comercializadora C.A,992896,Factura,02/06/2026,170.33,24.88,170.33,FACT.COMPLETA
+002737,Redvital Comercializadora C.A,992897,Factura,02/06/2026,51.63,8.26,51.63,FACT.COMPLETA
+002811,"Inversiones 141067, C.A",992894,Factura,08/07/2026,595.9,95.34,595.9,FACT.COMPLETA
+002811,"Inversiones 141067, C.A",992895,Factura,08/07/2026,825.56,103.75,825.56,FACT.COMPLETA
+002941,Tu Mundo Crayola C.A,982318,Nota de Crédito,02/07/2026,-412.0,-65.92,-412.0,NC
+002075,Inversiones Payper C.A,992902,Factura,04/07/2026,316.08,50.57,316.08,FACT.COMPLETA
+003181,"Sunny House, C.A",992900,Factura,08/06/2026,2067.84,330.85,0.0,RETENCION
+000028,Libreria Santa Rosa. C.A.,992910,Factura,09/07/2026,2420.88,276.17,2420.88,FACT.COMPLETA
+000028,Libreria Santa Rosa. C.A.,992911,Factura,08/08/2026,1733.28,240.5,1733.28,FACT.COMPLETA
+002554,"Distribuidora Ogyar 1404, C.A.",992908,Factura,05/06/2026,440.3,70.45,-0.0,RETENCION
+000028,Libreria Santa Rosa. C.A.,992916,Factura,08/08/2026,240.0,38.4,240.0,FACT.COMPLETA
+,"Hogar Ideal 1441, C.A",992913,Factura,08/06/2026,678.16,52.95,-0.0,RETENCION
+,"Espacios Modernos, C.A",992919,Factura,08/06/2026,312.4,8.32,-0.0,RETENCION
+,"Novedades Sirena 1438, C.A",992917,Factura,08/06/2026,396.33,58.88,0.0,RETENCION
+,"Novedades Sirena 1438, C.A",992914,Factura,08/06/2026,283.55,45.37,0.0,RETENCION
+,"Novedades Sirena 1438, C.A",992915,Factura,08/06/2026,696.81,57.33,0.0,RETENCION
+,"Grupo Mango Bajito, C.A",992918,Factura,08/06/2026,373.4,4.19,0.0,RETENCION
+003108,"Libreria Maraury, C.A",992929,Factura,08/07/2026,351.92,50.43,351.92,BASE + 25% IVA
+000092,Distribuidora Brando. C.A.,992930,Factura,16/07/2026,2163.82,126.12,2163.82,FACT.COMPLETA
+002825,"Inversiones Constelacion 2022, C.A",982330,Nota de Crédito,11/06/2026,-153.99,-21.84,-153.99,NC
+003112,"Distribuidora De Papeleria Ofipaca, C.A",992932,Factura,12/07/2026,442.08,70.73,-0.0,RETENCION
+002716,"Su Mayor De Papeleria ,C.A (Sumapaca)",992937,Factura,16/07/2026,985.21,157.63,985.21,FACT.COMPLETA
+002825,"Inversiones Constelacion 2022, C.A",992936,Factura,12/07/2026,153.99,24.64,153.99,FACT.COMPLETA
+003045,"Universo Papelero, C.A",992935,Factura,12/07/2026,45.36,2.3,45.36,FACT.COMPLETA
+003266,"Surtiven 2020, C.A",992940,Factura,15/06/2026,558.72,89.4,558.72,FACT.COMPLETA
+000114,Chinalandia. C.A.,992944,Factura,23/07/2026,2637.64,145.7,2637.64,FACT.COMPLETA
+000436,"Farmatodo, C.A",992941,Factura,15/06/2026,2112.98,304.46,-0.0,RETENCION
+000436,"Farmatodo, C.A",992942,Factura,15/06/2026,1532.19,146.54,0.0,RETENCION
+000436,"Farmatodo, C.A",992943,Factura,15/06/2026,44.5,4.94,0.0,RETENCION
+002554,"Distribuidora Ogyar 1404, C.A.",992946,Factura,16/07/2026,219.36,35.1,219.36,BASE + 25% IVA
+003266,"Surtiven 2020, C.A",992945,Factura,22/06/2026,153.6,24.58,153.6,FACT.COMPLETA
+003302,"1GVA, C.A",992947,Factura,25/07/2026,144.21,23.07,144.21,FACT.COMPLETA
+003216,"Comercial 212, C.A",992956,Factura,07/07/2026,314.92,34.5,314.92,FACT.COMPLETA
+003264,"Inversiones Evergrande 168, C.A",992951,Factura,23/07/2026,511.2,81.79,511.2,FACT.COMPLETA
+,Fotocopiado La Central C.A,992950,Factura,23/07/2026,381.65,61.06,381.65,FACT.COMPLETA
+,"Famoso Hipermercado, C.A",992958,Factura,23/07/2026,462.34,36.04,462.34,FACT.COMPLETA
+,"Multitiendas Familia, C.A",992955,Factura,23/07/2026,401.01,54.87,401.01,FACT.COMPLETA
+000088,Interbyte. C.A.,992966,Factura,23/07/2026,523.25,83.72,523.25,FACT.COMPLETA
+001462,Insumos De Papelería y Articulos De Oficina Pirineos C.A. (Inparpica),992962,Factura,25/07/2026,284.2,21.77,284.2,FACT.COMPLETA
+001462,Insumos De Papelería y Articulos De Oficina Pirineos C.A. (Inparpica),992964,Factura,25/07/2026,336.8,26.76,336.8,FACT.COMPLETA
+002148,Casetel (Compañia Anonima de Servicios y Telecomunicaciones),992967,Factura,22/07/2026,2988.4,0.0,2988.4,FACT.COMPLETA
+,"Famoso Hipermercado, C.A",992959,Factura,23/07/2026,342.23,54.76,342.23,FACT.COMPLETA
+,"Multitienda Familia, C.A",992960,Factura,23/07/2026,268.83,43.01,268.83,FACT.COMPLETA
+,"Multitienda Familia, C.A",992961,Factura,23/07/2026,328.4,26.56,328.4,FACT.COMPLETA
+002148,Casetel (Compañia Anonima de Servicios y Telecomunicaciones),992968,Factura,22/07/2026,0.1,0.02,0.1,FACT.COMPLETA
+002950,Emprendimiento Marian Ramos,992969,Factura,23/07/2026,153.0,0.0,153.0,FACT.COMPLETA
+000092,Distribuidora Brando. C.A.,982334,Nota de Crédito,24/06/2026,-690.3,0.0,-690.3,NC
+000328,Recorca. C.A.,982336,Nota de Crédito,07/07/2026,-216.0,-34.56,-216.0,NC
+000436,"Farmatodo, C.A",992971,Factura,22/06/2026,2034.99,293.27,0.0,RETENCION
+000436,"Farmatodo, C.A",992972,Factura,22/06/2026,1374.44,146.21,0.0,RETENCION
+000436,"Farmatodo, C.A",992973,Factura,22/06/2026,28.29,2.64,0.0,RETENCION
+002755,Papeleria Chacao C.A,992974,Factura,23/07/2026,259.56,41.53,259.56,FACT.COMPLETA
+003220,"Grupo El Exitazo, C.A",992975,Factura,23/07/2026,1313.04,210.09,1313.04,
+003266,"Surtiven 2020, C.A",982335,Nota de Crédito,24/06/2026,-320.64,-51.3,-320.64,NC
+003312,"Farma - Lucky, C.A",992976,Factura,15/08/2026,445.2,71.23,445.2,FACT.COMPLETA
+000436,"Farmatodo, C.A",982337,Nota de Crédito,29/06/2026,-1.32,-0.16,-1.32,NC
+000436,"Farmatodo, C.A",982338,Nota de Crédito,29/06/2026,-28.57,-3.84,0.0,RETENCION
+000436,"Farmatodo, C.A",982339,Nota de Crédito,29/06/2026,-34.37,-4.19,0.0,RETENCION
+000436,"Farmatodo, C.A",992980,Factura,29/06/2026,599.5,80.59,0.0,RETENCION
+000436,"Farmatodo, C.A",992981,Factura,29/06/2026,721.76,87.92,0.0,RETENCION
+000436,"Farmatodo, C.A",992982,Factura,29/06/2026,27.79,1.12,0.0,RETENCION
+000436,"Farmatodo, C.A",992983,Factura,29/06/2026,1069.39,145.21,-0.0,RETENCION
+000436,"Farmatodo, C.A",992984,Factura,29/06/2026,559.72,57.33,0.0,RETENCION
+000436,"Farmatodo, C.A",992985,Factura,29/06/2026,40.36,4.89,0.0,RETENCION
+000324,Felix Valois Acevedo (Papeleria El Venezolano),992986,Factura,06/08/2026,506.75,39.1,506.75,FACT.COMPLETA
+000837,"""Papeleria Latina Oriente, Compañia Anonima""",992988,Factura,15/08/2026,333.8,53.41,333.8,FACT.COMPLETA
+002737,Redvital Comercializadora C.A,992987,Factura,16/07/2026,117.88,15.56,117.88,FACT.COMPLETA
+002737,Redvital Comercializadora C.A,992948,Factura,16/07/2026,179.04,23.87,-0.0,RETENCION
+002737,Redvital Comercializadora C.A,992949,Factura,16/07/2026,81.0,10.91,-0.0,RETENCION
+000153,Libreria Europa Costa Verde. C.A.,992994,Factura,16/07/2026,369.36,59.1,369.36,FACT.COMPLETA
+000177,Papeleria Esteva. C.A.,992992,Factura,16/07/2026,249.26,5.26,249.26,FACT.COMPLETA
+002996,Meixian Feng (Automercado Wu y Feng),992993,Factura,31/07/2026,11.52,1.84,11.52,FACT.COMPLETA
+000028,Libreria Santa Rosa. C.A.,992998,Factura,15/08/2026,893.52,50.5,893.52,FACT.COMPLETA
+000081,Carvajal Romero C.A.,992996,Factura,16/07/2026,1467.6,50.5,1467.6,FACT.COMPLETA
+000088,Interbyte. C.A.,992997,Factura,15/08/2026,317.5,0.0,317.5,FACT.COMPLETA
+000092,Distribuidora Brando. C.A.,992999,Factura,14/09/2026,2515.08,126.24,2515.08,FACT.COMPLETA
+000092,Distribuidora Brando. C.A.,992995,Factura,16/07/2026,4233.6,0.0,4233.6,FACT.COMPLETA
+000114,Chinalandia. C.A.,993000,Factura,15/08/2026,553.2,46.27,553.2,FACT.COMPLETA
+000316,Comercial Victoria HL C.A.,993003,Factura,15/08/2026,495.0,23.14,495.0,FACT.COMPLETA
+000436,"Farmatodo, C.A",993004,Factura,16/07/2026,2241.1,272.04,-0.0,RETENCION
+000436,"Farmatodo, C.A",993005,Factura,16/07/2026,1184.6,107.5,0.0,RETENCION
+000436,"Farmatodo, C.A",993006,Factura,16/07/2026,47.93,5.93,0.0,RETENCION
+000436,"Farmatodo, C.A",982343,Nota de Crédito,16/07/2026,-6.63,-0.93,-6.63,NC
+000436,"Farmatodo, C.A",982344,Nota de Crédito,16/07/2026,-9.04,-0.73,-9.04,NC
+000436,"Farmatodo, C.A",982345,Nota de Crédito,16/07/2026,-18.1,-2.57,-18.1,NC
+000436,"Farmatodo, C.A",982346,Nota de Crédito,16/07/2026,-8.17,-0.72,-8.17,NC
+000436,"Farmatodo, C.A",993008,Factura,16/07/2026,958.63,124.06,958.63,FACT.COMPLETA
+000436,"Farmatodo, C.A",993009,Factura,16/07/2026,419.96,46.96,419.96,FACT.COMPLETA
+000436,"Farmatodo, C.A",993010,Factura,16/07/2026,225.16,28.71,225.16,FACT.COMPLETA
+000436,"Farmatodo, C.A",993011,Factura,16/07/2026,251.66,22.94,251.66,FACT.COMPLETA
+002325,"Mangocenter, C.A",993012,Factura,15/08/2026,88.25,14.12,88.25,FACT.COMPLETA
+000436,"Farmatodo, C.A",993013,Factura,16/07/2026,781.51,96.3,781.51,FACT.COMPLETA
+000436,"Farmatodo, C.A",993014,Factura,16/07/2026,339.02,44.48,339.02,FACT.COMPLETA
+000436,"Farmatodo, C.A",993015,Factura,16/07/2026,19.46,2.05,19.46,FACT.COMPLETA
+002737,Redvital Comercializadora C.A,993016,Factura,18/07/2026,194.74,16.41,194.74,FACT.COMPLETA
