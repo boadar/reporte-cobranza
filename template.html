@@ -583,12 +583,12 @@ function renderFacturas(){
   if(!chosenCli){el.innerHTML='<div class="fnone">Selecciona primero el cliente para ver sus facturas pendientes.</div>';updateSaldo();return;}
   const arr=facturasDe(chosenCli.cod);
   if(!arr.length){el.innerHTML='<div class="fnone">Este cliente no tiene facturas pendientes en el listado.</div>';updateSaldo();return;}
-  let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base</th><th class="num">IVA</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
+  let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base $</th><th class="num">IVA Bs.</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
   arr.forEach((f,i)=>{
     const nc=f.b<0?' nc':'';
-    h+='<tr id="frow'+i+'" onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td><td class="num">'+fmtUsd(f.i)+'</td><td class="num'+nc+'">'+fmtUsd(f.p)+'</td><td>'+esc(f.o||'')+'</td></tr>';
+    h+='<tr id="frow'+i+'" onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td><td class="num'+nc+'">'+(f.ib!=null&&f.ib!==0?fmtUsd(f.ib):'—')+'</td><td class="num'+nc+'">'+fmtUsd(f.p)+'</td><td>'+esc(f.o||'')+'</td></tr>';
   });
-  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Montos en $. Toca una fila para asignarle el pago.</div>';
+  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Base y Total x Pagar en $. IVA Bs. calculado con la tasa del día de la factura. Toca una fila para asignarle el pago.</div>';
   el.innerHTML=h;
   updateSaldo();
 }

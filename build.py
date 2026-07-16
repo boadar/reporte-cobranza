@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v15'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v16'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -54,7 +54,9 @@ def gen_data():
                         return 0.0
                 fac.setdefault(cod, []).append({
                     'f': r['Factura'], 't': r['Tipo'], 'v': r['Vencimiento'],
+                    'fd': r.get('FechaFactura', ''), 'tf': fnum(r.get('TasaFact', '')),
                     'b': fnum(r['Base']), 'i': fnum(r['IVA']),
+                    'ib': fnum(r.get('IVABs', '')), 'i25': fnum(r.get('IVA25', '')),
                     'p': fnum(r['TotalPorPagar']), 'o': r['Observacion'],
                 })
                 n += 1
