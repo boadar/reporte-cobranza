@@ -191,6 +191,13 @@ table.ftbl .nc{color:var(--danger)}
       <div class="field" style="margin:10px 0 0"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 992505" autocomplete="off" oninput="onFacturaInput()"></div>
       <div class="usd" id="saldoInfo"></div>
     </div>
+    <div class="card">
+      <div class="row2">
+        <div class="field"><label>Forma de pago</label><select id="fForma"><option>Transferencia</option><option>Efectivo</option></select></div>
+        <div class="field"><label>Moneda del pago</label><select id="fMonedaPago"><option>Bs.</option><option>$</option></select></div>
+      </div>
+      <div class="field" style="margin-bottom:0"><label>Observaciones</label><input id="fObs" placeholder="Observación" autocomplete="off"></div>
+    </div>
     <button class="btn btn-ok" id="btnSave" onclick="saveCobranza()" style="margin-bottom:10px">Guardar cobranza</button>
     <button class="btn btn-ghost" onclick="resetAndHome()">Descartar</button>
   </div>
@@ -512,6 +519,9 @@ function fillResult(bank,d,img){
   chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';
   document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';
   document.getElementById('fFactura').value='';
+  document.getElementById('fForma').value='Transferencia';
+  document.getElementById('fMonedaPago').value='Bs.';
+  document.getElementById('fObs').value='';
   renderCliSuggest();
   renderFacturas();
   calcUsd();
@@ -597,6 +607,7 @@ function pickFactura(i){
   const arr=facturasDe(chosenCli.cod);const f=arr[i];if(!f)return;
   selFactura=f;
   document.getElementById('fFactura').value=f.f;
+  document.getElementById('fObs').value=f.o||'';
   arr.forEach((_,j)=>{const r=document.getElementById('frow'+j);if(r)r.className=(j===i?'on':'');});
   updateSaldo();
 }
@@ -668,8 +679,17 @@ async function saveCobranza(){
     usd:document.getElementById('fUsd').value.trim(),
     ref:ref,
     factura:document.getElementById('fFactura').value.trim(),
+    facturaFecha:selFactura?(selFactura.fd||''):'',
+    facturaTasa:selFactura?(selFactura.tf||null):null,
     facturaBase:selFactura?selFactura.b:null,
+    facturaIva:selFactura?selFactura.i:null,
+    facturaIvaBs:selFactura?(selFactura.ib||null):null,
+    facturaIva25:selFactura?(selFactura.i25||null):null,
     facturaSaldo:selFactura?Math.round((selFactura.b-pagoUsd())*100)/100:null,
+    formaPago:document.getElementById('fForma').value,
+    monedaPago:document.getElementById('fMonedaPago').value,
+    tasaPago:(function(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;})(),
+    obs:document.getElementById('fObs').value.trim(),
     orig:document.getElementById('fOrig').value.trim(),
     dest:dest,
     banco:current&&current.bank?current.bank.nombre:'',
@@ -733,6 +753,9 @@ function openEdit(id){
   renderFacturas();
   document.getElementById('fFactura').value=rec.factura||'';
   onFacturaInput();
+  document.getElementById('fForma').value=rec.formaPago||'Transferencia';
+  document.getElementById('fMonedaPago').value=rec.monedaPago||'Bs.';
+  document.getElementById('fObs').value=rec.obs||'';
   document.getElementById('btnSave').textContent='Actualizar cobranza';
   calcUsd();updateOficaInfo();updateDupWarn();
   go('scResult');setTab('tabList');
@@ -742,8 +765,42 @@ function openEdit(id){
 function loadScriptOnce(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=()=>res();s.onerror=()=>rej(new Error('no se pudo cargar '+url));document.head.appendChild(s);});}
 let xlsxLoading=null;
 function ensureXLSX(){if(window.XLSX)return Promise.resolve();if(!xlsxLoading)xlsxLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return xlsxLoading;}
-const REP_HEAD=['Fecha','Banco Emisor','Monto Bs','Monto $','Referencia','N Factura','Monto Original $','Monto Resultante $','Cuenta Origen','Cuenta Destino','Cuenta OFICA','Moneda','Codigo Cliente','Nombre Cliente','Registrado'];
-function repRow(r){return [r.fecha||'',r.banco||'',r.monto!=null?r.monto:'',r.usd||'',r.ref||'',r.factura||'',r.facturaBase!=null?r.facturaBase:'',r.facturaSaldo!=null?r.facturaSaldo:'',r.orig||'',r.dest||'',r.oficaBanco||'',r.oficaMoneda||'',r.cliCod||'',r.cliNom||'',r.creado||''];}
+const REP_HEAD=['Fecha','N Factura','Nombre Cliente','Tasa Fact','Base $','IVA $','TOTAL $','Base Original','IVA Fact','Total Bs. Fact','25% IVA','RET IVA','Forma de Pago','Moneda','Monto Bs','Fecha del pago','Tasa del pago','Moneda','Pago $','Diferencial','Observaciones'];
+function r2(n){return Math.round(n*100)/100;}
+function repRow(r){
+  const b=r.facturaBase, i=r.facturaIva, tf=r.facturaTasa;
+  const hasBI=(b!=null&&i!=null);
+  const total$   = hasBI ? r2(b+i) : '';
+  const baseOrig = (b!=null&&tf) ? r2(b*tf) : '';          // Base en Bs = Base $ x Tasa Fact
+  const ivaFact  = (r.facturaIvaBs!=null) ? r.facturaIvaBs : ((i!=null&&tf)?r2(i*tf):'');  // IVA en Bs
+  const totalBs  = (hasBI&&tf) ? r2((b+i)*tf) : '';        // (Base $ + IVA $) x Tasa Fact
+  const iva25    = (r.facturaIva25!=null) ? r.facturaIva25 : (ivaFact!==''?r2(ivaFact*0.25):'');
+  const retIva   = (ivaFact!=='') ? r2(ivaFact*0.75) : ''; // IVA Bs - 25% = 75% del IVA Bs
+  const pagoUsd  = parseMonto(r.usd);
+  return [
+    r.facturaFecha||'',            // 1  Fecha (de la factura)
+    r.factura||'',                 // 2  N Factura
+    r.cliNom||'',                  // 3  Nombre Cliente
+    tf||'',                        // 4  Tasa Fact
+    b!=null?b:'',                  // 5  Base $
+    i!=null?i:'',                  // 6  IVA $
+    total$,                        // 7  TOTAL $
+    baseOrig,                      // 8  Base Original (Bs)
+    ivaFact,                       // 9  IVA Fact (Bs)
+    totalBs,                       // 10 Total Bs. Fact
+    iva25,                         // 11 25% IVA
+    retIva,                        // 12 RET IVA (75% del IVA Bs)
+    r.formaPago||'',               // 13 Forma de Pago
+    '$',                           // 14 Moneda (de la factura, siempre $)
+    r.monto!=null?r.monto:'',      // 15 Monto Bs (del comprobante)
+    r.fecha||'',                   // 16 Fecha del pago
+    r.tasaPago||'',                // 17 Tasa del pago
+    r.monedaPago||'',              // 18 Moneda (del pago)
+    pagoUsd!=null?pagoUsd:'',      // 19 Pago $
+    '',                            // 20 Diferencial (pendiente de definir)
+    r.obs||''                      // 21 Observaciones
+  ];
+}
 async function buildReportFile(sel){
   try{
     await ensureXLSX();
@@ -753,7 +810,7 @@ async function buildReportFile(sel){
     const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     return new File([out],'Cobranzas.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }catch(e){
-    const csv=[REP_HEAD].concat(sel.map(r=>{const row=repRow(r);row[2]=r.monto!=null?String(r.monto).replace('.',','):'';return row;})).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+    const csv=[REP_HEAD].concat(sel.map(r=>repRow(r).map(c=>typeof c==='number'?String(c).replace('.',','):c))).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
     return new File(['﻿'+csv],'Cobranzas.csv',{type:'text/csv'});
   }
 }
