@@ -224,6 +224,11 @@ function normFecha(s){
 }
 function pad(n){return String(n).padStart(2,'0');}
 function grab(text,re){const m=text.match(re);return m?(m[1]||m[0]):'';}
+function bestMonto(t){
+  const re=/\d{1,3}(?:\.\d{3})*,\d{2}/g;let m,best=null;
+  while(m=re.exec(t)){const v=parseMonto(m[0]);if(v!=null&&(best==null||v>best))best=v;}
+  return best;
+}
 
 const BANCOS=[
  {id:'banesco',nombre:'Banesco',detect:/banesco/i,extract(t){return{
@@ -331,6 +336,11 @@ function matchOficaCuenta(dest){
   if(cands.length>1 && cands.every(c=>c.banco===cands[0].banco))return {banco:cands[0].banco,moneda:'',ambig:true};
   return null;
 }
+function findOficaDest(t){
+  const toks=t.match(/[\d*]{4,}/g)||[];
+  for(const tk of toks){if(matchOficaCuenta(tk))return tk;}
+  return '';
+}
 
 /* ---------- carga y OCR ---------- */
 let current=null;
@@ -356,6 +366,9 @@ async function ocr(img,base,span){
 }
 function finishExtract(text,bank,img){
   const data=bank?bank.extract(text):genericExtract(text);
+  const bm=bestMonto(text);
+  if(bm!=null)data.monto=bm;
+  if(!matchOficaCuenta(data.dest)){const od=findOficaDest(text);if(od)data.dest=od;}
   current={img:img,text:text,bank:bank,data:data};
   fillResult(bank,data,img);
   const fac=extractFactura(text);
