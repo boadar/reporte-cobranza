@@ -254,19 +254,22 @@ const BANCOS=[
    fecha:normFecha(grab(t,/fecha operaci[oó]n[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
    monto:parseMonto(grab(t,/monto transferido[^\d]*([\d.,]+)/i)),
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
-   dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i)};}},
+   dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
+   empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
  {id:'mercantil',nombre:'Mercantil',detect:/mercantil/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
    monto:parseMonto(grab(t,/monto transferido[^\d]*([\d.,]+)/i)||grab(t,/monto[^\d]*([\d.,]{4,})/i)),
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
-   dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i)};}},
+   dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
+   empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
  {id:'bancaribe',nombre:'Bancaribe',detect:/bancaribe/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{4,})/i)||grab(t,/clave de confirmaci[oó]n[:\s]*(\d{4,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}-[A-Za-z]{3,}-\d{2,4})/)||grab(t,/(\d{1,2}\s+de\s+[A-Za-zÁÉÍÓÚáéíóú]+\s+del?\s+\d{4})/i)),
    monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
    orig:grab(t,/cuenta a debitar[^\d*]*([\d*]{4,})/i),
-   dest:grab(t,/cuenta a acreditar[^\d*]*([\d*]{4,})/i)};}}
+   dest:grab(t,/cuenta a acreditar[^\d*]*([\d*]{4,})/i),
+   empresa:grab(t,/(?:domingo|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado)[^\n]*\n\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)||grab(t,/comprobante de transferencia\s*\n\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}}
 ];
 function detectBank(t){
   let best=null,bestIdx=Infinity;
@@ -275,15 +278,13 @@ function detectBank(t){
 }
 
 /* ---------- sugerir cliente por el nombre del archivo ---------- */
-const FN_STOP=new Set(['pago','pagos','comprobante','comprobantes','transferencia','transf','recibo','deposito','abono','abonos','bs','bolivares','banco','banesco','bancaribe','bdv','venezuela','provincial','mercantil','bnc','bicentenario','tesoro','banplus','bod','sofitasa','exterior','factura','fact','fac','ref','referencia','screenshot','captura','pantalla','img','image','imagen','foto','whatsapp','doc','pdf','ca','cia','sa','srl','rif','de','del','la','el','los','las','y','e','cliente','copy','copia','final','nuevo','nota','saldo','total','monto','soporte','anexo','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','setiembre','octubre','noviembre','diciembre']);
-function cleanFileName(name){
-  let s=name.replace(/\.[a-z0-9]{2,5}$/i,'');
-  s=stripAcc(s).toLowerCase().replace(/[_\-.,;:()\[\]#]+/g,' ').replace(/\s+/g,' ').trim();
-  return s;
+const FN_STOP=new Set(['pago','pagos','comprobante','comprobantes','transferencia','transf','recibo','deposito','abono','abonos','bs','bolivares','banco','banesco','bancaribe','bdv','venezuela','provincial','provinet','mercantil','bnc','bicentenario','tesoro','banplus','bod','sofitasa','exterior','factura','fact','fac','ref','referencia','screenshot','captura','pantalla','img','image','imagen','imagenes','foto','whatsapp','doc','docx','pdf','jpg','jpeg','png','webp','gif','heic','ca','cia','sa','srl','rif','de','del','la','el','los','las','y','e','cliente','copy','copia','final','nuevo','nota','saldo','total','monto','soporte','anexo','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','setiembre','octubre','noviembre','diciembre']);
+['cuenta','destino','origen','concepto','transferido','beneficiario','confirmacion','identificacion','operacion','corriente','ahorro','ahorros','universal','solicitud','enviada','listo','otros','bancos','banca','internet','servicio','tecnico','resumen','procesada','terceros','instrumento','clave','usuario','empresa','numero','nombre','fecha','hora','moneda','nacional','abonado','abonada','email','divisas'].forEach(w=>FN_STOP.add(w));
+function tokenizeName(str){
+  return stripAcc(String(str||'')).toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>=3 && !FN_STOP.has(w) && !/^\d+$/.test(w));
 }
-function suggestClientFromName(name){
-  if(!name)return null;
-  const toks=cleanFileName(name).split(' ').filter(w=>w.length>=3 && !FN_STOP.has(w) && !/^\d+$/.test(w));
+function bestClientMatch(str){
+  const toks=tokenizeName(str);
   if(!toks.length)return null;
   let best=null;
   for(let i=0;i<CLIENTES.length;i++){
@@ -297,11 +298,23 @@ function suggestClientFromName(name){
   if(best && (best.score>=2 || best.mlen>=5)) return best;
   return null;
 }
+function cleanForSearch(str){
+  return tokenizeName(str).slice(0,4).join(' ');
+}
 function renderCliSuggest(){
   const el=document.getElementById('cliSuggest');
-  const b=chosenCli?null:suggestClientFromName(lastFileName);
-  if(!b){el.innerHTML='';return;}
-  el.innerHTML='<div class="suggest"><div class="stxt"><span class="slbl">Sugerido por el nombre del archivo</span><span class="snm">'+esc(b.nom)+'</span></div><button class="sbtn" onclick="pickCli(\''+b.cod+'\')">Usar</button></div>';
+  el.innerHTML='';
+  if(chosenCli)return;
+  const empresa=current&&current.empresa?current.empresa:'';
+  let b=empresa?bestClientMatch(empresa):null, src='comprobante';
+  if(!b){b=bestClientMatch(lastFileName);src='archivo';}
+  if(b){
+    el.innerHTML='<div class="suggest"><div class="stxt"><span class="slbl">Sugerido por el '+(src==='comprobante'?'comprobante':'nombre del archivo')+'</span><span class="snm">'+esc(b.nom)+'</span></div><button class="sbtn" onclick="pickCli(\''+b.cod+'\')">Usar</button></div>';
+    return;
+  }
+  // sin coincidencia: si el comprobante trae empresa, dejarla en el buscador para revision manual
+  const q=empresa?cleanForSearch(empresa):'';
+  if(q){document.getElementById('cliSearch').value=q;searchCli();}
 }
 function genericExtract(t){return{
   ref:grab(t,/referencia[^\d]*(\d{5,})/i),
@@ -369,7 +382,7 @@ function finishExtract(text,bank,img){
   const bm=bestMonto(text);
   if(bm!=null)data.monto=bm;
   if(!matchOficaCuenta(data.dest)){const od=findOficaDest(text);if(od)data.dest=od;}
-  current={img:img,text:text,bank:bank,data:data};
+  current={img:img,text:text,bank:bank,data:data,empresa:(data.empresa||'').trim()};
   fillResult(bank,data,img);
   const fac=extractFactura(text);
   if(fac)document.getElementById('fFactura').value=fac;
