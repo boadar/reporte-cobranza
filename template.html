@@ -788,7 +788,15 @@ let xlsxLoading=null;
 function ensureXLSX(){if(window.XLSX)return Promise.resolve();if(!xlsxLoading)xlsxLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return xlsxLoading;}
 const REP_HEAD=['Fecha','N Factura','Nombre Cliente','Tasa Fact','Base $','IVA $','TOTAL $','Base Original','IVA Fact','Total Bs. Fact','25% IVA','RET IVA','Forma de Pago','Moneda','Monto Bs','Fecha del pago','Tasa del pago','Moneda','Pago $','Diferencial','Observaciones'];
 function r2(n){return Math.round(n*100)/100;}
-function repRow(r){
+/* Cada cobro genera 2 filas: la porcion aplicada a la Base y la aplicada al 25% del IVA.
+   Ambas suman el pago total (en Bs y en $). modo = 'base' | 'iva' */
+function repRows(r){
+  const out=[repRow(r,'base')];
+  const iva25=r.facturaIva25;
+  if(iva25!=null && iva25>0) out.push(repRow(r,'iva'));
+  return out;
+}
+function repRow(r,modo){
   const b=r.facturaBase, i=r.facturaIva, tf=r.facturaTasa;
   const hasBI=(b!=null&&i!=null);
   const total$   = hasBI ? r2(b+i) : '';
@@ -798,6 +806,19 @@ function repRow(r){
   const iva25    = (r.facturaIva25!=null) ? r.facturaIva25 : (ivaFact!==''?r2(ivaFact*0.25):'');
   const retIva   = (ivaFact!=='') ? r2(ivaFact*0.75) : ''; // IVA Bs - 25% = 75% del IVA Bs
   const pagoUsd  = parseMonto(r.usd);
+  // --- lo que cambia entre la fila de la Base y la del 25% IVA ---
+  const iva25Bs = (r.facturaIva25!=null) ? r.facturaIva25 : 0;
+  const tp = r.tasaPago;
+  let montoBsCol, pagoCol, obsCol;
+  if(modo==='iva'){
+    montoBsCol = iva25Bs || '';                                  // porcion del pago que cubre el 25% IVA
+    pagoCol    = (tp && iva25Bs) ? r2(iva25Bs/tp) : '';
+    obsCol     = (r.obs ? r.obs+' · ' : '')+'Pago aplicado al 25% IVA';
+  }else{
+    montoBsCol = (r.pagoRestanteBs!=null) ? r.pagoRestanteBs : (r.monto!=null?r.monto:'');
+    pagoCol    = (r.pagoAplicadoUsd!=null) ? r.pagoAplicadoUsd : (pagoUsd!=null?pagoUsd:'');
+    obsCol     = r.obs||'';
+  }
   return [
     r.facturaFecha||'',            // 1  Fecha (de la factura)
     r.factura||'',                 // 2  N Factura
@@ -813,25 +834,25 @@ function repRow(r){
     retIva,                        // 12 RET IVA (75% del IVA Bs)
     r.formaPago||'',               // 13 Forma de Pago
     '$',                           // 14 Moneda (de la factura, siempre $)
-    r.monto!=null?r.monto:'',      // 15 Monto Bs (del comprobante)
+    montoBsCol,                    // 15 Monto Bs (porcion de esta fila)
     r.fecha||'',                   // 16 Fecha del pago
     r.tasaPago||'',                // 17 Tasa del pago
     r.monedaPago||'',              // 18 Moneda (del pago)
-    pagoUsd!=null?pagoUsd:'',      // 19 Pago $
+    pagoCol,                       // 19 Pago $ (neto de esta fila)
     '',                            // 20 Diferencial (pendiente de definir)
-    r.obs||''                      // 21 Observaciones
+    obsCol                         // 21 Observaciones
   ];
 }
 async function buildReportFile(sel){
   try{
     await ensureXLSX();
-    const aoa=[REP_HEAD].concat(sel.map(repRow));
+    const aoa=[REP_HEAD].concat(sel.flatMap(repRows));
     const ws=XLSX.utils.aoa_to_sheet(aoa);
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cobranzas');
     const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     return new File([out],'Cobranzas.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }catch(e){
-    const csv=[REP_HEAD].concat(sel.map(r=>repRow(r).map(c=>typeof c==='number'?String(c).replace('.',','):c))).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+    const csv=[REP_HEAD].concat(sel.flatMap(repRows).map(row=>row.map(c=>typeof c==='number'?String(c).replace('.',','):c))).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
     return new File(['﻿'+csv],'Cobranzas.csv',{type:'text/csv'});
   }
 }
