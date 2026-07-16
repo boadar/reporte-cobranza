@@ -620,11 +620,30 @@ function onFacturaInput(){
   updateSaldo();
 }
 function pagoUsd(){const v=parseMonto(document.getElementById('fUsd').value);return v==null?0:v;}
+function tasaPagoActual(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;}
+/* Aplicacion del pago: 1) se descuenta el 25% del IVA en Bs, 2) el restante en Bs se
+   pasa a $ con la tasa del dia del pago, 3) ese monto se descuenta de la Base en $. */
+function aplicacionPago(){
+  if(!selFactura)return null;
+  const pagoBs=parseMonto(document.getElementById('fMonto').value)||0;
+  const iva25=selFactura.i25||0;
+  const restanteBs=pagoBs-iva25;
+  const tasa=tasaPagoActual();
+  const restanteUsd=tasa?Math.round((restanteBs/tasa)*100)/100:null;
+  const saldo=(restanteUsd!=null)?Math.round((selFactura.b-restanteUsd)*100)/100:null;
+  return {pagoBs:pagoBs,iva25:iva25,restanteBs:restanteBs,tasa:tasa,restanteUsd:restanteUsd,base:selFactura.b,saldo:saldo};
+}
 function updateSaldo(){
   const el=document.getElementById('saldoInfo');if(!el)return;
-  if(!selFactura){el.innerHTML='';return;}
-  const pago=pagoUsd(), base=selFactura.b, saldo=base-pago;
-  el.innerHTML='<div class="saldo-box'+(saldo<0?' saldo-neg':'')+'">Factura '+esc(selFactura.f)+' · Base <b>$'+fmtUsd(base)+'</b> &minus; Pago <b>$'+fmtUsd(pago)+'</b><br>Saldo final: <b>$'+fmtUsd(saldo)+'</b>'+(saldo<0?' (el pago excede la base)':'')+'</div>';
+  const a=aplicacionPago();
+  if(!a){el.innerHTML='';return;}
+  if(a.tasa==null){el.innerHTML='<div class="saldo-box saldo-neg">No hay tasa para la fecha del pago: no se puede calcular el saldo.</div>';return;}
+  const neg=a.saldo<0;
+  el.innerHTML='<div class="saldo-box'+(neg?' saldo-neg':'')+'">Factura '+esc(selFactura.f)+
+    '<br>Pago <b>Bs '+fmtUsd(a.pagoBs)+'</b> &minus; 25% IVA <b>Bs '+fmtUsd(a.iva25)+'</b> = <b>Bs '+fmtUsd(a.restanteBs)+'</b>'+
+    '<br>&divide; Tasa '+a.tasa.toLocaleString('es-VE',{minimumFractionDigits:4,maximumFractionDigits:4})+' = <b>$'+fmtUsd(a.restanteUsd)+'</b> aplicado a la Base'+
+    '<br>Base <b>$'+fmtUsd(a.base)+'</b> &minus; <b>$'+fmtUsd(a.restanteUsd)+'</b> &rarr; Saldo final: <b>$'+fmtUsd(a.saldo)+'</b>'+
+    (neg?' (excede la base)':'')+'</div>';
 }
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
@@ -685,7 +704,9 @@ async function saveCobranza(){
     facturaIva:selFactura?selFactura.i:null,
     facturaIvaBs:selFactura?(selFactura.ib||null):null,
     facturaIva25:selFactura?(selFactura.i25||null):null,
-    facturaSaldo:selFactura?Math.round((selFactura.b-pagoUsd())*100)/100:null,
+    facturaSaldo:(function(){const a=aplicacionPago();return a?a.saldo:null;})(),
+    pagoAplicadoUsd:(function(){const a=aplicacionPago();return a?a.restanteUsd:null;})(),
+    pagoRestanteBs:(function(){const a=aplicacionPago();return a?Math.round(a.restanteBs*100)/100:null;})(),
     formaPago:document.getElementById('fForma').value,
     monedaPago:document.getElementById('fMonedaPago').value,
     tasaPago:(function(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;})(),
