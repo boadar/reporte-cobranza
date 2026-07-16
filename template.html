@@ -184,6 +184,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
       <button class="btn btn-acc" onclick="showChoice()">+ Nuevo pago</button>
       <button class="btn btn-ok" id="btnReportar" onclick="reportar()" style="flex:0 0 auto;width:auto;padding:12px 20px">Reportar</button>
     </div>
+    <div class="hint" style="text-align:left;margin:0 2px 10px">Reportar prepara el Excel y las imágenes para enviarlas a <b>cobranzas@ofica.com</b> (la dirección se copia para pegarla en el correo).</div>
     <div class="selbar" id="selBar" style="display:none">
       <label><input type="checkbox" id="selAll" onchange="toggleSelAll()"> Seleccionar todas</label>
       <span id="selCount"></span>
@@ -204,6 +205,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 const CLIENTES = __CLIENTES__;
 const TASAS = __TASAS__;
 const APPVER = "v1";
+const REPORT_EMAIL = "cobranzas@ofica.com";
 
 /* ---------- navegacion ---------- */
 function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
@@ -658,13 +660,17 @@ async function reportar(){
   const files=[await buildReportFile(sel)];
   sel.forEach(r=>{const f=dataUrlToFile(r.img,'comprobante_'+(r.ref||r.id)+'.jpg');if(f)files.push(f);});
   btn.textContent=lbl;btn.disabled=false;
-  const text='Reporte de Cobranza — '+sel.length+' cobro(s). Se adjunta el Excel y las imágenes de los comprobantes.';
+  const totalBs=sel.reduce((a,r)=>a+(r.monto||0),0);
+  const fecha=new Date().toLocaleDateString('es-VE');
+  const subject='Reporte de Cobranza — '+sel.length+' cobro(s) — '+fecha;
+  const text='Para: '+REPORT_EMAIL+'\n\n'+sel.length+' cobro(s), total '+fmtBs(totalBs)+' Bs.\nSe adjunta el Excel y las imágenes de los comprobantes.';
+  try{await navigator.clipboard.writeText(REPORT_EMAIL);}catch(e){}
   if(navigator.canShare && navigator.canShare({files})){
-    try{await navigator.share({files:files,title:'Reporte de Cobranza',text:text});}
-    catch(e){if(e&&e.name==='AbortError')return;fallbackDownload(files);alert('No se pudo abrir el menú de compartir. Descargué el Excel y las imágenes para que los adjuntes al correo.');}
+    try{await navigator.share({files:files,title:subject,text:text});}
+    catch(e){if(e&&e.name==='AbortError')return;fallbackDownload(files);alert('No se pudo abrir el menú de compartir. Descargué el Excel y las imágenes para que los adjuntes al correo a '+REPORT_EMAIL+'.');}
   }else{
     fallbackDownload(files);
-    alert('Tu dispositivo no permite compartir directamente (esto pasa en computadora). Descargué el Excel y las imágenes en tu carpeta de descargas para que los adjuntes al correo manualmente.');
+    alert('Tu dispositivo no permite compartir directamente (esto pasa en computadora). Descargué el Excel y las imágenes para que los adjuntes al correo a '+REPORT_EMAIL+'.');
   }
 }
 
