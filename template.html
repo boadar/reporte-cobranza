@@ -109,7 +109,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
         Cargar archivo o tomar foto
       </button>
     </div>
-    <div class="hint">Acepta fotos, capturas de pantalla e imágenes, y también archivos PDF.<br>Bancos reconocidos: Banesco, Banco de Venezuela, Bancaribe, Mercantil, Banplus, Provincial.<br>Los datos se pueden corregir antes de guardar.</div>
+    <div class="hint">Acepta fotos, capturas de pantalla e imágenes, y también archivos PDF.<br>Bancos reconocidos: Banesco, Banco de Venezuela, Bancaribe, Mercantil, Banplus, Provincial, BNC.<br>Los datos se pueden corregir antes de guardar.</div>
   </div>
 
   <!-- PANTALLA 2: ELEGIR ORIGEN -->
@@ -256,6 +256,13 @@ const BANCOS=[
    monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
    orig:grab(t,/instrumento origen[:\s]*([\d*]{4,})/i),
    dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)};}},
+ {id:'bnc',nombre:'BNC',detect:/\bbnc|banco nacional de cr[eé]dito/i,extract(t){return{
+   ref:grab(t,/transferencia[:\s]*(\d{5,})/i)||grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i),
+   fecha:normFecha(grab(t,/fecha\s*\/?\s*hora[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
+   monto:parseMonto(grab(t,/monto[^\d]*([\d.,]+)/i)),
+   orig:grab(t,/cuenta corriente[^\d*]*([\d*]{4,})/i),
+   dest:grab(t,/beneficiario[\s\S]{0,150}?(\d{18,20})/i),
+   empresa:grab(t,/cliente[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)||grab(t,/titular[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
  {id:'provincial',nombre:'Provincial',detect:/provinet|provincial/i,extract(t){return{
    ref:grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i)||grab(t,/referencia[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
