@@ -256,7 +256,7 @@ const BANCOS=[
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
    dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
    empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
- {id:'mercantil',nombre:'Mercantil',detect:/mercantil/i,extract(t){return{
+ {id:'mercantil',nombre:'Mercantil',detect:/mercanti/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
    monto:parseMonto(grab(t,/monto transferido[^\d]*([\d.,]+)/i)||grab(t,/monto[^\d]*([\d.,]{4,})/i)),
@@ -341,8 +341,15 @@ const OFICA_CUENTAS=[
 ];
 function matchOficaCuenta(dest){
   if(!dest)return null;
-  const lead=(dest.match(/^(\d+)/)||[])[1]||'';   // digitos al inicio (antes de la mascara)
-  const tail=(dest.match(/(\d+)$/)||[])[1]||'';   // digitos al final
+  let lead='',tail='';
+  if(/\*/.test(dest)){                              // tiene mascara: digitos antes/despues de los *
+    lead=(dest.match(/^(\d+)/)||[])[1]||'';
+    tail=(dest.match(/(\d+)$/)||[])[1]||'';
+  }else{                                            // sin mascara
+    const digs=(dest.match(/\d+/g)||[]).join('');
+    if(digs.length>=10){lead=digs.slice(0,4);tail=digs.slice(-6);}  // cuenta completa
+    else{tail=digs;}                                // numero corto = final de cuenta
+  }
   if(!lead && !tail)return null;
   const cands=OFICA_CUENTAS.filter(c=>(!lead||c.num.startsWith(lead))&&(!tail||c.num.endsWith(tail)));
   if(cands.length===1)return cands[0];
