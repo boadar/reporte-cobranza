@@ -261,9 +261,22 @@ function normFecha(s){
 }
 function pad(n){return String(n).padStart(2,'0');}
 function grab(text,re){const m=text.match(re);return m?(m[1]||m[0]):'';}
+/* Interpreta un importe sin importar la convencion: el ULTIMO separador es el decimal.
+   Sirve para 2.900.000,00 | 2.900.000.00 | 2,900,000.00 | 2 900 000,00 */
+function parseImporte(s){
+  s=String(s).replace(/\s/g,'');
+  const i=Math.max(s.lastIndexOf('.'),s.lastIndexOf(','));
+  if(i<0){const n=parseFloat(s);return isNaN(n)?null:n;}
+  const ent=s.slice(0,i).replace(/[.,]/g,''), dec=s.slice(i+1);
+  const v=parseFloat((ent||'0')+'.'+dec);
+  return isNaN(v)?null:v;
+}
+/* Busca el mayor importe del texto. Exige 2 decimales (todo comprobante los trae),
+   asi nunca confunde un numero de cuenta o una referencia con el monto. */
 function bestMonto(t){
-  const re=/\d{1,3}(?:\.\d{3})*,\d{2}/g;let m,best=null;
-  while(m=re.exec(t)){const v=parseMonto(m[0]);if(v!=null&&(best==null||v>best))best=v;}
+  // 1a alternativa: miles separados por espacio (2 900 000,00). 2a: sin espacios (2.900.000,00 / 2,900,000.00 / 2900000.00)
+  const re=/\d{1,3}(?:\s\d{3})+[.,]\d{2}(?!\d)|\d[\d.,]*[.,]\d{2}(?!\d)/g;let m,best=null;
+  while(m=re.exec(t)){const v=parseImporte(m[0]);if(v!=null&&v>0&&(best==null||v>best))best=v;}
   return best;
 }
 
