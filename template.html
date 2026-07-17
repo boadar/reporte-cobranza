@@ -297,12 +297,12 @@ const BANCOS=[
    monto:parseMonto(grab(t,/monto[^\d]*(?:bs\.?\s*)?([\d.,]+)/i)),
    orig:grab(t,/desde mi cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/debitada[^\d*]*([\d*\-]{4,})/i),
    dest:grab(t,/n[uú]mero de cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/transferida[^\d]*(\d{10,20})/i)};}},
- {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|terceros bdv|bdv/i,extract(t){return{
-   ref:grab(t,/referencia es[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i),
-   fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)),
+ {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|terceros bdv|bdv|0102[\d*]{4,}/i,extract(t){return{
+   ref:grab(t,/referencia es[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i)||grab(t,/operaci[oó]n[:\s]*(\d{5,})/i),
+   fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i))||normFecha(t),
    monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
-   orig:grab(t,/instrumento origen[:\s]*([\d*]{4,})/i),
-   dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)};}},
+   orig:grab(t,/instrumento origen[:\s]*([\d*]{4,})/i)||grab(t,/origen[:\s]*([\d*]{4,})/i),
+   dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)||grab(t,/destino[:\s]*([\d*]{4,})/i)};}},
  {id:'bnc',nombre:'BNC',detect:/\bbnc|banco nacional de cr[eé]dito/i,extract(t){return{
    ref:grab(t,/transferencia[:\s]*(\d{5,})/i)||grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/fecha\s*\/?\s*hora[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
@@ -406,10 +406,10 @@ function renderCliSuggest(){
   if(q){document.getElementById('cliSearch').value=q;searchCli();}
 }
 function genericExtract(t){return{
-  ref:grab(t,/referencia[^\d]*(\d{5,})/i),
+  ref:grab(t,/referencia[^\d]*(\d{5,})/i)||grab(t,/operaci[oó]n[:\s]*(\d{5,})/i)||grab(t,/confirmaci[oó]n[:\s]*(\d{5,})/i),
   fecha:normFecha(t),
   monto:parseMonto(grab(t,/monto[^\d]*([\d.,]{4,})/i)),
-  orig:'',dest:''};}
+  orig:grab(t,/origen[:\s]*([\d*]{4,})/i),dest:grab(t,/destino[:\s]*([\d*]{4,})/i)};}
 function extractFactura(t){
   let m=t.match(/fact(?:ura)?s?\.?\s*(?:n[ro°º.]*)?\s*[:#]?\s*(\d{3,})/i);
   if(m)return m[1];
