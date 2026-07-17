@@ -320,14 +320,14 @@ const BANCOS=[
    monto:parseMonto(grab(t,/monto transferido[^\d]*([\d.,]+)/i)),
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
    dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
-   empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
+   empresa:empresaCampo(t)};}},
  {id:'mercantil',nombre:'Mercantil',detect:/mercanti|monto transferido\s*\(bs/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
    monto:parseMonto(grab(t,/monto transferido[^\d]*([\d.,]+)/i)||grab(t,/monto[^\d]*([\d.,]{4,})/i)),
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
    dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
-   empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
+   empresa:empresaCampo(t)};}},
  {id:'bancaribe',nombre:'Bancaribe',detect:/bancaribe|cuenta a acreditar|clave de confirmaci/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{4,})/i)||grab(t,/clave de confirmaci[oó]n[:\s]*(\d{4,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}-[A-Za-z]{3,}-\d{2,4})/)||grab(t,/(\d{1,2}\s+de\s+[A-Za-zÁÉÍÓÚáéíóú]+\s+del?\s+\d{4})/i)),
@@ -340,6 +340,28 @@ function detectBank(t){
   let best=null,bestIdx=Infinity;
   for(const b of BANCOS){const m=t.match(b.detect);if(m&&m.index<bestIdx){bestIdx=m.index;best=b;}}
   return best;
+}
+/* Nombre del pagador desde el campo "Empresa". Sirve para el caso lineal
+   ("Empresa\nCARVAJAL ROMERO C.A.") y para cuando el OCR mezcla las columnas
+   (la etiqueta queda con otras etiquetas y los valores caen en la linea siguiente):
+      Empresa            Cuenta destino                 Monto transferido (Bs.)
+      CARVAJAL ROMERO C.A.  Ofica Representaciones... ****4827   1.072.226,18
+   Se corta en "Ofica" (el beneficiario siempre es OFICA), en la cuenta enmascarada
+   o en el importe final. */
+function empresaCampo(t){
+  const L=String(t).split('\n');
+  for(let i=0;i<L.length;i++){
+    const m=L[i].match(/^\s*empresa\b\s*:?\s*(.*)$/i);
+    if(!m)continue;
+    let v=(m[1]||'').trim();
+    if(!v || /cuenta\s+(destino|origen)|monto\s+transferido|concepto|fecha\s+y\s+hora/i.test(v)) v=(L[i+1]||'').trim();
+    v=v.split(/\s+ofica\b/i)[0];                     // columna del beneficiario
+    v=v.split(/\s+[\d*]{0,8}\*{2,}/)[0];             // o una cuenta enmascarada
+    v=v.replace(/\s+\d[\d.,]*[.,]\d{2}\s*$/,'');     // o un importe al final
+    v=v.trim();
+    if(v.length>=3 && /[A-Za-zÁÉÍÓÚÑ]/.test(v)) return v;
+  }
+  return '';
 }
 
 /* ---------- sugerir cliente por el nombre del archivo ---------- */
