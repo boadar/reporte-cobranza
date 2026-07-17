@@ -159,6 +159,11 @@ table.ftbl .nc{color:var(--danger)}
       <span class="badge badge-bank" id="bankBadge">Banco</span>
     </div>
     <div id="dupWarn"></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;margin:-4px 0 8px">
+      <button class="link" onclick="toggleOcr()">Ver texto leído</button>
+      <button class="link" onclick="copyOcr()">Copiar texto</button>
+    </div>
+    <pre id="ocrBox" style="display:none;white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.45;background:#f6f8fa;border:1px solid var(--line);border-radius:8px;padding:9px;max-height:190px;overflow:auto;margin:0 0 12px;font-family:ui-monospace,Consolas,monospace"></pre>
     <div class="card">
       <div class="field"><label>Fecha</label><input id="fFecha" placeholder="dd/mm/aaaa" oninput="onFechaChange()"></div>
       <div class="row2">
@@ -471,10 +476,46 @@ function finishExtract(text,bank,img){
   updateDupWarn();
   go('scResult');setTab('tabHome');
 }
+/* Prepara la imagen para el OCR: amplia el texto pequeño y sube el contraste.
+   Clave para fotos de pantallas, donde Tesseract falla si la letra es chica. */
+function prepOcr(dataUrl){
+  return new Promise(res=>{
+    if(!dataUrl||!/^data:image\//.test(dataUrl)){res(dataUrl);return;}
+    const im=new Image();
+    im.onload=function(){
+      try{
+        const w=im.width,h=im.height;
+        if(!w||!h){res(dataUrl);return;}
+        const target=2400;
+        let s=1;
+        if(Math.max(w,h)<target) s=Math.min(3,target/Math.max(w,h));
+        const cw=Math.round(w*s),ch=Math.round(h*s);
+        if(cw*ch>30000000){res(dataUrl);return;}
+        const c=document.createElement('canvas');c.width=cw;c.height=ch;
+        const ctx=c.getContext('2d');
+        ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+        ctx.drawImage(im,0,0,cw,ch);
+        const d=ctx.getImageData(0,0,cw,ch),p=d.data;
+        for(let i=0;i<p.length;i+=4){
+          let g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+          g=(g-128)*1.5+128;                       // contraste
+          p[i]=p[i+1]=p[i+2]=g<0?0:(g>255?255:g);  // escala de grises
+        }
+        ctx.putImageData(d,0,0);
+        res(c.toDataURL('image/png'));
+      }catch(e){res(dataUrl);}
+    };
+    im.onerror=function(){res(dataUrl);};
+    im.src=dataUrl;
+  });
+}
 async function processImage(dataUrl){
-  go('scProc');setProg(.05,'Leyendo el comprobante…');
+  go('scProc');setProg(.04,'Preparando la imagen…');
+  let prep=dataUrl;
+  try{prep=await prepOcr(dataUrl);}catch(e){}
+  setProg(.1,'Leyendo el comprobante…');
   let text='';
-  try{text=await ocr(dataUrl,.1,.85);}
+  try{text=await ocr(prep,.12,.83);}
   catch(err){console.error(err);alert('No se pudo leer la imagen. Intenta con una foto más nítida.');resetAndHome();return;}
   setProg(1,'Listo');
   finishExtract(text,detectBank(text),dataUrl);
@@ -698,6 +739,16 @@ function findDup(){
   if(ref){const d=db.find(x=>x.ref===ref && x.id!==editingId);if(d)return d;}
   if(!editingId && currentFileHash){const d=db.find(x=>x.fileHash===currentFileHash);if(d)return d;}
   return null;
+}
+function toggleOcr(){
+  const b=document.getElementById('ocrBox');
+  if(b.style.display==='none'){b.textContent=(current&&current.text)?current.text:'(no hay texto: el comprobante se leyó como PDF de texto o no se pudo leer)';b.style.display='';}
+  else{b.style.display='none';}
+}
+function copyOcr(){
+  const t=(current&&current.text)?current.text:'';
+  if(!t){alert('No hay texto que copiar.');return;}
+  navigator.clipboard.writeText(t).then(function(){alert('Texto leído copiado. Pégalo en el chat para diagnosticar.');},function(){alert('No se pudo copiar.');});
 }
 function updateDupWarn(){
   const el=document.getElementById('dupWarn');if(!el)return;
