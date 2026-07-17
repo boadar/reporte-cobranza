@@ -328,7 +328,7 @@ const BANCOS=[
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
    dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
    empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
- {id:'bancaribe',nombre:'Bancaribe',detect:/bancaribe/i,extract(t){return{
+ {id:'bancaribe',nombre:'Bancaribe',detect:/bancaribe|cuenta a acreditar|clave de confirmaci/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{4,})/i)||grab(t,/clave de confirmaci[oó]n[:\s]*(\d{4,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}-[A-Za-z]{3,}-\d{2,4})/)||grab(t,/(\d{1,2}\s+de\s+[A-Za-zÁÉÍÓÚáéíóú]+\s+del?\s+\d{4})/i)),
    monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
@@ -523,6 +523,12 @@ async function processImage(dataUrl){
   setProg(1,'Listo');
   finishExtract(text,detectBank(text),dataUrl);
 }
+/* ¿El texto del PDF es legible? Algunos PDF traen la capa de texto con fuentes
+   codificadas y sale basura; en ese caso hay que renderizar e ir por OCR. */
+function textoUtil(t){
+  const kw=String(t).match(/monto|cuenta|referencia|transferencia|comprobante|fecha|banco|beneficiario|concepto|operaci[oó]n|dep[oó]sito|confirmaci/gi);
+  return !!kw && kw.length>=2;
+}
 const PDF_PLACEHOLDER='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="150"><rect width="220" height="150" fill="#f6f8fa"/><rect x="80" y="38" width="60" height="74" rx="4" fill="#fff" stroke="#c3cad1"/><text x="110" y="86" font-family="Arial" font-size="20" font-weight="bold" fill="#6b7280" text-anchor="middle">PDF</text></svg>');
 function renderPdfPage(page,timeoutMs){
   return new Promise((resolve,reject)=>{
@@ -547,10 +553,11 @@ async function processPdf(buf){
   setProg(.35,'Leyendo el PDF…');
   let text='';
   try{const tc=await page.getTextContent();text=tc.items.map(i=>i.str).join('\n');}catch(e){}
-  const bank=detectBank(text);
-  if(bank && text.replace(/\s/g,'').length>40){
+  // Si el PDF trae texto LEGIBLE se usa tal cual (mas exacto que el OCR), aunque no
+  // se identifique el banco. Solo se cae al OCR si el texto viene ilegible o vacio.
+  if(text.replace(/\s/g,'').length>40 && textoUtil(text)){
     setProg(1,'Listo');
-    finishExtract(text,bank,PDF_PLACEHOLDER);
+    finishExtract(text,detectBank(text),PDF_PLACEHOLDER);
     return;
   }
   setProg(.45,'Convirtiendo el PDF…');
