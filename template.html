@@ -986,8 +986,10 @@ function r2(n){return Math.round(n*100)/100;}
 function repRows(r){
   const out=[];
   const iva=(r.iva25Aplicado!=null?r.iva25Aplicado:r.facturaIva25);
-  if(iva!=null && iva>0) out.push(repRow(r,'iva'));   // 1) el 25% del IVA va primero
-  out.push(repRow(r,'base'));                          // 2) luego la Base
+  const baseBs=(r.pagoRestanteBs!=null?r.pagoRestanteBs:(r.monto||0));
+  if(iva!=null && iva>0) out.push(repRow(r,'iva'));   // 1) el IVA va primero (si hubo)
+  // 2) la Base, solo si se aplico algo a la base (o si no hay ninguna otra fila)
+  if(baseBs>0 || out.length===0) out.push(repRow(r,'base'));
   return out;
 }
 function repRow(r,modo){
