@@ -1000,16 +1000,31 @@ async function reportar(){
   const totalBs=sel.reduce((a,r)=>a+(r.monto||0),0);
   const fecha=new Date().toLocaleDateString('es-VE');
   const subject='Reporte de Cobranza — '+sel.length+' cobro(s) — '+fecha;
-  const text='Para: '+REPORT_EMAIL+'\n\n'+sel.length+' cobro(s), total '+fmtBs(totalBs)+' Bs.\nSe adjunta el Excel y las imágenes de los comprobantes.';
+  const cuerpo=sel.length+' cobro(s), total '+fmtBs(totalBs)+' Bs.\nSe adjunta el Excel y las imágenes de los comprobantes.';
+  const text='Para: '+REPORT_EMAIL+'\n\n'+cuerpo;   // el compartir del telefono no fija destinatario
   try{await navigator.clipboard.writeText(REPORT_EMAIL);}catch(e){}
+  let compartido=false;
   if(navigator.canShare && navigator.canShare({files})){
-    try{await navigator.share({files:files,title:subject,text:text});}
-    catch(e){if(e&&e.name==='AbortError')return;fallbackDownload(files);alert('No se pudo abrir el menú de compartir. Descargué el Excel y las imágenes para que los adjuntes al correo a '+REPORT_EMAIL+'.');}
-  }else{
+    try{await navigator.share({files:files,title:subject,text:text});compartido=true;}
+    catch(e){if(e&&e.name==='AbortError')return;}   // si falla, se cae a descarga + correo
+  }
+  if(!compartido){
+    // En computadora no existe el menu de compartir con archivos: se descargan
+    // y se abre el correo ya dirigido, para solo adjuntar y enviar.
     fallbackDownload(files);
-    alert('Tu dispositivo no permite compartir directamente (esto pasa en computadora). Descargué el Excel y las imágenes para que los adjuntes al correo a '+REPORT_EMAIL+'.');
+    abrirCorreo(subject,cuerpo);
+    const nimg=files.length-1;
+    alert('Listo: se descargó el Excel'+(nimg>0?' y '+nimg+' imagen(es)':'')+' en tu carpeta de Descargas.\n\nAbrí un correo dirigido a '+REPORT_EMAIL+': solo adjunta esos archivos y envíalo.\n\n(El envío con adjuntos automáticos solo funciona desde el teléfono.)');
   }
   marcarReportadas(sel);
+}
+function abrirCorreo(subject,body){
+  try{
+    const a=document.createElement('a');
+    a.href='mailto:'+REPORT_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    a.style.display='none';document.body.appendChild(a);a.click();
+    setTimeout(function(){a.remove();},500);
+  }catch(e){}
 }
 function marcarReportadas(sel){
   const ids={};sel.forEach(r=>{ids[r.id]=1;});
