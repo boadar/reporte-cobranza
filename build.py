@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v30'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v31'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -72,8 +72,13 @@ PWA_HEAD = (
     '<meta name="apple-mobile-web-app-status-bar-style" content="black">'
 )
 PWA_HOOK = (
-    "<script>if('serviceWorker' in navigator){window.addEventListener('load',"
-    "function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>"
+    "<script>if('serviceWorker' in navigator){"
+    "var __hadCtrl=!!navigator.serviceWorker.controller,__reloaded=false;"
+    "navigator.serviceWorker.addEventListener('controllerchange',function(){"
+    "if(__hadCtrl&&!__reloaded){__reloaded=true;window.location.reload();}});"
+    "window.addEventListener('load',function(){"
+    "navigator.serviceWorker.register('sw.js').then(function(reg){reg.update();"
+    "setInterval(function(){reg.update();},1800000);}).catch(function(){});});}</script>"
 )
 
 tpl = read('template.html')
