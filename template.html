@@ -198,7 +198,8 @@ table.ftbl .nc{color:var(--danger)}
       <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Facturas pendientes del cliente</label>
       <div id="factList"></div>
       <div class="field" style="margin:10px 0 0"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 992505" autocomplete="off" oninput="onFacturaInput()"></div>
-      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="fAgenteRet" checked onchange="onAgenteChange()" style="width:20px;height:20px"> Cliente agente de retención <span style="color:var(--mut);font-size:12px">(retiene 75%, paga 25% del IVA)</span></label>
+      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:4px 0 6px;cursor:pointer"><input type="checkbox" id="fAgenteRet" checked onchange="onAgenteChange()" style="width:20px;height:20px"> Cliente agente de retención <span style="color:var(--mut);font-size:12px">(retiene 75%, paga 25% del IVA)</span></label>
+      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:0 0 8px;cursor:pointer"><input type="checkbox" id="fCobrarIva" checked onchange="updateSaldo()" style="width:20px;height:20px"> Cobrar el IVA primero <span id="fCobrarIvaNota" style="color:var(--mut);font-size:12px"></span></label>
       <div class="usd" id="saldoInfo"></div>
     </div>
     <div class="card">
@@ -616,6 +617,7 @@ function fillResult(bank,d,img){
   document.getElementById('fMonedaPago').value='Bs.';
   document.getElementById('fObs').value='';
   document.getElementById('fAgenteRet').checked=true;
+  document.getElementById('fCobrarIva').checked=true;
   renderCliSuggest();
   renderFacturas();
   calcUsd();
@@ -741,11 +743,13 @@ function aplicacionPago(){
   const ivaObjetivo=agente?(selFactura.i25||0):ivaBs;              // 25% o 100% del IVA Bs
   const yaCobrado=ivaYaCobrado(selFactura.f,chosenCli?chosenCli.cod:'');
   const ivaPend=Math.max(0,r2(ivaObjetivo-yaCobrado));            // IVA que aun falta cobrar
-  const iva25=Math.min(pagoBs,ivaPend);                           // lo que este pago aplica al IVA
+  const cchk=document.getElementById('fCobrarIva');
+  const cobrarIva=cchk?cchk.checked:true;                         // ¿cobrar el IVA en este pago?
+  const iva25=cobrarIva?Math.min(pagoBs,ivaPend):0;               // lo que este pago aplica al IVA
   const restanteBs=Math.max(0,r2(pagoBs-iva25));                  // lo que queda para la Base
   const tasa=tasaPagoActual();
   const base=selFactura.b;
-  const cabec={pagoBs:pagoBs,agente:agente,iva25:iva25,ivaObjetivo:ivaObjetivo,yaCobrado:yaCobrado,ivaPend:ivaPend,restanteBs:restanteBs,base:base,ivaBs:ivaBs};
+  const cabec={pagoBs:pagoBs,agente:agente,cobrarIva:cobrarIva,iva25:iva25,ivaObjetivo:ivaObjetivo,yaCobrado:yaCobrado,ivaPend:ivaPend,restanteBs:restanteBs,base:base,ivaBs:ivaBs};
   if(!tasa)return Object.assign(cabec,{tasa:null,restanteUsd:null,baseCancelada:null,pctBase:null,diferencial:null,saldo:null});
   const restanteUsd=r2(restanteBs/tasa);
   let baseCancelada, diferencial, pctBase, saldo;
@@ -764,10 +768,15 @@ function updateSaldo(){
   const el=document.getElementById('saldoInfo');if(!el)return;
   const a=aplicacionPago();
   if(!a){el.innerHTML='';return;}
+  const nota=document.getElementById('fCobrarIvaNota');
+  if(nota)nota.textContent=a.ivaPend>0?('(pendiente Bs '+fmtUsd(a.ivaPend)+')'):'(IVA ya cobrado)';
   if(a.tasa==null){el.innerHTML='<div class="saldo-box saldo-neg">No hay tasa para la fecha del pago: no se puede calcular el saldo.</div>';return;}
   let ivaLinea;
   if(a.iva25>0){
-    ivaLinea='1) '+(a.agente?'25%':'100%')+' del IVA: <b>Bs '+fmtUsd(a.iva25)+'</b>';
+    const residual=a.yaCobrado>0 && a.iva25<a.ivaObjetivo-0.01;
+    ivaLinea='1) '+(residual?'Residual del IVA':((a.agente?'25%':'100%')+' del IVA'))+': <b>Bs '+fmtUsd(a.iva25)+'</b>';
+  }else if(!a.cobrarIva && a.ivaPend>0){
+    ivaLinea='1) IVA NO se cobra en este pago &rarr; queda <b>Bs '+fmtUsd(a.ivaPend)+'</b> pendiente, todo va a la Base';
   }else if(a.ivaObjetivo>0 && a.yaCobrado>0){
     ivaLinea='1) IVA ya cobrado en un pago anterior &rarr; este pago va completo a la Base';
   }else{
@@ -855,6 +864,7 @@ async function saveCobranza(){
     pctBase:(function(){const a=aplicacionPago();return a?a.pctBase:null;})(),
     diferencial:(function(){const a=aplicacionPago();return a?a.diferencial:null;})(),
     agenteRetencion:document.getElementById('fAgenteRet').checked,
+    cobroIva:document.getElementById('fCobrarIva').checked,
     formaPago:document.getElementById('fForma').value,
     monedaPago:document.getElementById('fMonedaPago').value,
     tasaPago:(function(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;})(),
@@ -937,6 +947,7 @@ function openEdit(id){
   }else{document.getElementById('cliPick').style.display='';document.getElementById('cliChosen').innerHTML='';}
   renderFacturas();
   document.getElementById('fAgenteRet').checked=(rec.agenteRetencion!=null)?rec.agenteRetencion:esAgentePref(rec.cliCod);
+  document.getElementById('fCobrarIva').checked=(rec.cobroIva!=null)?rec.cobroIva:true;
   document.getElementById('fFactura').value=rec.factura||'';
   onFacturaInput();
   document.getElementById('fForma').value=rec.formaPago||'Transferencia';
@@ -979,9 +990,8 @@ function repRow(r,modo){
   if(modo==='iva'){
     montoBsCol = iva25Bs || '';                                  // porcion del pago que cubre el IVA
     pagoCol    = (tp && iva25Bs) ? r2(iva25Bs/tp) : '';
-    const ivaBsF = r.facturaIvaBs||0;
-    const pctIva = ivaBsF ? Math.round(iva25Bs/ivaBsF*100) : (r.agenteRetencion===false?100:25);
-    obsCol     = fmtPct(pctIva)+'% del IVA';
+    const objetivo = (r.agenteRetencion===false ? (r.facturaIvaBs||0) : (r.facturaIva25||0));
+    obsCol = (objetivo>0 && Math.abs(iva25Bs-objetivo)<0.01) ? ((r.agenteRetencion===false?'100%':'25%')+' del IVA') : 'Residual del IVA';
     difCol     = '';
   }else{
     montoBsCol = (r.pagoRestanteBs!=null) ? r.pagoRestanteBs : (r.monto!=null?r.monto:'');
