@@ -70,6 +70,9 @@ table.ftbl tbody tr:active{background:#eef4f8}
 table.ftbl .num{text-align:right;font-variant-numeric:tabular-nums}
 table.ftbl .nc{color:var(--danger)}
 .fnone{border:1px dashed var(--line);border-radius:10px;padding:12px;text-align:center;color:var(--mut);font-size:12px}
+.est{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;white-space:nowrap;margin-right:6px}
+.est-pend{background:#faeeda;color:#854f0b}
+.est-rep{background:#e1f5ee;color:#0f6e56}
 .saldo-box{background:#e1f5ee;border:1px solid #b6e3d3;border-radius:10px;padding:9px 11px;margin-top:8px;font-size:13px;color:#0f6e56}
 .saldo-box b{font-size:15px}
 .saldo-neg{background:#fcebeb;border-color:#f0c0c0;color:#a32d2d}
@@ -216,7 +219,7 @@ table.ftbl .nc{color:var(--danger)}
     <div class="hint" style="text-align:left;margin:0 2px 10px">Reportar prepara el Excel y las imágenes para enviarlas a <b>cobranzas@ofica.com</b> (la dirección se copia para pegarla en el correo).</div>
     <div class="selbar" id="selBar" style="display:none">
       <label><input type="checkbox" id="selAll" onchange="toggleSelAll()"> Seleccionar todas</label>
-      <span id="selCount"></span>
+      <span><span id="selCount"></span><button class="link" onclick="delAll()" style="color:var(--danger);margin-left:12px">Eliminar todas</button></span>
     </div>
     <div id="listBody"></div>
   </div>
@@ -241,7 +244,7 @@ const REPORT_EMAIL = "cobranzas@ofica.com";
 function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 function setTab(id){document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('on'));document.getElementById(id).classList.add('on');}
 function showChoice(){go('scChoice');setTab('tabHome');}
-function resetAndHome(){current=null;editingId=null;editingCreado=null;go('scInicio');setTab('tabHome');}
+function resetAndHome(){current=null;editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;go('scInicio');setTab('tabHome');}
 
 /* ---------- plantillas por banco ---------- */
 function parseMonto(s){
@@ -468,7 +471,7 @@ function finishExtract(text,bank,img){
   if(bm!=null)data.monto=bm;
   if(!matchOficaCuenta(data.dest)){const od=findOficaDest(text);if(od)data.dest=od;}
   current={img:img,text:text,bank:bank,data:data,empresa:(data.empresa||'').trim(),fileHash:currentFileHash};
-  editingId=null;editingCreado=null;
+  editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;
   document.getElementById('btnSave').textContent='Guardar cobranza';
   fillResult(bank,data,img);
   const fac=extractFactura(text);
@@ -714,7 +717,7 @@ function updateSaldo(){
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 /* ---------- guardar ---------- */
-let editingId=null, editingCreado=null;
+let editingId=null, editingCreado=null, editingEstatus=null, editingFechaReporte=null;
 const selected=new Set();
 function loadDb(){try{return JSON.parse(localStorage.getItem('cobranzas')||'[]');}catch(e){return[];}}
 function saveDb(a){localStorage.setItem('cobranzas',JSON.stringify(a));}
@@ -797,6 +800,8 @@ async function saveCobranza(){
     cliCod:cliCod, cliNom:chosenCli?chosenCli.nom:'',
     img:img,
     fileHash:(current&&current.fileHash)||currentFileHash||'',
+    estatus:editingId?(editingEstatus||'Pendiente'):'Pendiente',
+    fechaReporte:editingId?(editingFechaReporte||''):'',
     creado:editingId?editingCreado:new Date().toISOString(),
     actualizado:new Date().toISOString()
   };
@@ -810,7 +815,7 @@ async function saveCobranza(){
     return;
   }
   btn.textContent=lbl;btn.disabled=false;
-  editingId=null;editingCreado=null;current=null;
+  editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;current=null;
   openList();setTab('tabList');
 }
 
@@ -820,7 +825,7 @@ function renderList(){
   const db=loadDb();const body=document.getElementById('listBody');
   document.getElementById('selBar').style.display=db.length?'flex':'none';
   if(!db.length){body.innerHTML='<div class="empty-big"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><div>Aún no hay cobranzas registradas.</div></div>';updateSelUi();return;}
-  body.innerHTML=db.map(r=>'<div class="saved-it"><label class="sit-chk"><input type="checkbox" '+(selected.has(r.id)?'checked':'')+' onchange="toggleSel('+r.id+')"></label><div class="sit-main" onclick="openEdit('+r.id+')"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+(r.oficaBanco?' &rarr; OFICA '+esc(r.oficaBanco)+(r.oficaMoneda?' '+esc(r.oficaMoneda):''):'')+'</div><div class="meta">Ref: <span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="event.stopPropagation();delRec('+r.id+')" style="float:right">Eliminar</button></div></div></div>').join('');
+  body.innerHTML=db.map(r=>'<div class="saved-it"><label class="sit-chk"><input type="checkbox" '+(selected.has(r.id)?'checked':'')+' onchange="toggleSel('+r.id+')"></label><div class="sit-main" onclick="openEdit('+r.id+')"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+(r.oficaBanco?' &rarr; OFICA '+esc(r.oficaBanco)+(r.oficaMoneda?' '+esc(r.oficaMoneda):''):'')+'</div><div class="meta"><span class="est '+(r.estatus==='Reportado'?'est-rep">Reportado':'est-pend">Pendiente')+'</span>Ref:<span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="event.stopPropagation();delRec('+r.id+')" style="float:right">Eliminar</button></div></div></div>').join('');
   updateSelUi();
 }
 function toggleSel(id){if(selected.has(id))selected.delete(id);else selected.add(id);updateSelUi();}
@@ -832,9 +837,20 @@ function updateSelUi(){
   const rb=document.getElementById('btnReportar');if(rb)rb.textContent=n?'Reportar ('+n+')':'Reportar';
 }
 function delRec(id){if(!confirm('¿Eliminar esta cobranza?'))return;selected.delete(id);saveDb(loadDb().filter(r=>r.id!==id));renderList();}
+function delAll(){
+  const db=loadDb();if(!db.length)return;
+  const sinReportar=db.filter(r=>r.estatus!=='Reportado').length;
+  let msg='¿Eliminar TODAS las cobranzas? Se borrarán '+db.length+' registro(s) con sus imágenes.';
+  if(sinReportar)msg+='\n\nOJO: '+sinReportar+' aún está(n) PENDIENTE(S) de reportar.';
+  msg+='\n\nEsta acción no se puede deshacer.';
+  if(!confirm(msg))return;
+  if(!confirm('Confirma otra vez: se eliminarán las '+db.length+' cobranzas.'))return;
+  selected.clear();saveDb([]);renderList();
+}
 function openEdit(id){
   const rec=loadDb().find(x=>x.id===id);if(!rec)return;
   editingId=id;editingCreado=rec.creado;currentFileHash='';
+  editingEstatus=rec.estatus||'Pendiente';editingFechaReporte=rec.fechaReporte||'';
   current={img:rec.img,bank:{nombre:rec.banco},empresa:'',fileHash:rec.fileHash||''};
   document.getElementById('thumb').src=rec.img||PDF_PLACEHOLDER;
   const bb=document.getElementById('bankBadge');bb.textContent=rec.banco||'Banco';bb.className='badge badge-bank';
@@ -961,6 +977,14 @@ async function reportar(){
     fallbackDownload(files);
     alert('Tu dispositivo no permite compartir directamente (esto pasa en computadora). Descargué el Excel y las imágenes para que los adjuntes al correo a '+REPORT_EMAIL+'.');
   }
+  marcarReportadas(sel);
+}
+function marcarReportadas(sel){
+  const ids={};sel.forEach(r=>{ids[r.id]=1;});
+  const now=new Date().toISOString();
+  saveDb(loadDb().map(r=>ids[r.id]?Object.assign({},r,{estatus:'Reportado',fechaReporte:now}):r));
+  selected.clear();
+  renderList();
 }
 
 document.getElementById('hdrsub').textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER;
