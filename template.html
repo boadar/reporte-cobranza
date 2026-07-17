@@ -149,8 +149,9 @@ table.ftbl .nc{color:var(--danger)}
   <div class="screen" id="scProc">
     <div class="progress">
       <div class="spin"></div>
-      <div class="msg" id="procMsg">Leyendo el comprobante…</div>
+      <div class="msg" id="procMsg">Procesando el comprobante…</div>
       <div class="bar"><i id="procBar"></i></div>
+      <div class="hint" style="margin-top:14px">Estamos leyendo la imagen. Esto puede tardar unos segundos, aunque la pantalla parezca detenida. No cierres la app.</div>
     </div>
   </div>
 
@@ -466,12 +467,14 @@ async function onFile(ev){
   const file=ev.target.files[0];ev.target.value='';
   if(!file)return;
   lastFileName=file.name||'';
+  go('scProc');setTab('tabHome');setProg(.02,'Cargando el archivo…');
+  await new Promise(function(r){setTimeout(r,30);});   // deja pintar la pantalla de proceso
   let buf=null;
   try{buf=await file.arrayBuffer();}catch(e){}
   if(buf){
     currentFileHash=await sha256(buf);
     const dup=currentFileHash?loadDb().find(r=>r.fileHash===currentFileHash):null;
-    if(dup){alert('Este archivo ya fue procesado.\n\nCobranza registrada: '+(dup.cliNom||'—')+'\nRef: '+(dup.ref||'—')+(dup.fecha?' · '+dup.fecha:'')+'\n\nNo se procesará de nuevo.');return;}
+    if(dup){go('scInicio');setTab('tabHome');alert('Este archivo ya fue procesado.\n\nCobranza registrada: '+(dup.cliNom||'—')+'\nRef: '+(dup.ref||'—')+(dup.fecha?' · '+dup.fecha:'')+'\n\nNo se procesará de nuevo.');return;}
   }else{currentFileHash='';}
   const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);
   if(isPdf){
@@ -914,8 +917,8 @@ function openEdit(id){
 
 /* ---------- reportar (Excel + imagenes por correo/compartir) ---------- */
 function loadScriptOnce(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=()=>res();s.onerror=()=>rej(new Error('no se pudo cargar '+url));document.head.appendChild(s);});}
-let xlsxLoading=null;
-function ensureXLSX(){if(window.XLSX)return Promise.resolve();if(!xlsxLoading)xlsxLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return xlsxLoading;}
+let exceljsLoading=null;
+function ensureExcelJS(){if(window.ExcelJS)return Promise.resolve();if(!exceljsLoading)exceljsLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');return exceljsLoading;}
 const REP_HEAD=['Fecha','N Factura','Nombre Cliente','Tasa Fact','Base $','IVA $','TOTAL $','Base Original','IVA Fact','Total Bs. Fact','25% IVA','RET IVA','Forma de Pago','Moneda','Monto Bs','Fecha del pago','Tasa del pago','Moneda','Pago $','Diferencial','Observaciones'];
 function r2(n){return Math.round(n*100)/100;}
 /* Cada cobro genera 2 filas: la porcion aplicada a la Base y la aplicada al 25% del IVA.
@@ -977,15 +980,24 @@ function repRow(r,modo){
   ];
 }
 async function buildReportFile(sel){
+  const rows=sel.flatMap(repRows);
   try{
-    await ensureXLSX();
-    const aoa=[REP_HEAD].concat(sel.flatMap(repRows));
-    const ws=XLSX.utils.aoa_to_sheet(aoa);
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Cobranzas');
-    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    return new File([out],'Cobranzas.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    await ensureExcelJS();
+    const wb=new ExcelJS.Workbook();
+    const ws=wb.addWorksheet('Cobranzas',{views:[{zoomScale:85}]});
+    ws.addRow(REP_HEAD);ws.getRow(1).font={bold:true};
+    rows.forEach(function(r){ws.addRow(r);});
+    // ancho de cada columna = el de su contenido mas largo (encabezado o datos)
+    for(let c=0;c<REP_HEAD.length;c++){
+      let max=String(REP_HEAD[c]==null?'':REP_HEAD[c]).length;
+      for(let k=0;k<rows.length;k++){const v=rows[k][c];const len=(v==null?0:String(v).length);if(len>max)max=len;}
+      ws.getColumn(c+1).width=Math.min(60,Math.max(8,max+2));
+    }
+    const buf=await wb.xlsx.writeBuffer();
+    return new File([buf],'Cobranzas.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }catch(e){
-    const csv=[REP_HEAD].concat(sel.flatMap(repRows).map(row=>row.map(c=>typeof c==='number'?String(c).replace('.',','):c))).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+    console.error(e);
+    const csv=[REP_HEAD].concat(rows.map(row=>row.map(c=>typeof c==='number'?String(c).replace('.',','):c))).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
     return new File(['﻿'+csv],'Cobranzas.csv',{type:'text/csv'});
   }
 }
