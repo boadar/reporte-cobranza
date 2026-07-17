@@ -578,8 +578,11 @@ async function processPdf(buf){
   // Si el PDF trae texto LEGIBLE se usa tal cual (mas exacto que el OCR), aunque no
   // se identifique el banco. Solo se cae al OCR si el texto viene ilegible o vacio.
   if(text.replace(/\s/g,'').length>40 && textoUtil(text)){
+    setProg(.6,'Generando imagen…');
+    let img=PDF_PLACEHOLDER;
+    try{const r=await renderPdfPage(page,9000);if(r)img=r;}catch(e){console.error(e);}
     setProg(1,'Listo');
-    finishExtract(text,detectBank(text),PDF_PLACEHOLDER);
+    finishExtract(text,detectBank(text),img);
     return;
   }
   setProg(.45,'Convirtiendo el PDF…');
