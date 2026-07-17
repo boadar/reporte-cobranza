@@ -198,6 +198,7 @@ table.ftbl .nc{color:var(--danger)}
       <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Facturas pendientes del cliente</label>
       <div id="factList"></div>
       <div class="field" style="margin:10px 0 0"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 992505" autocomplete="off" oninput="onFacturaInput()"></div>
+      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="fAgenteRet" checked onchange="onAgenteChange()" style="width:20px;height:20px"> Cliente agente de retención <span style="color:var(--mut);font-size:12px">(retiene 75%, paga 25% del IVA)</span></label>
       <div class="usd" id="saldoInfo"></div>
     </div>
     <div class="card">
@@ -614,6 +615,7 @@ function fillResult(bank,d,img){
   document.getElementById('fForma').value='Transferencia';
   document.getElementById('fMonedaPago').value='Bs.';
   document.getElementById('fObs').value='';
+  document.getElementById('fAgenteRet').checked=true;
   renderCliSuggest();
   renderFacturas();
   calcUsd();
@@ -671,6 +673,7 @@ function pickCli(cod){
   document.getElementById('cliSuggest').innerHTML='';
   document.getElementById('cliPick').style.display='none';
   document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(c[1])+'</div><div class="cod">'+c[0]+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
+  document.getElementById('fAgenteRet').checked=esAgentePref(c[0]);
   renderFacturas();
 }
 function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';renderCliSuggest();renderFacturas();}
@@ -713,29 +716,48 @@ function onFacturaInput(){
 }
 function pagoUsd(){const v=parseMonto(document.getElementById('fUsd').value);return v==null?0:v;}
 function tasaPagoActual(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;}
-/* Aplicacion del pago: 1) se descuenta el 25% del IVA en Bs, 2) el restante en Bs se
-   pasa a $ con la tasa del dia del pago, 3) ese monto se descuenta de la Base en $. */
+function r2(n){return Math.round(n*100)/100;}
+/* ¿el cliente es agente de retencion? se recuerda por cliente (default: si) */
+function loadAgentes(){try{return JSON.parse(localStorage.getItem('agentesRet')||'{}');}catch(e){return {};}}
+function esAgentePref(cod){const m=loadAgentes();return (cod in m)?!!m[cod]:true;}
+function setAgentePref(cod,val){if(!cod)return;const m=loadAgentes();m[cod]=!!val;localStorage.setItem('agentesRet',JSON.stringify(m));}
+function onAgenteChange(){if(chosenCli)setAgentePref(chosenCli.cod,document.getElementById('fAgenteRet').checked);updateSaldo();}
+/* IVA ya cobrado de una factura en cobranzas anteriores (Bs) */
+function ivaYaCobrado(factura,cod){
+  if(!factura)return 0;
+  return loadDb().reduce(function(a,r){
+    return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.iva25Aplicado||0):0);
+  },0);
+}
+/* Aplicacion del pago: 1) se descuenta el IVA en Bs (25% si el cliente es agente de
+   retencion, 100% si no), pero SOLO la parte del IVA que aun no se ha cobrado de esa
+   factura; 2) el restante en Bs se pasa a $ con la tasa del dia; 3) se resta de la Base. */
 function aplicacionPago(){
   if(!selFactura)return null;
   const pagoBs=parseMonto(document.getElementById('fMonto').value)||0;
-  const iva25Fact=selFactura.i25||0;
-  const iva25=Math.min(pagoBs,iva25Fact);              // porcion del pago que cubre el 25% del IVA
-  const restanteBs=Math.max(0,pagoBs-iva25Fact);       // lo que queda para la Base
+  const chk=document.getElementById('fAgenteRet');
+  const agente=chk?chk.checked:true;
+  const ivaBs=selFactura.ib||0;
+  const ivaObjetivo=agente?(selFactura.i25||0):ivaBs;              // 25% o 100% del IVA Bs
+  const yaCobrado=ivaYaCobrado(selFactura.f,chosenCli?chosenCli.cod:'');
+  const ivaPend=Math.max(0,r2(ivaObjetivo-yaCobrado));            // IVA que aun falta cobrar
+  const iva25=Math.min(pagoBs,ivaPend);                           // lo que este pago aplica al IVA
+  const restanteBs=Math.max(0,r2(pagoBs-iva25));                  // lo que queda para la Base
   const tasa=tasaPagoActual();
   const base=selFactura.b;
-  if(!tasa)return {pagoBs:pagoBs,iva25:iva25,restanteBs:restanteBs,tasa:null,restanteUsd:null,base:base,baseCancelada:null,pctBase:null,diferencial:null,saldo:null};
-  const restanteUsd=Math.round((restanteBs/tasa)*100)/100;
+  const cabec={pagoBs:pagoBs,agente:agente,iva25:iva25,ivaObjetivo:ivaObjetivo,yaCobrado:yaCobrado,ivaPend:ivaPend,restanteBs:restanteBs,base:base,ivaBs:ivaBs};
+  if(!tasa)return Object.assign(cabec,{tasa:null,restanteUsd:null,baseCancelada:null,pctBase:null,diferencial:null,saldo:null});
+  const restanteUsd=r2(restanteBs/tasa);
   let baseCancelada, diferencial, pctBase, saldo;
   if(base>0){
-    baseCancelada=Math.round(Math.min(restanteUsd,base)*100)/100;
-    diferencial=Math.round(Math.max(0,restanteUsd-base)*100)/100;   // sobrante, siempre positivo
+    baseCancelada=r2(Math.min(restanteUsd,base));
+    diferencial=r2(Math.max(0,restanteUsd-base));                 // sobrante, siempre positivo
     pctBase=Math.round((baseCancelada/base)*10000)/100;
-    saldo=Math.round(Math.max(0,base-restanteUsd)*100)/100;
+    saldo=r2(Math.max(0,base-restanteUsd));
   }else{
-    baseCancelada=restanteUsd;diferencial=0;pctBase=0;saldo=Math.round((base-restanteUsd)*100)/100;
+    baseCancelada=restanteUsd;diferencial=0;pctBase=0;saldo=r2(base-restanteUsd);
   }
-  return {pagoBs:pagoBs,iva25:iva25,restanteBs:restanteBs,tasa:tasa,restanteUsd:restanteUsd,
-          base:base,baseCancelada:baseCancelada,pctBase:pctBase,diferencial:diferencial,saldo:saldo};
+  return Object.assign(cabec,{tasa:tasa,restanteUsd:restanteUsd,baseCancelada:baseCancelada,pctBase:pctBase,diferencial:diferencial,saldo:saldo});
 }
 function fmtPct(p){return (p%1===0)?String(p):p.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function updateSaldo(){
@@ -743,8 +765,16 @@ function updateSaldo(){
   const a=aplicacionPago();
   if(!a){el.innerHTML='';return;}
   if(a.tasa==null){el.innerHTML='<div class="saldo-box saldo-neg">No hay tasa para la fecha del pago: no se puede calcular el saldo.</div>';return;}
+  let ivaLinea;
+  if(a.iva25>0){
+    ivaLinea='1) '+(a.agente?'25%':'100%')+' del IVA: <b>Bs '+fmtUsd(a.iva25)+'</b>';
+  }else if(a.ivaObjetivo>0 && a.yaCobrado>0){
+    ivaLinea='1) IVA ya cobrado en un pago anterior &rarr; este pago va completo a la Base';
+  }else{
+    ivaLinea='1) Sin descuento de IVA';
+  }
   el.innerHTML='<div class="saldo-box">Factura '+esc(selFactura.f)+
-    '<br>1) 25% del IVA: <b>Bs '+fmtUsd(a.iva25)+'</b>'+
+    '<br>'+ivaLinea+
     '<br>2) Restante <b>Bs '+fmtUsd(a.restanteBs)+'</b> &divide; Tasa '+a.tasa.toLocaleString('es-VE',{minimumFractionDigits:4,maximumFractionDigits:4})+' = <b>$'+fmtUsd(a.restanteUsd)+'</b>'+
     '<br>Base <b>$'+fmtUsd(a.base)+'</b> &minus; <b>$'+fmtUsd(a.baseCancelada)+'</b> (<b>'+fmtPct(a.pctBase)+'%</b> de la BASE) &rarr; Saldo: <b>$'+fmtUsd(a.saldo)+'</b>'+
     (a.diferencial>0?'<br><b>Diferencial (sobrante): $'+fmtUsd(a.diferencial)+'</b>':'')+'</div>';
@@ -824,6 +854,7 @@ async function saveCobranza(){
     iva25Aplicado:(function(){const a=aplicacionPago();return a?Math.round(a.iva25*100)/100:null;})(),
     pctBase:(function(){const a=aplicacionPago();return a?a.pctBase:null;})(),
     diferencial:(function(){const a=aplicacionPago();return a?a.diferencial:null;})(),
+    agenteRetencion:document.getElementById('fAgenteRet').checked,
     formaPago:document.getElementById('fForma').value,
     monedaPago:document.getElementById('fMonedaPago').value,
     tasaPago:(function(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;})(),
@@ -905,6 +936,7 @@ function openEdit(id){
     document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(rec.cliNom)+'</div><div class="cod">'+esc(rec.cliCod)+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
   }else{document.getElementById('cliPick').style.display='';document.getElementById('cliChosen').innerHTML='';}
   renderFacturas();
+  document.getElementById('fAgenteRet').checked=(rec.agenteRetencion!=null)?rec.agenteRetencion:esAgentePref(rec.cliCod);
   document.getElementById('fFactura').value=rec.factura||'';
   onFacturaInput();
   document.getElementById('fForma').value=rec.formaPago||'Transferencia';
@@ -945,9 +977,11 @@ function repRow(r,modo){
   const tp = r.tasaPago;
   let montoBsCol, pagoCol, obsCol, difCol;
   if(modo==='iva'){
-    montoBsCol = iva25Bs || '';                                  // porcion del pago que cubre el 25% IVA
+    montoBsCol = iva25Bs || '';                                  // porcion del pago que cubre el IVA
     pagoCol    = (tp && iva25Bs) ? r2(iva25Bs/tp) : '';
-    obsCol     = '25% del IVA';
+    const ivaBsF = r.facturaIvaBs||0;
+    const pctIva = ivaBsF ? Math.round(iva25Bs/ivaBsF*100) : (r.agenteRetencion===false?100:25);
+    obsCol     = fmtPct(pctIva)+'% del IVA';
     difCol     = '';
   }else{
     montoBsCol = (r.pagoRestanteBs!=null) ? r.pagoRestanteBs : (r.monto!=null?r.monto:'');
