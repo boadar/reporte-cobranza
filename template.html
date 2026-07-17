@@ -219,7 +219,7 @@ table.ftbl .nc{color:var(--danger)}
     <div class="hint" style="text-align:left;margin:0 2px 10px">Reportar prepara el Excel y las imágenes para enviarlas a <b>cobranzas@ofica.com</b> (la dirección se copia para pegarla en el correo).</div>
     <div class="selbar" id="selBar" style="display:none">
       <label><input type="checkbox" id="selAll" onchange="toggleSelAll()"> Seleccionar todas</label>
-      <span><span id="selCount"></span><button class="link" onclick="delAll()" style="color:var(--danger);margin-left:12px">Eliminar todas</button></span>
+      <span><span id="selCount"></span><button class="link" id="btnDelSel" onclick="delSel()" style="color:var(--danger);margin-left:12px">Eliminar</button></span>
     </div>
     <div id="listBody"></div>
   </div>
@@ -842,17 +842,20 @@ function updateSelUi(){
   document.getElementById('selCount').textContent=n?n+' seleccionada'+(n>1?'s':''):'';
   const sa=document.getElementById('selAll');if(sa)sa.checked=db.length>0 && n===db.length;
   const rb=document.getElementById('btnReportar');if(rb)rb.textContent=n?'Reportar ('+n+')':'Reportar';
+  const eb=document.getElementById('btnDelSel');if(eb)eb.textContent=n?'Eliminar ('+n+')':'Eliminar';
 }
 function delRec(id){if(!confirm('¿Eliminar esta cobranza?'))return;selected.delete(id);saveDb(loadDb().filter(r=>r.id!==id));renderList();}
-function delAll(){
-  const db=loadDb();if(!db.length)return;
-  const sinReportar=db.filter(r=>r.estatus!=='Reportado').length;
-  let msg='¿Eliminar TODAS las cobranzas? Se borrarán '+db.length+' registro(s) con sus imágenes.';
-  if(sinReportar)msg+='\n\nOJO: '+sinReportar+' aún está(n) PENDIENTE(S) de reportar.';
+function delSel(){
+  const db=loadDb();
+  const sel=db.filter(r=>selected.has(r.id));
+  if(!sel.length){alert('Selecciona al menos una cobranza para eliminar (toca la casilla a la izquierda).');return;}
+  const pend=sel.filter(r=>r.estatus!=='Reportado').length;
+  let msg='¿Eliminar '+sel.length+' cobranza(s) seleccionada(s)? Se borran con sus imágenes.';
+  if(pend)msg+='\n\nOJO: '+pend+' aún está(n) PENDIENTE(S) de reportar.';
   msg+='\n\nEsta acción no se puede deshacer.';
   if(!confirm(msg))return;
-  if(!confirm('Confirma otra vez: se eliminarán las '+db.length+' cobranzas.'))return;
-  selected.clear();saveDb([]);renderList();
+  saveDb(db.filter(r=>!selected.has(r.id)));
+  selected.clear();renderList();
 }
 function openEdit(id){
   const rec=loadDb().find(x=>x.id===id);if(!rec)return;
