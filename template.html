@@ -690,12 +690,15 @@ function renderFacturas(){
   if(!chosenCli){el.innerHTML='<div class="fnone">Selecciona primero el cliente para ver sus facturas pendientes.</div>';updateSaldo();return;}
   const arr=facturasDe(chosenCli.cod);
   if(!arr.length){el.innerHTML='<div class="fnone">Este cliente no tiene facturas pendientes en el listado.</div>';updateSaldo();return;}
-  let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base $</th><th class="num">IVA Bs.</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
+  let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base $</th><th class="num">Saldo $</th><th class="num">IVA Bs.</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
   arr.forEach((f,i)=>{
     const nc=f.b<0?' nc':'';
-    h+='<tr id="frow'+i+'" onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td><td class="num'+nc+'">'+(f.ib!=null&&f.ib!==0?fmtUsd(f.ib):'—')+'</td><td class="num'+nc+'">'+fmtUsd(f.p)+'</td><td>'+esc(f.o||'')+'</td></tr>';
+    const saldoBase=r2(f.b-baseYaCobrado(f.f,chosenCli.cod));      // base pendiente actual
+    const pagada=(f.b>0 && saldoBase<=0.01);
+    const saldoTd='<td class="num'+(pagada?'':nc)+'"'+(pagada?' style="color:var(--ok);font-weight:600"':(saldoBase<f.b?' style="font-weight:600"':''))+'>'+(pagada?'PAGADA':fmtUsd(saldoBase))+'</td>';
+    h+='<tr id="frow'+i+'" onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td>'+saldoTd+'<td class="num'+nc+'">'+(f.ib!=null&&f.ib!==0?fmtUsd(f.ib):'—')+'</td><td class="num'+nc+'">'+fmtUsd(f.p)+'</td><td>'+esc(f.o||'')+'</td></tr>';
   });
-  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Base y Total x Pagar en $. IVA Bs. calculado con la tasa del día de la factura. Toca una fila para asignarle el pago.</div>';
+  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Base y Saldo en $. El Saldo descuenta lo ya cobrado de la base en pagos anteriores. IVA Bs. con la tasa del día de la factura. Toca una fila para asignarle el pago.</div>';
   el.innerHTML=h;
   updateSaldo();
 }
@@ -731,6 +734,13 @@ function ivaYaCobrado(factura,cod){
     return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.iva25Aplicado||0):0);
   },0);
 }
+/* Base ya cobrada de una factura en cobranzas anteriores ($) */
+function baseYaCobrado(factura,cod){
+  if(!factura)return 0;
+  return loadDb().reduce(function(a,r){
+    return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.pagoAplicadoUsd||0):0);
+  },0);
+}
 /* Aplicacion del pago: 1) se descuenta el IVA en Bs (25% si el cliente es agente de
    retencion, 100% si no), pero SOLO la parte del IVA que aun no se ha cobrado de esa
    factura; 2) el restante en Bs se pasa a $ con la tasa del dia; 3) se resta de la Base. */
@@ -749,15 +759,19 @@ function aplicacionPago(){
   const restanteBs=Math.max(0,r2(pagoBs-iva25));                  // lo que queda para la Base
   const tasa=tasaPagoActual();
   const base=selFactura.b;
-  const cabec={pagoBs:pagoBs,agente:agente,cobrarIva:cobrarIva,iva25:iva25,ivaObjetivo:ivaObjetivo,yaCobrado:yaCobrado,ivaPend:ivaPend,restanteBs:restanteBs,base:base,ivaBs:ivaBs};
+  const baseYaCobrada=r2(baseYaCobrado(selFactura.f,chosenCli?chosenCli.cod:''));   // $ ya cobrado de la base
+  const baseRestante=base>0?r2(Math.max(0,base-baseYaCobrada)):base;                // base que aun falta
+  const cabec={pagoBs:pagoBs,agente:agente,cobrarIva:cobrarIva,iva25:iva25,ivaObjetivo:ivaObjetivo,yaCobrado:yaCobrado,ivaPend:ivaPend,restanteBs:restanteBs,base:base,baseYaCobrada:baseYaCobrada,baseRestante:baseRestante,ivaBs:ivaBs};
   if(!tasa)return Object.assign(cabec,{tasa:null,restanteUsd:null,baseCancelada:null,pctBase:null,diferencial:null,saldo:null});
   const restanteUsd=r2(restanteBs/tasa);
   let baseCancelada, diferencial, pctBase, saldo;
-  if(base>0){
-    baseCancelada=r2(Math.min(restanteUsd,base));
-    diferencial=r2(Math.max(0,restanteUsd-base));                 // sobrante, siempre positivo
-    pctBase=Math.round((baseCancelada/base)*10000)/100;
-    saldo=r2(Math.max(0,base-restanteUsd));
+  if(baseRestante>0){
+    baseCancelada=r2(Math.min(restanteUsd,baseRestante));
+    diferencial=r2(Math.max(0,restanteUsd-baseRestante));         // sobrante, siempre positivo
+    pctBase=Math.round((baseCancelada/(base||baseRestante))*10000)/100;
+    saldo=r2(Math.max(0,baseRestante-restanteUsd));
+  }else if(base>0){
+    baseCancelada=0;diferencial=restanteUsd;pctBase=0;saldo=0;    // base ya saldada -> todo es sobrante
   }else{
     baseCancelada=restanteUsd;diferencial=0;pctBase=0;saldo=r2(base-restanteUsd);
   }
@@ -782,10 +796,13 @@ function updateSaldo(){
   }else{
     ivaLinea='1) Sin descuento de IVA';
   }
+  const baseTxt=(a.baseYaCobrada>0)
+    ? 'Base restante <b>$'+fmtUsd(a.baseRestante)+'</b> <span style="opacity:.8">(de $'+fmtUsd(a.base)+', ya cobrado $'+fmtUsd(a.baseYaCobrada)+')</span>'
+    : 'Base <b>$'+fmtUsd(a.base)+'</b>';
   el.innerHTML='<div class="saldo-box">Factura '+esc(selFactura.f)+
     '<br>'+ivaLinea+
     '<br>2) Restante <b>Bs '+fmtUsd(a.restanteBs)+'</b> &divide; Tasa '+a.tasa.toLocaleString('es-VE',{minimumFractionDigits:4,maximumFractionDigits:4})+' = <b>$'+fmtUsd(a.restanteUsd)+'</b>'+
-    '<br>Base <b>$'+fmtUsd(a.base)+'</b> &minus; <b>$'+fmtUsd(a.baseCancelada)+'</b> (<b>'+fmtPct(a.pctBase)+'%</b> de la BASE) &rarr; Saldo: <b>$'+fmtUsd(a.saldo)+'</b>'+
+    '<br>'+baseTxt+' &minus; <b>$'+fmtUsd(a.baseCancelada)+'</b> (<b>'+fmtPct(a.pctBase)+'%</b> de la BASE) &rarr; Saldo: <b>$'+fmtUsd(a.saldo)+'</b>'+
     (a.diferencial>0?'<br><b>Diferencial (sobrante): $'+fmtUsd(a.diferencial)+'</b>':'')+'</div>';
 }
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
