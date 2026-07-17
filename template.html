@@ -269,11 +269,11 @@ function bestMonto(t){
 
 const BANCOS=[
  {id:'banesco',nombre:'Banesco',detect:/banesco/i,extract(t){return{
-   ref:grab(t,/referencia[^\d]*(\d[\d\s]{5,})/i).replace(/\s/g,''),
+   ref:grab(t,/referencia[^\d]*(\d[\d\s]{5,})/i).replace(/\s/g,'')||grab(t,/recibo[:\s#°ºn]*(\d{4,})/i),
    fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)),
    monto:parseMonto(grab(t,/monto[^\d]*(?:bs\.?\s*)?([\d.,]+)/i)),
-   orig:grab(t,/desde mi cuenta[^\d*]*([\d*]{4,})/i),
-   dest:grab(t,/n[uú]mero de cuenta[^\d*]*([\d*]{4,})/i)};}},
+   orig:grab(t,/desde mi cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/debitada[^\d*]*([\d*\-]{4,})/i),
+   dest:grab(t,/n[uú]mero de cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/transferida[^\d]*(\d{10,20})/i)};}},
  {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|terceros bdv|bdv/i,extract(t){return{
    ref:grab(t,/referencia es[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i),
    fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)),
@@ -300,7 +300,7 @@ const BANCOS=[
    orig:grab(t,/cuenta origen[^\d*]*([\d*]{4,})/i),
    dest:grab(t,/cuenta destino[^\d*]*([\d*]{4,})/i),
    empresa:grab(t,/empresa[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
- {id:'mercantil',nombre:'Mercantil',detect:/mercanti/i,extract(t){return{
+ {id:'mercantil',nombre:'Mercantil',detect:/mercanti|monto transferido\s*\(bs/i,extract(t){return{
    ref:grab(t,/referencia[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
    monto:parseMonto(grab(t,/monto transferido[^\d]*([\d.,]+)/i)||grab(t,/monto[^\d]*([\d.,]{4,})/i)),
