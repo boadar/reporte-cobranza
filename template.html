@@ -207,7 +207,17 @@ table.ftbl .nc{color:var(--danger)}
         <div class="field"><label>Forma de pago</label><select id="fForma"><option>Transferencia</option><option>Efectivo</option></select></div>
         <div class="field"><label>Moneda del pago</label><select id="fMonedaPago"><option>Bs.</option><option>$</option></select></div>
       </div>
-      <div class="field" style="margin-bottom:0"><label>Observaciones</label><input id="fObs" placeholder="Observación" autocomplete="off"></div>
+      <div class="field" style="margin-bottom:0"><label>Observaciones</label><select id="fObs" onchange="obsManual=true">
+        <option value="">— Seleccionar —</option>
+        <option>BASE</option>
+        <option>BASE + 25% IVA</option>
+        <option>BASE + 100% IVA</option>
+        <option>ABONO</option>
+        <option>PAGO ADELANTADO</option>
+        <option>25% IVA</option>
+        <option>100% IVA</option>
+        <option>RETENCION</option>
+      </select></div>
     </div>
     <button class="btn btn-ok" id="btnSave" onclick="saveCobranza()" style="margin-bottom:10px">Guardar cobranza</button>
     <button class="btn btn-ghost" onclick="resetAndHome()">Descartar</button>
@@ -615,6 +625,7 @@ function fillResult(bank,d,img){
   document.getElementById('fForma').value='Transferencia';
   document.getElementById('fMonedaPago').value='Bs.';
   document.getElementById('fObs').value='';
+  obsManual=false;
   document.getElementById('fAgenteRet').checked=true;
   document.getElementById('fCobrarIva').checked=true;
   refreshAgenteState();
@@ -708,7 +719,6 @@ function pickFactura(i){
   const arr=facturasDe(chosenCli.cod);const f=arr[i];if(!f)return;
   selFactura=f;
   document.getElementById('fFactura').value=f.f;
-  document.getElementById('fObs').value=f.o||'';
   arr.forEach((_,j)=>{const r=document.getElementById('frow'+j);if(r)r.className=(j===i?'on':'');});
   updateSaldo();
 }
@@ -794,6 +804,18 @@ function aplicacionPago(){
   return Object.assign(cabec,{tasa:tasa,restanteUsd:restanteUsd,baseCancelada:baseCancelada,pctBase:pctBase,diferencial:diferencial,saldo:saldo});
 }
 function fmtPct(p){return (p%1===0)?String(p):p.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+/* Sugiere la observacion segun lo que cubre el pago. Si el usuario ya eligio una, no la toca. */
+let obsManual=false;
+function sugerirObs(a){
+  if(obsManual)return;
+  const sel=document.getElementById('fObs');if(!sel||!a)return;
+  const hayIva=a.iva25>0, hayBase=a.baseCancelada>0;
+  let v='';
+  if(hayIva&&hayBase)v=a.agente?'BASE + 25% IVA':'BASE + 100% IVA';
+  else if(hayIva)v=a.agente?'25% IVA':'100% IVA';
+  else if(hayBase)v='BASE';
+  if(v)sel.value=v;
+}
 function updateSaldo(){
   const el=document.getElementById('saldoInfo');if(!el)return;
   const a=aplicacionPago();
@@ -820,6 +842,7 @@ function updateSaldo(){
     '<br>2) Restante <b>Bs '+fmtUsd(a.restanteBs)+'</b> &divide; Tasa '+a.tasa.toLocaleString('es-VE',{minimumFractionDigits:4,maximumFractionDigits:4})+' = <b>$'+fmtUsd(a.restanteUsd)+'</b>'+
     '<br>'+baseTxt+' &minus; <b>$'+fmtUsd(a.baseCancelada)+'</b> (<b>'+fmtPct(a.pctBase)+'%</b> de la BASE) &rarr; Saldo: <b>$'+fmtUsd(a.saldo)+'</b>'+
     (a.diferencial>0?'<br><b>Diferencial (sobrante): $'+fmtUsd(a.diferencial)+'</b>':'')+'</div>';
+  sugerirObs(a);
 }
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
@@ -986,7 +1009,14 @@ function openEdit(id){
   onFacturaInput();
   document.getElementById('fForma').value=rec.formaPago||'Transferencia';
   document.getElementById('fMonedaPago').value=rec.monedaPago||'Bs.';
-  document.getElementById('fObs').value=rec.obs||'';
+  (function(){
+    const sel=document.getElementById('fObs'), v=rec.obs||'';
+    // si viene una observacion vieja que no esta en la lista, se agrega para no perderla
+    if(v && ![].slice.call(sel.options).some(function(o){return o.value===v;})){
+      const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);
+    }
+    sel.value=v;obsManual=!!v;
+  })();
   document.getElementById('btnSave').textContent='Actualizar cobranza';
   calcUsd();updateOficaInfo();updateDupWarn();
   go('scResult');setTab('tabList');
