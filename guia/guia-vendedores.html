@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guía Reporte de Cobranza — OFICA</title>
+<style>
+  :root{
+    --ink:#282828; --ink-soft:#4a4a48;
+    --blue:#009DDC; --blue-dark:#0c6a97; --blue-bg:#e6f4fb;
+    --wa:#1faa52; --wa-bg:#e3f6ea;
+    --amber-bg:#fbf1dc; --amber-tx:#8a5a12;
+    --bg:#eef1f3; --card:#ffffff; --line:#e2e6ea; --muted:#6b7280;
+    --ok:#0f6e56;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  html,body{margin:0;padding:0;background:var(--bg)}
+  @page{size:A4;margin:12mm}
+  .wrap{font-family:var(--font);color:var(--ink);background:var(--bg);max-width:680px;margin:0 auto;padding:22px 16px 40px;line-height:1.55}
+  .hdr{background:var(--ink);color:#fff;border-radius:16px;padding:22px 20px;text-align:center}
+  .hdr .kick{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#9fd9f0;font-weight:600}
+  .hdr h1{margin:6px 0 8px;font-size:23px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+  .hdr .lnk{display:inline-block;font-size:13px;background:var(--blue);color:#fff;padding:6px 13px;border-radius:999px;text-decoration:none;font-weight:500;word-break:break-all}
+  .hdr .sub{font-size:13px;color:#c9ccce;margin-top:10px}
+  .band{display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+  .band .n{flex:0 0 auto;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff}
+  .band h2{margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .band .tag{margin-left:auto;font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 4px;break-inside:avoid}
+  .steps{list-style:none;margin:0;padding:0}
+  .steps li{display:flex;gap:13px;padding:13px 14px;border-bottom:1px solid var(--line)}
+  .steps li:last-child{border-bottom:none}
+  .steps .b{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--blue-bg);color:var(--blue-dark);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .steps.wa .b{background:var(--wa-bg);color:var(--wa)}
+  .steps .t{font-size:14.5px}
+  .steps .t b{font-weight:600}
+  .chip{display:inline-block;font-weight:600;background:var(--ink);color:#fff;border-radius:7px;padding:1px 8px;font-size:13px;white-space:nowrap}
+  .chip.blue{background:var(--blue)} .chip.wa{background:var(--wa)}
+  .chip.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+  .callout{display:flex;gap:11px;background:var(--amber-bg);color:var(--amber-tx);border-radius:12px;padding:13px 15px;font-size:13.5px;margin-top:14px;break-inside:avoid}
+  .callout.blue{background:var(--blue-bg);color:var(--blue-dark)}
+  .callout .ic{flex:0 0 auto;font-weight:800;font-size:16px;line-height:1.2}
+  .mock{margin:14px auto 2px;width:200px;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.07)}
+  .mock .top{background:var(--ink);height:26px}
+  .mock .body{padding:12px}
+  .mrow{display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;font-size:12px}
+  .mrow.on{background:var(--blue-bg);outline:2px solid var(--blue)}
+  .mdot{width:26px;height:26px;border-radius:7px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+  .mcap{text-align:center;font-size:12px;color:var(--muted);margin:8px 0 0}
+  svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+  .nov{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px 16px;break-inside:avoid}
+  .nov .row{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .nov .row:last-child{border-bottom:none}
+  .nov .d{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--blue-dark);background:var(--blue-bg);border-radius:7px;padding:3px 8px;height:fit-content;white-space:nowrap}
+  .nov .x{font-size:13.5px}
+  .foot{margin-top:26px;font-size:12.5px;color:var(--muted);text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="kick">OFICA · Reporte de Cobranza</div>
+    <h1>Cómo reportar los pagos desde tu teléfono</h1>
+    <a class="lnk" href="https://boadar.github.io/reporte-cobranza/">boadar.github.io/reporte-cobranza</a>
+    <div class="sub">Toma la foto o recibe el comprobante por WhatsApp, y la app saca los datos sola.</div>
+  </div>
+
+  <div class="band"><span class="n" style="background:var(--ink)">1</span><h2>Instala la app (una sola vez)</h2></div>
+  <div class="card"><ul class="steps">
+    <li><span class="b">A</span><div class="t"><b>En Android:</b> abre el enlace de arriba en <b>Chrome</b>, toca el menú <span class="chip ghost">⋮</span> (arriba a la derecha) y elige <span class="chip">Instalar aplicación</span> o <span class="chip">Agregar a pantalla de inicio</span>.</div></li>
+    <li><span class="b">B</span><div class="t"><b>En iPhone:</b> abre el enlace en <b>Safari</b>, toca el botón <b>Compartir</b> y elige <span class="chip">Agregar a inicio</span>.</div></li>
+    <li><span class="b">&#10003;</span><div class="t">Listo: queda un <b>ícono</b> en tu teléfono, como cualquier otra app. Ábrela desde ahí.</div></li>
+  </ul></div>
+  <div class="callout blue"><span class="ic">i</span><div>Instalarla es lo que permite recibir comprobantes directo desde WhatsApp (paso 2A). Si solo la abres en el navegador, no aparecerá en “Compartir”.</div></div>
+
+  <div class="band"><span class="n" style="background:var(--wa)">2</span><h2>Carga el comprobante del pago</h2></div>
+
+  <div class="band" style="margin:14px 0 8px"><span class="n" style="width:24px;height:24px;border-radius:7px;font-size:12px;background:var(--wa)">2A</span><h2 style="font-size:15.5px">Android · directo desde WhatsApp</h2><span class="tag" style="background:var(--wa-bg);color:var(--wa)">Recomendado</span></div>
+  <div class="card"><ul class="steps wa">
+    <li><span class="b">1</span><div class="t">En <b>WhatsApp</b>, abre la <b>imagen</b> del comprobante.</div></li>
+    <li><span class="b">2</span><div class="t">Toca <b>Compartir</b> (el ícono de compartir / los tres puntos).</div></li>
+    <li><span class="b">3</span><div class="t">En la lista de apps, elige <span class="chip wa">Reporte de Cobranza</span>.</div></li>
+    <li><span class="b">4</span><div class="t">La imagen <b>entra sola a la app</b> y empieza a procesarse. <b>No hay que descargar ni buscar nada.</b></div></li>
+  </ul>
+    <div class="mock"><div class="top"></div><div class="body">
+      <div style="font-size:11px;color:var(--muted);margin:2px 4px 8px">Compartir con…</div>
+      <div class="mrow"><span class="mdot" style="background:#25D366">W</span> WhatsApp</div>
+      <div class="mrow on"><span class="mdot" style="background:var(--blue)">$</span> <b>Reporte de Cobranza</b></div>
+      <div class="mrow"><span class="mdot" style="background:#888">&#9993;</span> Correo</div>
+    </div></div>
+    <div class="mcap">Elige “Reporte de Cobranza” en el menú Compartir.</div>
+  </div>
+
+  <div class="band" style="margin:20px 0 8px"><span class="n" style="width:24px;height:24px;border-radius:7px;font-size:12px;background:var(--ink)">2B</span><h2 style="font-size:15.5px">iPhone · guardar y cargar</h2></div>
+  <div class="card"><ul class="steps">
+    <li><span class="b">1</span><div class="t">En <b>WhatsApp</b>, abre la imagen → <b>Compartir</b> → <span class="chip ghost">Guardar imagen</span>.</div></li>
+    <li><span class="b">2</span><div class="t">Abre la app <b>Reporte de Cobranza</b> y toca <span class="chip blue">Cargar archivo o tomar foto</span>.</div></li>
+    <li><span class="b">3</span><div class="t">Elige <span class="chip ghost">Cargar imagen</span> y selecciónala de <b>Fotos</b>.</div></li>
+  </ul>
+    <div class="callout"><span class="ic">!</span><div>En iPhone no se puede enviar directo desde WhatsApp a la app (es un límite de Apple). Por eso hay que guardarla primero. En Android sí es directo (paso 2A).</div></div>
+  </div>
+
+  <div class="band" style="margin:20px 0 8px"><span class="n" style="width:24px;height:24px;border-radius:7px;font-size:12px;background:var(--blue)">2C</span><h2 style="font-size:15.5px">O con la cámara, en el momento</h2></div>
+  <div class="card"><ul class="steps">
+    <li><span class="b">&#128247;</span><div class="t">Abre la app → <span class="chip blue">Cargar archivo o tomar foto</span> → <span class="chip ghost">Tomar foto</span> y fotografía el comprobante.</div></li>
+  </ul></div>
+
+  <div class="band"><span class="n" style="background:var(--blue)">3</span><h2>Revisa y guarda</h2></div>
+  <div class="card"><ul class="steps">
+    <li><span class="b">1</span><div class="t">La app muestra los datos que leyó: <b>fecha, monto, referencia, cuentas</b>. Revísalos y corrige si algo salió mal.</div></li>
+    <li><span class="b">2</span><div class="t">Confirma el <b>cliente</b> (la app suele sugerirlo). Toca <span class="chip ghost">Usar</span> o búscalo por nombre.</div></li>
+    <li><span class="b">3</span><div class="t">Toca la <b>factura</b> que se está pagando en la lista.</div></li>
+    <li><span class="b">&#10003;</span><div class="t">Toca <span class="chip" style="background:var(--ok)">Guardar cobranza</span>.</div></li>
+  </ul></div>
+
+  <div class="band"><span class="n" style="background:var(--ink)">4</span><h2>Reporta a la oficina</h2></div>
+  <div class="card"><ul class="steps">
+    <li><span class="b">1</span><div class="t">Abajo, entra a la pestaña <span class="chip ghost">Cobranzas</span>.</div></li>
+    <li><span class="b">2</span><div class="t">Marca la casilla de los cobros que quieres enviar y toca <span class="chip" style="background:var(--ok)">Reportar</span>.</div></li>
+    <li><span class="b">3</span><div class="t">Elige <b>Correo</b> (o WhatsApp). El Excel y las imágenes van adjuntos. Envíalo a <b>cobranzas@ofica.com</b> y dale enviar.</div></li>
+  </ul></div>
+
+  <div class="band"><span class="n" style="background:var(--blue-dark)">&#9733;</span><h2>Novedades</h2></div>
+  <div class="nov">
+    <div class="row"><span class="d">Jul 2026</span><div class="x"><b>Compartir desde WhatsApp (Android):</b> ya puedes enviar el comprobante directo a la app desde el menú Compartir, sin descargarlo.</div></div>
+    <div class="row"><span class="d">Jul 2026</span><div class="x"><b>Bancos reconocidos:</b> Banesco, Banco de Venezuela, Bancaribe, Mercantil, Banplus, Provincial y BNC (app y web).</div></div>
+    <div class="row"><span class="d">Jul 2026</span><div class="x"><b>Facturas pendientes:</b> al elegir el cliente ves sus facturas con su saldo, y el pago se aplica al IVA y a la base automáticamente.</div></div>
+  </div>
+
+  <div class="foot">La app se actualiza sola. Si tienes dudas, escribe a la oficina.<br><b>OFICA Representaciones, S.A.</b> · Reporte de Cobranza</div>
+</div>
+</body>
+</html>
