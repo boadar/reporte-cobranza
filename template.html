@@ -465,9 +465,8 @@ function bufToDataUrl(buf,mime){
   for(let i=0;i<bytes.length;i+=chunk){bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));}
   return 'data:'+(mime||'image/jpeg')+';base64,'+btoa(bin);
 }
-async function onFile(ev){
-  const file=ev.target.files[0];ev.target.value='';
-  if(!file)return;
+function onFile(ev){const f=ev.target.files[0];ev.target.value='';if(f)processFile(f);}
+async function processFile(file){
   lastFileName=file.name||'';
   go('scProc');setTab('tabHome');setProg(.02,'Cargando el archivo…');
   await new Promise(function(r){setTimeout(r,30);});   // deja pintar la pantalla de proceso
@@ -1139,6 +1138,24 @@ function marcarReportadas(sel){
 }
 
 document.getElementById('hdrsub').textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER;
+
+/* Recibe una imagen/PDF compartido desde WhatsApp (Share Target). El service worker
+   guarda el archivo en el cache 'shared-file' y redirige aquí con ?shared=1. */
+async function checkSharedFile(){
+  if(!/[?&]shared=1/.test(location.search))return;
+  try{
+    const cache=await caches.open('shared-file');
+    const resp=await cache.match('shared');
+    history.replaceState(null,'',location.pathname);
+    if(resp){
+      const blob=await resp.blob();
+      const name=resp.headers.get('x-filename')||('compartido'+(/(pdf)/i.test(blob.type)?'.pdf':'.jpg'));
+      await cache.delete('shared');
+      processFile(new File([blob],name,{type:blob.type||'image/jpeg'}));
+    }
+  }catch(e){console.error(e);}
+}
+checkSharedFile();
 </script>
 __PWA_HOOK__
 </body>

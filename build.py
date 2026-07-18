@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v40'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v41'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -98,7 +98,9 @@ manifest = (
     '"display":"standalone","orientation":"portrait","background_color":"#282828","theme_color":"#282828",'
     '"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},'
     '{"src":"icon-512.png","sizes":"512x512","type":"image/png"},'
-    '{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}'
+    '{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}],'
+    '"share_target":{"action":"./share-target","method":"POST","enctype":"multipart/form-data",'
+    '"params":{"title":"title","text":"text","url":"url","files":[{"name":"file","accept":["image/*","application/pdf"]}]}}}'
 )
 write('manifest.webmanifest', manifest)
 
@@ -106,8 +108,10 @@ sw = (
     "const CACHE='%s';\n"
     "const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];\n"
     "self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});\n"
-    "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});\n"
-    "self.addEventListener('fetch',e=>{const req=e.request;if(req.method!=='GET')return;\n"
+    "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!=='shared-file').map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});\n"
+    "self.addEventListener('fetch',e=>{const req=e.request;const u=new URL(req.url);\n"
+    " if(req.method==='POST'&&u.pathname.endsWith('/share-target')){e.respondWith((async function(){try{const f=await req.formData();let file=f.get('file');if(!file){const all=f.getAll('file');file=all&&all[0];}if(file){const c=await caches.open('shared-file');await c.put('shared',new Response(file,{headers:{'content-type':file.type||'application/octet-stream','x-filename':file.name||''}}));}}catch(err){}return Response.redirect('./?shared=1',303);})());return;}\n"
+    " if(req.method!=='GET')return;\n"
     " e.respondWith(fetch(req).then(res=>{const cp=res.clone();caches.open(CACHE).then(c=>c.put(req,cp)).catch(()=>{});return res;}).catch(()=>caches.match(req).then(m=>m||caches.match('./index.html'))));});\n"
 ) % CACHE_NAME
 write('sw.js', sw)
