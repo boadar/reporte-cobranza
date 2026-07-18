@@ -1052,17 +1052,15 @@ function repRow(r,modo){
   // --- lo que cambia entre la fila de la Base y la del 25% IVA ---
   const iva25Bs = (r.iva25Aplicado!=null) ? r.iva25Aplicado : (r.facturaIva25!=null?r.facturaIva25:0);
   const tp = r.tasaPago;
-  let montoBsCol, pagoCol, obsCol, difCol;
+  let montoBsCol, pagoCol, difCol;
+  const obsCol = r.obs||'';        // lo elegido en la lista desplegable de Observaciones
   if(modo==='iva'){
     montoBsCol = iva25Bs || '';                                  // porcion del pago que cubre el IVA
     pagoCol    = (tp && iva25Bs) ? r2(iva25Bs/tp) : '';
-    const objetivo = (r.agenteRetencion===false ? (r.facturaIvaBs||0) : (r.facturaIva25||0));
-    obsCol = (objetivo>0 && Math.abs(iva25Bs-objetivo)<0.01) ? ((r.agenteRetencion===false?'100%':'25%')+' del IVA') : 'Residual del IVA';
     difCol     = '';
   }else{
     montoBsCol = (r.pagoRestanteBs!=null) ? r.pagoRestanteBs : (r.monto!=null?r.monto:'');
     pagoCol    = (r.pagoAplicadoUsd!=null) ? r.pagoAplicadoUsd : (pagoUsd!=null?pagoUsd:'');
-    obsCol     = (r.pctBase!=null) ? (fmtPct(r.pctBase)+'% de la BASE') : (r.obs||'');
     difCol     = (r.diferencial!=null && r.diferencial>0) ? r.diferencial : '';   // sobrante, positivo
   }
   return [
