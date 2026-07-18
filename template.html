@@ -196,10 +196,10 @@ table.ftbl .nc{color:var(--danger)}
     </div>
     <div class="card">
       <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:6px;font-weight:500">Facturas pendientes del cliente</label>
+      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:0 0 6px;cursor:pointer"><input type="checkbox" id="fCobrarIva" checked onchange="onCobrarIvaChange()" style="width:20px;height:20px"> Cobrar el IVA primero <span id="fCobrarIvaNota" style="color:var(--mut);font-size:12px"></span></label>
+      <label id="lblAgente" style="display:flex;align-items:center;gap:9px;font-size:13px;margin:0 0 10px;cursor:pointer"><input type="checkbox" id="fAgenteRet" checked onchange="onAgenteChange()" style="width:20px;height:20px"> Cliente agente de retención <span style="color:var(--mut);font-size:12px">(retiene 75%, paga 25% del IVA)</span></label>
       <div id="factList"></div>
       <div class="field" style="margin:10px 0 0"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 992505" autocomplete="off" oninput="onFacturaInput()"></div>
-      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:4px 0 6px;cursor:pointer"><input type="checkbox" id="fAgenteRet" checked onchange="onAgenteChange()" style="width:20px;height:20px"> Cliente agente de retención <span style="color:var(--mut);font-size:12px">(retiene 75%, paga 25% del IVA)</span></label>
-      <label style="display:flex;align-items:center;gap:9px;font-size:13px;margin:0 0 8px;cursor:pointer"><input type="checkbox" id="fCobrarIva" checked onchange="updateSaldo()" style="width:20px;height:20px"> Cobrar el IVA primero <span id="fCobrarIvaNota" style="color:var(--mut);font-size:12px"></span></label>
       <div class="usd" id="saldoInfo"></div>
     </div>
     <div class="card">
@@ -618,6 +618,7 @@ function fillResult(bank,d,img){
   document.getElementById('fObs').value='';
   document.getElementById('fAgenteRet').checked=true;
   document.getElementById('fCobrarIva').checked=true;
+  refreshAgenteState();
   renderCliSuggest();
   renderFacturas();
   calcUsd();
@@ -676,6 +677,7 @@ function pickCli(cod){
   document.getElementById('cliPick').style.display='none';
   document.getElementById('cliChosen').innerHTML='<div class="chosen"><div><div class="nm">'+esc(c[1])+'</div><div class="cod">'+c[0]+'</div></div><button onclick="clearCli()" aria-label="Quitar">&times;</button></div>';
   document.getElementById('fAgenteRet').checked=esAgentePref(c[0]);
+  refreshAgenteState();
   renderFacturas();
 }
 function clearCli(){chosenCli=null;document.getElementById('cliChosen').innerHTML='';document.getElementById('cliPick').style.display='';document.getElementById('cliSearch').value='';document.getElementById('cliResults').style.display='none';renderCliSuggest();renderFacturas();}
@@ -727,6 +729,21 @@ function loadAgentes(){try{return JSON.parse(localStorage.getItem('agentesRet')|
 function esAgentePref(cod){const m=loadAgentes();return (cod in m)?!!m[cod]:true;}
 function setAgentePref(cod,val){if(!cod)return;const m=loadAgentes();m[cod]=!!val;localStorage.setItem('agentesRet',JSON.stringify(m));}
 function onAgenteChange(){if(chosenCli)setAgentePref(chosenCli.cod,document.getElementById('fAgenteRet').checked);updateSaldo();}
+/* Si no se cobra el IVA primero, el agente de retencion no aplica: se deshabilita y desmarca. */
+function refreshAgenteState(){
+  const cob=document.getElementById('fCobrarIva').checked;
+  const ag=document.getElementById('fAgenteRet'), lbl=document.getElementById('lblAgente');
+  ag.disabled=!cob;
+  if(lbl){lbl.style.opacity=cob?'1':'.4';lbl.style.cursor=cob?'pointer':'default';}
+  if(!cob)ag.checked=false;
+}
+function onCobrarIvaChange(){
+  const cob=document.getElementById('fCobrarIva').checked;
+  const ag=document.getElementById('fAgenteRet');
+  if(cob)ag.checked=chosenCli?esAgentePref(chosenCli.cod):true;   // al reactivar, restaura la preferencia del cliente
+  refreshAgenteState();
+  updateSaldo();
+}
 /* IVA ya cobrado de una factura en cobranzas anteriores (Bs) */
 function ivaYaCobrado(factura,cod){
   if(!factura)return 0;
@@ -965,6 +982,7 @@ function openEdit(id){
   renderFacturas();
   document.getElementById('fAgenteRet').checked=(rec.agenteRetencion!=null)?rec.agenteRetencion:esAgentePref(rec.cliCod);
   document.getElementById('fCobrarIva').checked=(rec.cobroIva!=null)?rec.cobroIva:true;
+  refreshAgenteState();
   document.getElementById('fFactura').value=rec.factura||'';
   onFacturaInput();
   document.getElementById('fForma').value=rec.formaPago||'Transferencia';
