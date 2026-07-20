@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v46'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v47'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -117,5 +117,6 @@ sw = (
 write('sw.js', sw)
 
 print('OK  index.html (%d KB) + manifest.webmanifest + sw.js  [%s]' % (len(html)//1024, CACHE_NAME))
+
 
 

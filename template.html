@@ -248,7 +248,10 @@ table.ftbl .nc{color:var(--danger)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const CLIENTES = __CLIENTES__;
-const TASAS = __TASAS__;
+/* Las tasas vienen incrustadas (para que la app funcione sin señal), pero al abrir
+   se busca tasas.json en el servidor y se mezclan las nuevas. Asi agregar la tasa
+   de un dia NO obliga a publicar una version nueva de la app. */
+let TASAS = __TASAS__;
 const FACTURAS = __FACTURAS__;
 const APPVER = "v1";
 const REPORT_EMAIL = "cobranzas@ofica.com";
@@ -1220,6 +1223,30 @@ async function checkSharedFile(){
   }catch(e){console.error(e);}
 }
 checkSharedFile();
+
+/* Baja las tasas mas recientes sin necesidad de publicar la app de nuevo.
+   Si no hay señal o el archivo viene dañado, se sigue con las incrustadas. */
+async function refrescarTasas(){
+  try{
+    const r=await fetch('tasas.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    const nuevas=await r.json();
+    if(!nuevas||typeof nuevas!=='object')return;
+    let n=0;
+    for(const k in nuevas){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(k))continue;
+      const v=nuevas[k];
+      if(!Array.isArray(v)||v[0]==null)continue;
+      if(!TASAS[k]||TASAS[k][0]!==v[0]||TASAS[k][1]!==v[1]){TASAS[k]=v;n++;}
+    }
+    if(n){                              // recalcula lo que ya este en pantalla
+      try{calcUsd();renderFacturas();}catch(e){}
+      const el=document.getElementById('hdrsub');
+      if(el)el.textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER+' · tasas al día';
+    }
+  }catch(e){}
+}
+refrescarTasas();
 </script>
 __PWA_HOOK__
 </body>
