@@ -308,12 +308,14 @@ const BANCOS=[
    monto:parseMonto(grab(t,/monto[^\d]*(?:bs\.?\s*)?([\d.,]+)/i)),
    orig:grab(t,/desde mi cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/debitada[^\d*]*([\d*\-]{4,})/i),
    dest:grab(t,/n[uú]mero de cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/transferida[^\d]*(\d{10,20})/i)};}},
- {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|terceros bdv|bdv|0102[\d*]{4,}/i,extract(t){return{
-   ref:grab(t,/referencia es[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i)||grab(t,/operaci[oó]n[:\s]*(\d{5,})/i),
-   fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i))||normFecha(t),
-   monto:parseMonto(grab(t,/monto[:\s]*([\d.,]+)/i)),
+ {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|bdv\s*en\s*l[ií]nea|terceros bdv|bdv|0102[\d*]{4,}/i,extract(t){return{
+   ref:grab(t,/referencia\s*(?:es)?[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i)||grab(t,/operaci[oó]n[:\s]*(\d{5,})/i)||grab(t,/lote[:\s]*(\d{5,})/i),
+   fecha:normFecha(grab(t,/fecha\s*(?:de\s*)?(?:creaci[oó]n)?[^\d]{0,12}(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i))||normFecha(t),
+   // "Monto: 1.234,00" y tambien "Monto total: 368.466,00 Bs." (pago a proveedores)
+   monto:parseMonto(grab(t,/monto\s*(?:total)?[^\d]{0,12}([\d.,]+)/i)),
    orig:grab(t,/instrumento origen[:\s]*([\d*]{4,})/i)||grab(t,/origen[:\s]*([\d*]{4,})/i),
-   dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)||grab(t,/destino[:\s]*([\d*]{4,})/i)};}},
+   dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)||grab(t,/destino[:\s]*([\d*]{4,})/i),
+   empresa:empresaCampo(t)};}},
  {id:'bnc',nombre:'BNC',detect:/\bbnc|banco nacional de cr[eé]dito/i,extract(t){return{
    ref:grab(t,/transferencia[:\s]*(\d{5,})/i)||grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/fecha\s*\/?\s*hora[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
@@ -372,6 +374,9 @@ function empresaCampo(t){
     v=v.split(/\s+[\d*]{0,8}\*{2,}/)[0];             // o una cuenta enmascarada
     v=v.replace(/\s+\d[\d.,]*[.,]\d{2}\s*$/,'');     // o un importe al final
     v=v.trim();
+    // si el OCR separo etiquetas y valores en dos bloques, la linea siguiente es otra
+    // etiqueta ("Monto total:", "Concepto:"...): mejor devolver vacio que un nombre falso
+    if(/:\s*$/.test(v) || /^(n[°ºo]?\s*)?(lote|documento|monto|concepto|fecha|empresa|referencia|banco|cuenta)\b/i.test(v)) continue;
     if(v.length>=3 && /[A-Za-zÁÉÍÓÚÑ]/.test(v)) return v;
   }
   return '';
