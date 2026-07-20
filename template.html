@@ -247,12 +247,13 @@ table.ftbl .nc{color:var(--danger)}
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-const CLIENTES = __CLIENTES__;
-/* Las tasas vienen incrustadas (para que la app funcione sin señal), pero al abrir
-   se busca tasas.json en el servidor y se mezclan las nuevas. Asi agregar la tasa
-   de un dia NO obliga a publicar una version nueva de la app. */
+/* Los datos vienen incrustados para que la app funcione sin señal, pero al abrir
+   se buscan clientes.json / tasas.json / facturas.json en el servidor y se toma lo
+   nuevo (ver refrescarDatos). Asi actualizar tasas, clientes o la cartera de
+   facturas NO obliga a publicar una version nueva de la app. */
+let CLIENTES = __CLIENTES__;
 let TASAS = __TASAS__;
-const FACTURAS = __FACTURAS__;
+let FACTURAS = __FACTURAS__;
 const APPVER = "v1";
 const REPORT_EMAIL = "cobranzas@ofica.com";
 
@@ -1224,29 +1225,45 @@ async function checkSharedFile(){
 }
 checkSharedFile();
 
-/* Baja las tasas mas recientes sin necesidad de publicar la app de nuevo.
-   Si no hay señal o el archivo viene dañado, se sigue con las incrustadas. */
-async function refrescarTasas(){
+/* Baja tasas, clientes y facturas mas recientes sin publicar la app de nuevo.
+   Si no hay señal o un archivo viene dañado, se sigue con lo incrustado: cada
+   archivo se valida por separado, uno malo no daña a los otros. */
+async function bajarJson(nombre){
   try{
-    const r=await fetch('tasas.json?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok)return;
-    const nuevas=await r.json();
-    if(!nuevas||typeof nuevas!=='object')return;
-    let n=0;
-    for(const k in nuevas){
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(k))continue;
-      const v=nuevas[k];
-      if(!Array.isArray(v)||v[0]==null)continue;
-      if(!TASAS[k]||TASAS[k][0]!==v[0]||TASAS[k][1]!==v[1]){TASAS[k]=v;n++;}
-    }
-    if(n){                              // recalcula lo que ya este en pantalla
-      try{calcUsd();renderFacturas();}catch(e){}
-      const el=document.getElementById('hdrsub');
-      if(el)el.textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER+' · tasas al día';
-    }
-  }catch(e){}
+    const r=await fetch(nombre+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return null;
+    const j=await r.json();
+    return (j&&typeof j==='object')?j:null;
+  }catch(e){return null;}
 }
-refrescarTasas();
+async function refrescarDatos(){
+  const [tas,cli,fac]=await Promise.all([bajarJson('tasas.json'),bajarJson('clientes.json'),bajarJson('facturas.json')]);
+  let cambio=false;
+  // tasas: se mezclan los dias nuevos con los que ya trae la app
+  if(tas){
+    for(const k in tas){
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(k))continue;
+      const v=tas[k];
+      if(!Array.isArray(v)||v[0]==null)continue;
+      if(!TASAS[k]||TASAS[k][0]!==v[0]||TASAS[k][1]!==v[1]){TASAS[k]=v;cambio=true;}
+    }
+  }
+  // clientes: se reemplaza la lista completa, nunca por una vacia o mas corta a la mitad
+  if(Array.isArray(cli) && cli.length>=Math.min(50,CLIENTES.length/2) && Array.isArray(cli[0])){
+    if(cli.length!==CLIENTES.length){cambio=true;}
+    CLIENTES=cli;
+  }
+  // facturas: se reemplaza la cartera completa (una factura cobrada desaparece del archivo)
+  if(fac && !Array.isArray(fac) && Object.keys(fac).length>0){
+    FACTURAS=fac;cambio=true;
+  }
+  if(cambio){
+    try{if(chosenCli)renderFacturas();calcUsd();}catch(e){}
+    const el=document.getElementById('hdrsub');
+    if(el)el.textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER+' · datos al día';
+  }
+}
+refrescarDatos();
 </script>
 __PWA_HOOK__
 </body>

@@ -6,9 +6,9 @@
 Uso:  python build.py
 Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr build.py.
 """
-import os, re, csv, json
+import os, re, csv, json, sys, subprocess
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v47'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v48'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -65,6 +65,22 @@ def gen_data():
 
 gen_data()
 
+# --solo-datos: actualiza clientes/tasas/facturas y los publica SIN tocar la app.
+# La app los busca al arrancar, asi que no hace falta subir el numero de version.
+if '--solo-datos' in sys.argv:
+    if '--push' in sys.argv:
+        msg = 'datos: clientes / tasas / facturas al dia'
+        for cmd in (['git', 'add', 'clientes.json', 'tasas.json', 'facturas.json', 'data'],
+                    ['git', 'commit', '-m', msg],
+                    ['git', 'push']):
+            if subprocess.run(cmd, cwd=D).returncode != 0:
+                print('  fallo:', ' '.join(cmd))
+                raise SystemExit(1)
+        print('OK  datos publicados (la app no cambia de version)')
+    else:
+        print('OK  datos regenerados. Agrega --push para publicarlos.')
+    raise SystemExit(0)
+
 PWA_HEAD = (
     '<link rel="manifest" href="manifest.webmanifest">\n'
     '<link rel="apple-touch-icon" href="icon-180.png">\n'
@@ -117,6 +133,7 @@ sw = (
 write('sw.js', sw)
 
 print('OK  index.html (%d KB) + manifest.webmanifest + sw.js  [%s]' % (len(html)//1024, CACHE_NAME))
+
 
 
 
