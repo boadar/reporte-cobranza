@@ -1052,16 +1052,20 @@ function repRow(r,modo){
   // --- lo que cambia entre la fila de la Base y la del 25% IVA ---
   const iva25Bs = (r.iva25Aplicado!=null) ? r.iva25Aplicado : (r.facturaIva25!=null?r.facturaIva25:0);
   const tp = r.tasaPago;
-  let montoBsCol, pagoCol, difCol;
-  const obsCol = r.obs||'';        // lo elegido en la lista desplegable de Observaciones
+  let montoBsCol, pagoCol, difCol, obsCol;
   if(modo==='iva'){
     montoBsCol = iva25Bs || '';                                  // porcion del pago que cubre el IVA
     pagoCol    = (tp && iva25Bs) ? r2(iva25Bs/tp) : '';
     difCol     = '';
+    // % del IVA de la factura que cubre esta linea: 25%, 100% o el residual que toque
+    const pctIva = (ivaFact!=='' && ivaFact>0 && iva25Bs) ? Math.round((iva25Bs/ivaFact)*10000)/100 : null;
+    obsCol     = (pctIva!=null) ? (fmtPct(pctIva)+'% del IVA') : 'IVA';
   }else{
     montoBsCol = (r.pagoRestanteBs!=null) ? r.pagoRestanteBs : (r.monto!=null?r.monto:'');
     pagoCol    = (r.pagoAplicadoUsd!=null) ? r.pagoAplicadoUsd : (pagoUsd!=null?pagoUsd:'');
     difCol     = (r.diferencial!=null && r.diferencial>0) ? r.diferencial : '';   // sobrante, positivo
+    // esta linea solo descuenta base -> se nombra por el % de la base que cancela
+    obsCol     = (r.pctBase!=null) ? (fmtPct(r.pctBase)+'% de la base') : (r.obs||'');
   }
   return [
     r.facturaFecha||'',            // 1  Fecha (de la factura)
