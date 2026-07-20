@@ -272,8 +272,15 @@ const MESES={ENE:1,ENERO:1,FEB:2,FEBRERO:2,MAR:3,MARZO:3,ABR:4,ABRIL:4,MAY:5,MAY
 function stripAcc(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 function normFecha(s){
   if(!s) return '';
-  let m=s.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-  if(m){let a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=2000;let d,mo;if(b>12&&a<=12){d=b;mo=a;}else{d=a;mo=b;}return pad(d)+'/'+pad(mo)+'/'+y;}
+  // se recorren todas las fechas del texto y se toma la primera VALIDA: si el OCR
+  // leyo mal un digito (p.ej. 40/07/2026) se descarta en vez de darla por buena
+  let re=/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/g, m;
+  while(m=re.exec(s)){
+    let a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=2000;
+    let d,mo;if(b>12&&a<=12){d=b;mo=a;}else{d=a;mo=b;}
+    if(d<1||d>31||mo<1||mo>12)continue;
+    return pad(d)+'/'+pad(mo)+'/'+y;
+  }
   m=s.match(/(\d{1,2})-([A-Za-zÁÉÍÓÚáéíóú]{3,})-(\d{2,4})/);
   if(m){let mo=MESES[stripAcc(m[2]).toUpperCase()];if(mo){let y=+m[3];if(y<100)y+=2000;return pad(+m[1])+'/'+pad(mo)+'/'+y;}}
   m=s.match(/(\d{1,2})\s+de\s+([A-Za-zÁÉÍÓÚáéíóú]+)\s+(?:del?\s+)?(\d{4})/i);
@@ -308,7 +315,7 @@ const BANCOS=[
    monto:parseMonto(grab(t,/monto[^\d]*(?:bs\.?\s*)?([\d.,]+)/i)),
    orig:grab(t,/desde mi cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/debitada[^\d*]*([\d*\-]{4,})/i),
    dest:grab(t,/n[uú]mero de cuenta[^\d*]*([\d*]{4,})/i)||grab(t,/transferida[^\d]*(\d{10,20})/i)};}},
- {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|bdv\s*en\s*l[ií]nea|terceros bdv|bdv|0102[\d*]{4,}/i,extract(t){return{
+ {id:'bdv',nombre:'Banco de Venezuela',detect:/banco de venezuela|bdv\s*en\s*l[ií]nea|bdvenl[ií]nea|terceros bdv|bdv|0102[\d*]{4,}|comprobante de pago a proveedores/i,extract(t){return{
    ref:grab(t,/referencia\s*(?:es)?[:\s]*(\d{4,})/i)||grab(t,/referencia[^\d]*(\d{5,})/i)||grab(t,/operaci[oó]n[:\s]*(\d{5,})/i)||grab(t,/lote[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/fecha\s*(?:de\s*)?(?:creaci[oó]n)?[^\d]{0,12}(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i))||normFecha(t),
    // "Monto: 1.234,00" y tambien "Monto total: 368.466,00 Bs." (pago a proveedores)
@@ -425,7 +432,8 @@ function genericExtract(t){return{
   ref:grab(t,/referencia[^\d]*(\d{5,})/i)||grab(t,/operaci[oó]n[:\s]*(\d{5,})/i)||grab(t,/confirmaci[oó]n[:\s]*(\d{5,})/i),
   fecha:normFecha(t),
   monto:parseMonto(grab(t,/monto[^\d]*([\d.,]{4,})/i)),
-  orig:grab(t,/origen[:\s]*([\d*]{4,})/i),dest:grab(t,/destino[:\s]*([\d*]{4,})/i)};}
+  orig:grab(t,/origen[:\s]*([\d*]{4,})/i),dest:grab(t,/destino[:\s]*([\d*]{4,})/i),
+  empresa:empresaCampo(t)};}   // aunque no se reconozca el banco, sirve para sugerir el cliente
 function extractFactura(t){
   let m=t.match(/fact(?:ura)?s?\.?\s*(?:n[ro°º.]*)?\s*[:#]?\s*(\d{3,})/i);
   if(m)return m[1];
@@ -553,14 +561,33 @@ function prepOcr(dataUrl){
     im.src=dataUrl;
   });
 }
+/* Cuanta informacion util trae un texto leido: sirve para elegir entre dos lecturas. */
+function puntajeTexto(t){
+  let n=0;
+  if(bestMonto(t)!=null)n+=3;
+  if(detectBank(t))n+=1;
+  if(normFecha(t))n+=1;
+  if(/referencia|operaci[oó]n|confirmaci[oó]n/i.test(t))n+=1;
+  if(empresaCampo(t))n+=1;
+  return n;
+}
 async function processImage(dataUrl){
   go('scProc');setProg(.04,'Preparando la imagen…');
   let prep=dataUrl;
   try{prep=await prepOcr(dataUrl);}catch(e){}
   setProg(.1,'Leyendo el comprobante…');
   let text='';
-  try{text=await ocr(prep,.12,.83);}
+  try{text=await ocr(prep,.12,.62);}
   catch(err){console.error(err);alert('No se pudo leer la imagen. Intenta con una foto más nítida.');resetAndHome();return;}
+  /* El realce de contraste ayuda con fotos oscuras, pero en comprobantes de texto
+     gris claro puede borrar renglones (p.ej. el monto). Si falto algo clave se
+     relee la imagen original y se queda el texto que traiga mas datos. */
+  if(prep!==dataUrl && bestMonto(text)==null){
+    setProg(.76,'Releyendo la imagen…');
+    let t2='';
+    try{t2=await ocr(dataUrl,.78,.2);}catch(e){}
+    if(t2 && puntajeTexto(t2)>puntajeTexto(text)) text=t2;
+  }
   setProg(1,'Listo');
   finishExtract(text,detectBank(text),dataUrl);
 }
