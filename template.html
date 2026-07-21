@@ -276,6 +276,11 @@ const MESES={ENE:1,ENERO:1,FEB:2,FEBRERO:2,MAR:3,MARZO:3,ABR:4,ABRIL:4,MAY:5,MAY
 function stripAcc(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 function normFecha(s){
   if(!s) return '';
+  // formato ISO ano-mes-dia (2026-07-20), como la "Fecha de Ejecucion" del BNC.
+  // se busca primero para que no lo confunda con dia-mes: en "2026-07-20" el patron
+  // dia/mes/ano tomaria "26-07-20" y daria 26/07/2020.
+  let mi=s.match(/(20\d{2})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(mi){let y=+mi[1],mo=+mi[2],d=+mi[3];if(d>=1&&d<=31&&mo>=1&&mo<=12)return pad(d)+'/'+pad(mo)+'/'+y;}
   // se recorren todas las fechas del texto y se toma la primera VALIDA: si el OCR
   // leyo mal un digito (p.ej. 40/07/2026) se descarta en vez de darla por buena
   let re=/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/g, m;
@@ -327,13 +332,16 @@ const BANCOS=[
    orig:grab(t,/instrumento origen[:\s]*([\d*]{4,})/i)||grab(t,/origen[:\s]*([\d*]{4,})/i),
    dest:grab(t,/instrumento destino[:\s]*([\d*]{4,})/i)||grab(t,/destino[:\s]*([\d*]{4,})/i),
    empresa:empresaCampo(t)};}},
- {id:'bnc',nombre:'BNC',detect:/\bbnc|banco nacional de cr[eé]dito/i,extract(t){return{
-   ref:grab(t,/transferencia[:\s]*(\d{5,})/i)||grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i),
-   fecha:normFecha(grab(t,/fecha\s*\/?\s*hora[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
+ {id:'bnc',nombre:'BNC',detect:/\bbnc|banco nacional de cr[eé]dito|bncnet/i,extract(t){return{
+   // "Nro. de Transferencia" es el identificador (el "Nro. de Referencia" suele venir 0)
+   ref:grab(t,/n[roº°.\s]*de\s*transferencia[:\s]*(\d{5,})/i)||grab(t,/transferencia[:\s]*(\d{5,})/i)||grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i),
+   // "Fecha de Ejecucion 2026-07-20 17:22:..." viene en formato ISO; normFecha lo entiende
+   fecha:normFecha(grab(t,/fecha\s*(?:de\s*ejecuci[oó]n|\/?\s*hora)[:\s]*([\d\/\-]{8,10})/i))||normFecha(t),
    monto:parseMonto(grab(t,/monto[^\d]*([\d.,]+)/i)),
    orig:grab(t,/cuenta corriente[^\d*]*([\d*]{4,})/i),
    dest:grab(t,/beneficiario[\s\S]{0,150}?(\d{18,20})/i),
-   empresa:grab(t,/cliente[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)||grab(t,/titular[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)};}},
+   // "Estimado cliente EL MUNDO DEL LIBRO,C.A," -> se quita la coma final
+   empresa:(grab(t,/(?:estimado\s+)?cliente[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)||grab(t,/titular[:\s]*\n?\s*([A-Za-zÁÉÍÓÚÑ][^\n]{2,})/i)).replace(/[,\s]+$/,'')};}},
  {id:'provincial',nombre:'Provincial',detect:/provinet|provincial/i,extract(t){return{
    ref:grab(t,/identificaci[oó]n[:\s]*(\d{5,})/i)||grab(t,/referencia[:\s]*(\d{5,})/i),
    fecha:normFecha(grab(t,/fecha[^\d]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i)||grab(t,/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)),
@@ -1127,7 +1135,8 @@ function repRow(r,modo){
     obsCol                         // 21 Observaciones
   ];
 }
-async function buildReportFile(sel){
+async function buildReportFile(sel,baseName){
+  const base=baseName||'Cobranzas';
   const rows=sel.flatMap(repRows);
   try{
     await ensureExcelJS();
@@ -1142,11 +1151,11 @@ async function buildReportFile(sel){
       ws.getColumn(c+1).width=Math.min(60,Math.max(8,max+2));
     }
     const buf=await wb.xlsx.writeBuffer();
-    return new File([buf],'Cobranzas.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    return new File([buf],base+'.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }catch(e){
     console.error(e);
     const csv=[REP_HEAD].concat(rows.map(row=>row.map(c=>typeof c==='number'?String(c).replace('.',','):c))).map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(';')).join('\r\n');
-    return new File(['﻿'+csv],'Cobranzas.csv',{type:'text/csv'});
+    return new File(['﻿'+csv],base+'.csv',{type:'text/csv'});
   }
 }
 function dataUrlToFile(dataUrl,name){
@@ -1159,12 +1168,28 @@ function nombreCorto(nom){
   s=s.replace(/[,;\s]+$/,'').trim();
   return s||String(nom||'').trim();
 }
+/* Convierte un texto en un fragmento seguro para nombre de archivo:
+   sin acentos, sin signos raros, con guiones bajos y a lo sumo 40 caracteres. */
+function slugArchivo(s){
+  return stripAcc(String(s||'')).replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
+}
+/* Nombre de archivo de UNA cobranza: Cliente_Fecha_Fact992659.ext */
+function nombreArchivo(r,ext){
+  const cli=slugArchivo(nombreCorto(r.cliNom||'')) || 'Cliente';
+  const fecha=(r.fecha||'').replace(/\//g,'-');            // 20/07/2026 -> 20-07-2026
+  const fac=r.factura?('Fact'+slugArchivo(r.factura)):'';
+  const partes=[cli,fecha,fac].filter(Boolean);
+  return partes.join('_')+'.'+ext;
+}
 async function reportar(){
   const db=loadDb();const sel=db.filter(r=>selected.has(r.id));
   if(!sel.length){alert('Selecciona al menos una cobranza para reportar (toca la casilla a la izquierda).');return;}
   const btn=document.getElementById('btnReportar');const lbl=btn.textContent;btn.textContent='Preparando…';btn.disabled=true;
-  const files=[await buildReportFile(sel)];
-  sel.forEach(r=>{const f=dataUrlToFile(r.img,'comprobante_'+(r.ref||r.id)+'.jpg');if(f)files.push(f);});
+  // el Excel toma el nombre del cobro cuando es uno solo; si son varios, la fecha y el conteo
+  const excelBase=(sel.length===1)?('Cobranza_'+nombreArchivo(sel[0],'x').replace(/\.x$/,''))
+                                   :('Cobranzas_'+(new Date().toLocaleDateString('es-VE').replace(/\//g,'-'))+'_'+sel.length+'cobros');
+  const files=[await buildReportFile(sel,excelBase)];
+  sel.forEach(r=>{const f=dataUrlToFile(r.img,nombreArchivo(r,'jpg'));if(f)files.push(f);});
   btn.textContent=lbl;btn.disabled=false;
   const totalBs=sel.reduce((a,r)=>a+(r.monto||0),0);
   const fecha=new Date().toLocaleDateString('es-VE');
