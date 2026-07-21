@@ -697,15 +697,58 @@ function calcUsd(){
   const info=document.getElementById('tasaInfo');
   if(monto==null||!iso||!TASAS[iso]||TASAS[iso][0]==null){
     document.getElementById('fUsd').value='';
-    info.innerHTML=iso&&monto!=null?'<span style="color:var(--danger)">No hay tasa registrada para esa fecha</span>':'';
+    if(iso&&monto!=null&&iso===hoyIso()&&tasaVivoEstado[iso]!=='fallo'){
+      // la rutina diaria no alcanzo a cargar la tasa de hoy: se consulta en vivo
+      if(tasaVivoEstado[iso]!=='buscando')consultarTasaEnVivo(iso);
+      info.innerHTML='<span style="color:var(--mut)">&#8987; Consultando la tasa del día…</span>';
+    }else if(iso&&monto!=null){
+      info.innerHTML='<span style="color:var(--danger)">No hay tasa registrada para esa fecha</span>';
+    }else{info.innerHTML='';}
     updateSaldo();
     return;
   }
   const tasa=TASAS[iso][0];
   document.getElementById('fUsd').value=(monto/tasa).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
-  info.innerHTML='Tasa BCV '+iso.split('-').reverse().join('/')+': <b>'+tasa.toLocaleString('es-VE',{minimumFractionDigits:4})+' Bs/$</b>';
+  const marca=tasaVivoEstado[iso]==='ok'?' <span style="color:var(--mut)">(consultada en vivo)</span>':'';
+  info.innerHTML='Tasa BCV '+iso.split('-').reverse().join('/')+': <b>'+tasa.toLocaleString('es-VE',{minimumFractionDigits:4})+' Bs/$</b>'+marca;
   updateSaldo();
 }
+/* ---------- respaldo: consulta de la tasa oficial en vivo ----------
+   Si la PC estuvo apagada a las 7 am y la rutina no cargo la tasa de hoy, un
+   vendedor que cargue un pago de HOY dispara esta consulta. Fuente: dolarapi
+   (promedio = tasa oficial BCV, con CORS). Solo aplica al dia de hoy: para dias
+   pasados la API solo tiene el valor de hoy y seria una tasa equivocada.
+   Lo consultado queda en memoria y en el telefono/PC; cuando la rutina publique
+   la tasa oficial, esa reemplaza a la consultada (mismo origen, mismo valor). */
+const TASA_API='https://ve.dolarapi.com/v1/dolares/oficial';
+let tasaVivoEstado={};                    // iso -> 'buscando' | 'ok' | 'fallo'
+function hoyIso(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function guardarTasaVivo(iso,usd,eur){
+  TASAS[iso]=[usd,eur!=null?eur:null];
+  try{const o=JSON.parse(localStorage.getItem('tasasEnVivo')||'{}');o[iso]=[usd,eur!=null?eur:null];localStorage.setItem('tasasEnVivo',JSON.stringify(o));}catch(e){}
+}
+async function consultarTasaEnVivo(iso){
+  tasaVivoEstado[iso]='buscando';
+  try{
+    const r=await fetch(TASA_API+'?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw 0;
+    const j=await r.json();
+    const usd=Number(j.promedio);
+    if(!usd||usd<=0)throw 0;
+    guardarTasaVivo(iso,usd,null);
+    tasaVivoEstado[iso]='ok';
+  }catch(e){tasaVivoEstado[iso]='fallo';}
+  calcUsd();
+}
+/* Al arrancar, recupera las tasas consultadas en vivo guardadas en este equipo,
+   para no volver a pedirlas si el vendedor recarga la app. */
+function cargarTasasVivoLocal(){
+  try{
+    const o=JSON.parse(localStorage.getItem('tasasEnVivo')||'{}');
+    for(const k in o){if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&Array.isArray(o[k])&&o[k][0]!=null&&!TASAS[k]){TASAS[k]=o[k];tasaVivoEstado[k]='ok';}}
+  }catch(e){}
+}
+cargarTasasVivoLocal();
 
 /* ---------- buscador de clientes ---------- */
 let chosenCli=null;
