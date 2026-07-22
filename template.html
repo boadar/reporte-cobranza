@@ -127,6 +127,9 @@ table.ftbl .nc{color:var(--danger)}
       </button>
     </div>
     <div class="hint">Acepta fotos, capturas de pantalla e imágenes, y también archivos PDF.<br>Bancos reconocidos: Banesco, Banco de Venezuela, Bancaribe, Mercantil, Banplus, Provincial, BNC.<br>Los datos se pueden corregir antes de guardar.</div>
+    <div style="text-align:center;margin-top:26px">
+      <button onclick="openAdmin()" style="background:none;border:1px solid var(--line);color:var(--mut);font-size:12px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;letter-spacing:.5px">ADM</button>
+    </div>
   </div>
 
   <!-- PANTALLA 2: ELEGIR ORIGEN -->
@@ -235,6 +238,20 @@ table.ftbl .nc{color:var(--danger)}
       <span><span id="selCount"></span><button class="link" id="btnDelSel" onclick="delSel()" style="color:var(--danger);margin-left:12px">Eliminar</button></span>
     </div>
     <div id="listBody"></div>
+  </div>
+
+  <!-- PANTALLA 6: ADMINISTRACION -->
+  <div class="screen" id="scAdmin">
+    <div class="sheet-title">Ventana de Administración</div>
+    <div class="card">
+      <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:8px;font-weight:500">Cuentas por cobrar</label>
+      <div id="admFacturasEstado" class="usd" style="margin:0 0 12px"></div>
+      <button class="btn btn-primary" onclick="document.getElementById('admFile').click()">ACTUALIZAR CUENTAS POR COBRAR</button>
+      <input type="file" id="admFile" accept=".xlsx" style="display:none" onchange="onAdminFile(event)">
+      <div class="hint" style="text-align:left;margin:10px 2px 0">Carga la plantilla <b>Plantilla-CxC.xlsx</b> con las facturas pendientes. Reemplaza toda la cartera: incluye <b>todas</b> las facturas por cobrar (una ya cobrada simplemente no se incluye).</div>
+    </div>
+    <div id="admResultado"></div>
+    <button class="btn btn-ghost" onclick="go('scInicio');setTab('tabHome')">Volver</button>
   </div>
 
 </div>
@@ -1319,18 +1336,122 @@ async function refrescarDatos(){
   // clientes: se reemplaza la lista completa, nunca por una vacia o mas corta a la mitad
   if(Array.isArray(cli) && cli.length>=Math.min(50,CLIENTES.length/2) && Array.isArray(cli[0])){
     if(cli.length!==CLIENTES.length){cambio=true;}
-    CLIENTES=cli;
+    CLIENTES=cli;cliIdx=null;cliCods=null;   // se recalcula el indice de nombres
   }
   // facturas: se reemplaza la cartera completa (una factura cobrada desaparece del archivo)
   if(fac && !Array.isArray(fac) && Object.keys(fac).length>0){
     FACTURAS=fac;cambio=true;
   }
+  // si en este equipo un administrador cargo una cartera manual, esa manda sobre la del servidor
+  if(aplicarFacturasAdmin())cambio=true;
   if(cambio){
     try{if(chosenCli)renderFacturas();calcUsd();}catch(e){}
     const el=document.getElementById('hdrsub');
     if(el)el.textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER+' · datos al día';
   }
 }
+/* ---------- Ventana de Administración (v51) ----------
+   OJO: el repo es PUBLICO, asi que esta clave es visible para quien inspeccione el
+   codigo; es una traba para que un vendedor no entre por error, NO seguridad real.
+   Igual el riesgo es bajo: cargar una plantilla solo actualiza la cartera en ESTE
+   equipo y genera archivos para descargar; no escribe nada en el servidor. */
+const ADMIN_PASS='Solita.2026';
+let cliIdx=null, cliCods=null, admGen=null;
+function openAdmin(){
+  const p=prompt('Ventana de Administración\n\nClave:');
+  if(p==null)return;
+  if(p!==ADMIN_PASS){alert('Clave incorrecta.');return;}
+  go('scAdmin');setTab('tabHome');
+  document.getElementById('admResultado').innerHTML='';admGen=null;
+  renderAdmin();
+}
+function renderAdmin(){
+  const el=document.getElementById('admFacturasEstado');
+  let nCli=0,nFac=0;for(const k in FACTURAS){nCli++;nFac+=(FACTURAS[k]||[]).length;}
+  const ov=overrideInfo();
+  el.innerHTML='Cartera actual: <b>'+nFac+'</b> facturas de <b>'+nCli+'</b> clientes.'+
+    (ov?'<br><span style="color:var(--ok)">Cargada en este equipo el '+ov+'.</span> <a class="link" onclick="quitarFacturasAdmin()" style="cursor:pointer">Volver a lo publicado</a>':'');
+}
+/* nombre normalizado igual que gen_cxc_desde_xlsx.py (quita acentos, signos y sufijos c.a/s.a...) */
+function normCliName(s){
+  s=stripAcc(String(s||'')).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  s=s.replace(/\b(c a|ca|compania anonima|s a|sa|srl|rl|cia)\b/g,'').trim();
+  return s.replace(/\s+/g,' ').trim();
+}
+function getCliIdx(){if(cliIdx)return cliIdx;cliIdx={};for(let i=0;i<CLIENTES.length;i++){const k=normCliName(CLIENTES[i][1]);if(k&&!(k in cliIdx))cliIdx[k]=CLIENTES[i][0];}return cliIdx;}
+function getCliCods(){if(cliCods)return cliCods;cliCods=new Set(CLIENTES.map(c=>String(c[0]).trim()));return cliCods;}
+function keyHdr(s){return stripAcc(String(s==null?'':s)).toLowerCase().replace(/[^a-z0-9]+/g,'');}
+const ADM_ALIAS={fecha:['fechafactura','fechadelafactura','fechafact','fecha'],factura:['factura','numerodefactura','nfactura','nrofactura','nrodefactura','numfactura'],tipo:['tipo','tipodedocumento','tipodocumento'],cliente:['cliente','nombrecliente','nombre'],codigo:['codigo','codcliente','codigocliente','cod'],venc:['vencimiento','fechadevencimiento','fechavencimiento'],base:['base','basedolares'],iva:['iva','ivadolares'],total:['totalporpagar','totalapagar','saldo','saldopendiente','totalpagar'],obs:['observacion','observaciones','obs']};
+function cellText(v){if(v==null)return '';if(typeof v==='object'){if(v.text!=null)return String(v.text);if(v.result!=null)return String(v.result);if(v.richText)return v.richText.map(t=>t.text).join('');return '';}return String(v);}
+function cellVal(v){if(v!=null&&typeof v==='object'&&!(v instanceof Date)){if('result' in v)return v.result;if('text' in v)return v.text;if(v.richText)return v.richText.map(t=>t.text).join('');}return v;}
+function admNum(v){if(typeof v==='number')return Math.round(v*100)/100;if(v==null)return null;let s=String(v).trim();if(!s)return null;if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?null:Math.round(n*100)/100;}
+function admISO(v){
+  if(v instanceof Date&&!isNaN(v))return v.getUTCFullYear()+'-'+pad(v.getUTCMonth()+1)+'-'+pad(v.getUTCDate());
+  const s=String(v==null?'':v).trim();
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);if(m){let y=+m[3];if(y<100)y+=2000;return y+'-'+pad(+m[2])+'-'+pad(+m[1]);}
+  return '';
+}
+function admDMY(v){const iso=admISO(v);if(iso){const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}return String(v==null?'':v).trim();}
+const CXC_HEAD=['Codigo','Cliente','Factura','Tipo','FechaFactura','TasaFact','Vencimiento','Base','IVA','IVABs','IVA25','TotalPorPagar','Observacion'];
+function toCsv(rows){return rows.map(r=>r.map(c=>{const s=(c==null?'':String(c));return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\r\n');}
+async function onAdminFile(ev){
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  const res=document.getElementById('admResultado');
+  res.innerHTML='<div class="card"><div class="usd" style="margin:0">Procesando la plantilla…</div></div>';
+  try{
+    await ensureExcelJS();
+    const wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());
+    const ws=wb.getWorksheet('Facturas')||wb.worksheets[0];
+    if(!ws)throw new Error('No se encontró la hoja «Facturas».');
+    const filas=[];ws.eachRow({includeEmpty:false},function(row){const v=row.values;const arr=[];for(let i=1;i<v.length;i++)arr.push(v[i]);filas.push(arr);});
+    // detectar la fila de encabezados (puede haber titulo arriba)
+    let hdrRow=-1,colmap={};
+    for(let r=0;r<Math.min(10,filas.length);r++){const m={};const fila=filas[r];for(let i=0;i<fila.length;i++){const k=keyHdr(cellText(fila[i]));for(const lg in ADM_ALIAS){if(ADM_ALIAS[lg].indexOf(k)>=0&&!(lg in m))m[lg]=i;}}if(Object.keys(m).length>Object.keys(colmap).length){colmap=m;hdrRow=r;}}
+    const faltan=['fecha','factura','cliente','base','iva','total'].filter(c=>!(c in colmap));
+    if(faltan.length)throw new Error('Faltan columnas en la plantilla: '+faltan.join(', ')+'. Usa la Plantilla-CxC.xlsx.');
+    const idx=getCliIdx(),cods=getCliCods();
+    const nuevo={},cxcRows=[],sinCod={};let nFac=0,sinTasa=0;
+    for(let r=hdrRow+1;r<filas.length;r++){
+      const row=filas[r];const get=lg=>{const i=colmap[lg];return (i!=null&&i<row.length)?cellVal(row[i]):null;};
+      const facturaV=cellText(get('factura')).trim(),clienteV=cellText(get('cliente')).trim();
+      if(!facturaV&&!clienteV)continue;
+      let cod=cellText(get('codigo')).trim();if(cod&&!cods.has(cod))cod='';if(!cod)cod=idx[normCliName(clienteV)]||'';
+      const iso=admISO(get('fecha')),tasa=(iso&&TASAS[iso])?TASAS[iso][0]:null;
+      if(iso&&tasa==null)sinTasa++;
+      const base=admNum(get('base')),iva=admNum(get('iva')),total=admNum(get('total'));
+      const ib=(iva!=null&&tasa)?Math.round(iva*tasa*100)/100:0,i25=ib?Math.round(ib*25)/100:0;
+      const tipo=cellText(get('tipo')).trim()||'Factura',venc=admDMY(get('venc')),fd=admDMY(get('fecha')),obs=cellText(get('obs')).trim();
+      const tf=tasa?Math.round(tasa*10000)/10000:'';
+      cxcRows.push([cod,clienteV,facturaV,tipo,fd,tf,venc,base==null?'':base,iva==null?'':iva,ib||'',i25||'',total==null?'':total,obs]);
+      if(!cod){sinCod[clienteV]=(sinCod[clienteV]||0)+1;continue;}   // sin codigo: no entra a la app (igual que build.py)
+      (nuevo[cod]=nuevo[cod]||[]).push({f:facturaV,t:tipo,v:venc,fd:fd,tf:tf||0,b:base||0,i:iva||0,ib:ib,i25:i25,p:total||0,o:obs});
+      nFac++;
+    }
+    if(nFac===0)throw new Error('No se reconoció ninguna factura con un cliente válido. Revisa los nombres o completa la columna Código.');
+    FACTURAS=nuevo;guardarFacturasAdmin(nuevo);
+    if(chosenCli)renderFacturas();
+    admGen={facturasJson:JSON.stringify(nuevo),cxcCsv:toCsv([CXC_HEAD].concat(cxcRows))};
+    const sinList=Object.keys(sinCod);
+    let h='<div class="card"><div style="font-weight:600;margin-bottom:6px">Plantilla procesada</div>'+
+      '<div class="usd" style="margin:0">'+nFac+' facturas · '+Object.keys(nuevo).length+' clientes'+(sinTasa?' · '+sinTasa+' sin tasa':'')+'</div>'+
+      '<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; Cuentas por cobrar actualizadas en este equipo.</div>';
+    if(sinList.length){h+='<div style="color:var(--danger);font-size:12px;margin-top:8px"><b>'+sinList.length+' cliente(s) sin código</b> (no entraron; corrige el nombre o pon el Código):<br>'+sinList.slice(0,15).map(esc).join('<br>')+(sinList.length>15?'<br>…y '+(sinList.length-15)+' más':'')+'</div>';}
+    h+='</div>';
+    h+='<div class="card"><div style="font-weight:600;margin-bottom:6px">Publicar a todos los equipos</div>'+
+      '<div class="hint" style="text-align:left;margin:0 0 10px">Lo de arriba solo cambió este equipo. Para que <b>todos los vendedores</b> reciban la cartera nueva, descarga estos archivos y súbelos al proyecto (reemplazan <b>data/cxc.csv</b> y <b>facturas.json</b>).</div>'+
+      '<button class="btn btn-ok" onclick="admDescargar()">Descargar cxc.csv + facturas.json</button></div>';
+    res.innerHTML=h;renderAdmin();
+  }catch(e){res.innerHTML='<div class="card"><div style="color:var(--danger)">No se pudo cargar la plantilla: '+esc(e.message||'error')+'</div></div>';}
+}
+function admDescargar(){if(!admGen)return;descargarTexto('cxc.csv',admGen.cxcCsv,'text/csv');descargarTexto('facturas.json',admGen.facturasJson,'application/json');}
+function descargarTexto(nombre,texto,mime){const f=new File([texto],nombre,{type:mime||'text/plain'});const u=URL.createObjectURL(f);const a=document.createElement('a');a.href=u;a.download=nombre;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);}
+function guardarFacturasAdmin(data){try{localStorage.setItem('facturasAdmin',JSON.stringify({ts:new Date().toISOString(),data:data}));}catch(e){}}
+function overrideInfo(){try{const o=JSON.parse(localStorage.getItem('facturasAdmin')||'null');if(o&&o.ts){const d=new Date(o.ts);return d.toLocaleDateString('es-VE')+' '+d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}}catch(e){}return '';}
+function aplicarFacturasAdmin(){try{const o=JSON.parse(localStorage.getItem('facturasAdmin')||'null');if(o&&o.data&&typeof o.data==='object'&&!Array.isArray(o.data)&&Object.keys(o.data).length){FACTURAS=o.data;return true;}}catch(e){}return false;}
+function quitarFacturasAdmin(){if(!confirm('¿Quitar la cartera cargada en este equipo y volver a las cuentas por cobrar publicadas?'))return;try{localStorage.removeItem('facturasAdmin');}catch(e){}location.reload();}
+aplicarFacturasAdmin();
+
 refrescarDatos();
 </script>
 __PWA_HOOK__

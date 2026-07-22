@@ -1,3 +1,6 @@
 node_modules/
 _test_*
 *.tmp
+# La plantilla de CxC se llena con datos reales (todas las facturas y montos).
+# NO se publica en el repo publico; vive solo en la carpeta local / OneDrive.
+Plantilla-CxC.xlsx
