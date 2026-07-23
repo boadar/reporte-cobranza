@@ -1065,11 +1065,20 @@ async function saveCobranza(){
 
 /* ---------- lista + seleccion + editar ---------- */
 function openList(){renderList();go('scList');}
+/* Fecha y hora en que se reporto la cobranza, para el badge verde. */
+function fmtFechaHora(iso){
+  if(!iso)return '';
+  try{
+    const d=new Date(iso);
+    if(isNaN(d.getTime()))return '';
+    return d.toLocaleDateString('es-VE')+' '+d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
+  }catch(e){return '';}
+}
 function renderList(){
   const db=loadDb();const body=document.getElementById('listBody');
   document.getElementById('selBar').style.display=db.length?'flex':'none';
   if(!db.length){body.innerHTML='<div class="empty-big"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg><div>Aún no hay cobranzas registradas.</div></div>';updateSelUi();return;}
-  body.innerHTML=db.map(r=>'<div class="saved-it"><label class="sit-chk"><input type="checkbox" '+(selected.has(r.id)?'checked':'')+' onchange="toggleSel('+r.id+')"></label><div class="sit-main" onclick="openEdit('+r.id+')"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+(r.oficaBanco?' &rarr; OFICA '+esc(r.oficaBanco)+(r.oficaMoneda?' '+esc(r.oficaMoneda):''):'')+'</div><div class="meta"><span class="est '+(r.estatus==='Reportado'?'est-rep">Reportado':'est-pend">Pendiente')+'</span>Ref:<span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="event.stopPropagation();delRec('+r.id+')" style="float:right">Eliminar</button></div></div></div>').join('');
+  body.innerHTML=db.map(r=>'<div class="saved-it"><label class="sit-chk"><input type="checkbox" '+(selected.has(r.id)?'checked':'')+' onchange="toggleSel('+r.id+')"></label><div class="sit-main" onclick="openEdit('+r.id+')"><div class="top"><span class="cli">'+esc(r.cliNom||'(sin cliente)')+'</span><span class="mto">'+(r.monto!=null?fmtBs(r.monto):'')+' Bs</span></div><div class="meta"><span class="cod" style="font-family:monospace">'+esc(r.cliCod)+'</span> · '+esc(r.fecha||'')+' · '+esc(r.banco||'—')+(r.oficaBanco?' &rarr; OFICA '+esc(r.oficaBanco)+(r.oficaMoneda?' '+esc(r.oficaMoneda):''):'')+'</div><div class="meta"><span class="est '+(r.estatus==='Reportado'?'est-rep">Reportado'+(fmtFechaHora(r.fechaReporte)?' '+fmtFechaHora(r.fechaReporte):''):'est-pend">Pendiente')+'</span>Ref:<span class="ref">'+esc(r.ref||'—')+'</span>'+(r.factura?' · Fact: '+esc(r.factura):'')+(r.usd?' · $'+esc(r.usd):'')+' <button class="link" onclick="event.stopPropagation();delRec('+r.id+')" style="float:right">Eliminar</button></div></div></div>').join('');
   updateSelUi();
 }
 function toggleSel(id){if(selected.has(id))selected.delete(id);else selected.add(id);updateSelUi();}
