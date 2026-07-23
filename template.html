@@ -67,6 +67,10 @@ table.ftbl tr:last-child td{border-bottom:none}
 table.ftbl tbody tr{cursor:pointer}
 table.ftbl tbody tr.on{background:#e6f4fb}
 table.ftbl tbody tr:active{background:#eef4f8}
+table.ftbl tbody tr.rojo{background:#fcebeb}
+table.ftbl tbody tr.rojo.on{background:#f8dede}
+table.ftbl tbody tr.rojo td{color:var(--danger)}
+table.ftbl tbody tr.rojo td:first-child{border-left:3px solid var(--danger)}
 table.ftbl .num{text-align:right;font-variant-numeric:tabular-nums}
 table.ftbl .nc{color:var(--danger)}
 .fnone{border:1px dashed var(--line);border-radius:10px;padding:12px;text-align:center;color:var(--mut);font-size:12px}
@@ -208,6 +212,12 @@ table.ftbl .nc{color:var(--danger)}
       <label id="lblAgente" style="display:flex;align-items:center;gap:9px;font-size:13px;margin:0 0 10px;cursor:pointer"><input type="checkbox" id="fAgenteRet" checked onchange="onAgenteChange()" style="width:20px;height:20px"> Cliente agente de retención <span style="color:var(--mut);font-size:12px">(retiene 75%, paga 25% del IVA)</span></label>
       <div id="factList"></div>
       <div class="field" style="margin:10px 0 0"><label>Número de factura</label><input id="fFactura" placeholder="Ej. 992505" autocomplete="off" oninput="onFacturaInput()"></div>
+      <div id="fCobroTipoWrap" class="field" style="margin:10px 0 0;display:none"><label>¿Qué cobras de esta factura? <span style="color:var(--danger);font-weight:600">(base pagada)</span></label>
+        <select id="fCobroTipo" onchange="updateSaldo()">
+          <option value="iva25">25% de IVA — pago</option>
+          <option value="retencion">Retención — comprobante</option>
+        </select>
+      </div>
       <div class="usd" id="saldoInfo"></div>
     </div>
     <div class="card">
@@ -833,14 +843,27 @@ function renderFacturas(){
   let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base $</th><th class="num">Saldo $</th><th class="num">IVA Bs.</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
   arr.forEach((f,i)=>{
     const nc=f.b<0?' nc':'';
+    const est=estadoFactura(f,chosenCli.cod);
     const saldoBase=r2(f.b-baseYaCobrado(f.f,chosenCli.cod));      // base pendiente actual
     const pagada=(f.b>0 && saldoBase<=0.01);
-    const saldoTd='<td class="num'+(pagada?'':nc)+'"'+(pagada?' style="color:var(--ok);font-weight:600"':(saldoBase<f.b?' style="font-weight:600"':''))+'>'+(pagada?'PAGADA':fmtUsd(saldoBase))+'</td>';
-    h+='<tr id="frow'+i+'" onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td>'+saldoTd+'<td class="num'+nc+'">'+(f.ib!=null&&f.ib!==0?fmtUsd(f.ib):'—')+'</td><td class="num'+nc+'">'+fmtUsd(f.p)+'</td><td>'+esc(f.o||'')+'</td></tr>';
+    let saldoTd, pendTd, obsTxt=esc(f.o||'');
+    if(est.soloIva){
+      // base pagada: rojo. Saldo = "PAGADA"; Total x Pagar = 25% IVA / retencion pendiente en Bs
+      const partes=[];
+      if(est.iva25>0.01)partes.push('25% IVA Bs '+fmtUsd(est.iva25));
+      if(est.ret>0.01)partes.push('Retención Bs '+fmtUsd(est.ret));
+      saldoTd='<td class="num" style="color:var(--ok);font-weight:600">PAGADA</td>';
+      pendTd='<td class="num" style="font-weight:600">'+(partes.length?fmtUsd(est.iva25+est.ret):'—')+'</td>';
+      obsTxt='<b>'+(partes.join(' + ')||esc(f.o||''))+'</b>';
+    }else{
+      saldoTd='<td class="num'+(pagada?'':nc)+'"'+(pagada?' style="color:var(--ok);font-weight:600"':(saldoBase<f.b?' style="font-weight:600"':''))+'>'+(pagada?'PAGADA':fmtUsd(saldoBase))+'</td>';
+      pendTd='<td class="num'+nc+'">'+fmtUsd(f.p)+'</td>';
+    }
+    h+='<tr id="frow'+i+'"'+(est.soloIva?' class="rojo"':'')+' onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td>'+saldoTd+'<td class="num'+nc+'">'+(f.ib!=null&&f.ib!==0?fmtUsd(f.ib):'—')+'</td>'+pendTd+'<td>'+obsTxt+'</td></tr>';
   });
-  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Base y Saldo en $. El Saldo descuenta lo ya cobrado de la base en pagos anteriores. IVA Bs. con la tasa del día de la factura. Toca una fila para asignarle el pago.</div>';
+  h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Base y Saldo en $. Las filas en <b style="color:var(--danger)">rojo</b> tienen la base pagada: solo falta el 25% de IVA o la retención (en Bs). Toca una fila para asignarle el pago.</div>';
   el.innerHTML=h;
-  updateSaldo();
+  refreshFacturaUI();updateSaldo();
 }
 function pickFactura(i){
   if(!chosenCli)return;
@@ -848,7 +871,7 @@ function pickFactura(i){
   selFactura=f;
   document.getElementById('fFactura').value=f.f;
   arr.forEach((_,j)=>{const r=document.getElementById('frow'+j);if(r)r.className=(j===i?'on':'');});
-  updateSaldo();
+  refreshFacturaUI();updateSaldo();
 }
 function onFacturaInput(){
   const v=document.getElementById('fFactura').value.trim();
@@ -856,7 +879,33 @@ function onFacturaInput(){
   const i=arr.findIndex(f=>String(f.f)===v);
   selFactura=i>=0?arr[i]:null;
   arr.forEach((_,j)=>{const r=document.getElementById('frow'+j);if(r)r.className=(j===i?'on':'');});
-  updateSaldo();
+  refreshFacturaUI();updateSaldo();
+}
+/* Ajusta la UI a la factura elegida: para "solo IVA/retencion" muestra el selector de
+   concepto (con los montos pendientes) y oculta los toggles de base/IVA que no aplican. */
+function refreshFacturaUI(){
+  const wrap=document.getElementById('fCobroTipoWrap');
+  const sel=document.getElementById('fCobroTipo');
+  const cobLbl=document.getElementById('fCobrarIva')?document.getElementById('fCobrarIva').closest('label'):null;
+  const agLbl=document.getElementById('lblAgente');
+  const est=selFactura?estadoFactura(selFactura,chosenCli?chosenCli.cod:''):null;
+  if(est&&est.soloIva){
+    if(wrap)wrap.style.display='';
+    if(sel){
+      const op=sel.options;
+      op[0].text='25% de IVA — pago  (Bs '+fmtUsd(Math.max(0,est.iva25))+')';
+      op[0].disabled=!(est.iva25>0.01);
+      op[1].text='Retención — comprobante  (Bs '+fmtUsd(Math.max(0,est.ret))+')';
+      op[1].disabled=!(est.ret>0.01);
+      if(op[sel.selectedIndex].disabled)sel.value=(est.iva25>0.01)?'iva25':'retencion';
+    }
+    if(cobLbl)cobLbl.style.display='none';
+    if(agLbl)agLbl.style.display='none';
+  }else{
+    if(wrap)wrap.style.display='none';
+    if(cobLbl)cobLbl.style.display='';
+    if(agLbl)agLbl.style.display='';
+  }
 }
 function pagoUsd(){const v=parseMonto(document.getElementById('fUsd').value);return v==null?0:v;}
 function tasaPagoActual(){const iso=fechaToIso(document.getElementById('fFecha').value.trim());return iso&&TASAS[iso]?TASAS[iso][0]:null;}
@@ -895,12 +944,39 @@ function baseYaCobrado(factura,cod){
     return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.pagoAplicadoUsd||0):0);
   },0);
 }
+/* Ya cobrado/registrado de un concepto (iva25 | retencion) de una factura, en Bs. */
+function cobradoConcepto(factura,cod,tipo){
+  if(!factura)return 0;
+  return loadDb().reduce(function(a,r){
+    return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId && r.cobroTipo===tipo)?(r.montoAplicadoBs||0):0);
+  },0);
+}
+/* Estado de una factura segun el ERP + lo ya cobrado en la app.
+   soloIva = la base ya esta pagada (p~0) y solo queda 25% de IVA y/o retencion (en Bs). */
+function estadoFactura(f,cod){
+  const basePend=r2(f.p||0);                                            // base pendiente ($)
+  const iva25=r2((f.i25p||0)-cobradoConcepto(f.f,cod,'iva25'));         // 25% de IVA pendiente (Bs)
+  const ret=r2((f.rtp||0)-cobradoConcepto(f.f,cod,'retencion'));        // retencion pendiente (Bs)
+  const soloIva=Math.abs(basePend)<0.01 && ((f.i25p||0)>0.01 || (f.rtp||0)>0.01);
+  return {basePend:basePend,iva25:iva25,ret:ret,soloIva:soloIva};
+}
 /* Aplicacion del pago: 1) se descuenta el IVA en Bs (25% si el cliente es agente de
    retencion, 100% si no), pero SOLO la parte del IVA que aun no se ha cobrado de esa
    factura; 2) el restante en Bs se pasa a $ con la tasa del dia; 3) se resta de la Base. */
 function aplicacionPago(){
   if(!selFactura)return null;
   const pagoBs=parseMonto(document.getElementById('fMonto').value)||0;
+  // --- CASO: base pagada, solo queda 25% de IVA (pago) o retencion (comprobante) ---
+  const est=estadoFactura(selFactura,chosenCli?chosenCli.cod:'');
+  if(est.soloIva){
+    const tSel=document.getElementById('fCobroTipo');
+    const tipo=(tSel&&tSel.value)||'iva25';
+    const pend=r2(Math.max(0,tipo==='retencion'?est.ret:est.iva25));
+    const aplicado=r2(Math.min(pagoBs,pend));
+    return {soloIva:true,cobroTipo:tipo,pendBs:pend,pagoBs:pagoBs,aplicadoBs:aplicado,
+            saldoBs:r2(Math.max(0,pend-pagoBs)),sobranteBs:r2(Math.max(0,pagoBs-pend)),
+            tasa:tasaPagoActual()};
+  }
   const chk=document.getElementById('fAgenteRet');
   const agente=chk?chk.checked:true;
   const ivaBs=selFactura.ib||0;
@@ -948,6 +1024,17 @@ function updateSaldo(){
   const el=document.getElementById('saldoInfo');if(!el)return;
   const a=aplicacionPago();
   if(!a){el.innerHTML='';return;}
+  // caso base pagada -> solo 25% de IVA (pago) o retencion (comprobante), todo en Bs
+  if(a.soloIva){
+    const et=a.cobroTipo==='retencion'?'Retención (comprobante)':'25% de IVA';
+    el.innerHTML='<div class="saldo-box">Factura '+esc(selFactura.f)+' &middot; <b style="color:var(--danger)">Base pagada</b>'+
+      '<br>'+et+' pendiente: <b>Bs '+fmtUsd(a.pendBs)+'</b>'+
+      '<br>'+(a.cobroTipo==='retencion'?'Comprobante':'Pago')+' <b>Bs '+fmtUsd(a.pagoBs)+'</b> &rarr; Saldo '+et+': <b>Bs '+fmtUsd(a.saldoBs)+'</b>'+
+      (a.sobranteBs>0?'<br><b>Sobrante: Bs '+fmtUsd(a.sobranteBs)+'</b>':'')+'</div>';
+    const so=document.getElementById('fObs');
+    if(so&&!obsManual)so.value=(a.cobroTipo==='retencion')?'RETENCION':'25% IVA';
+    return;
+  }
   const nota=document.getElementById('fCobrarIvaNota');
   if(nota)nota.textContent=a.ivaPend>0?('(pendiente Bs '+fmtUsd(a.ivaPend)+')'):'(IVA ya cobrado)';
   if(a.tasa==null){el.innerHTML='<div class="saldo-box saldo-neg">No hay tasa para la fecha del pago: no se puede calcular el saldo.</div>';return;}
@@ -1047,6 +1134,9 @@ async function saveCobranza(){
     iva25Aplicado:(function(){const a=aplicacionPago();return a?Math.round(a.iva25*100)/100:null;})(),
     pctBase:(function(){const a=aplicacionPago();return a?a.pctBase:null;})(),
     diferencial:(function(){const a=aplicacionPago();return a?a.diferencial:null;})(),
+    // cobro de 25% de IVA (pago) o retencion (comprobante) cuando la base ya esta pagada
+    cobroTipo:(function(){const a=aplicacionPago();return (a&&a.soloIva)?a.cobroTipo:'';})(),
+    montoAplicadoBs:(function(){const a=aplicacionPago();return (a&&a.soloIva)?a.aplicadoBs:null;})(),
     agenteRetencion:document.getElementById('fAgenteRet').checked,
     cobroIva:document.getElementById('fCobrarIva').checked,
     formaPago:document.getElementById('fForma').value,
@@ -1144,6 +1234,7 @@ function openEdit(id){
   refreshAgenteState();
   document.getElementById('fFactura').value=rec.factura||'';
   onFacturaInput();
+  if(rec.cobroTipo){const ct=document.getElementById('fCobroTipo');if(ct){ct.value=rec.cobroTipo;refreshFacturaUI();updateSaldo();}}
   document.getElementById('fForma').value=rec.formaPago||'Transferencia';
   document.getElementById('fMonedaPago').value=rec.monedaPago||'Bs.';
   (function(){
@@ -1179,6 +1270,7 @@ function r2(n){return Math.round(n*100)/100;}
 /* Cada cobro genera 2 filas: la porcion aplicada a la Base y la aplicada al 25% del IVA.
    Ambas suman el pago total (en Bs y en $). modo = 'base' | 'iva' */
 function repRows(r){
+  if(r.cobroTipo)return [repRowSolo(r)];   // cobro de SOLO 25% de IVA o retencion (base ya pagada)
   const out=[];
   const iva=(r.iva25Aplicado!=null?r.iva25Aplicado:r.facturaIva25);
   const baseBs=(r.pagoRestanteBs!=null?r.pagoRestanteBs:(r.monto||0));
@@ -1186,6 +1278,23 @@ function repRows(r){
   // 2) la Base, solo si se aplico algo a la base (o si no hay ninguna otra fila)
   if(baseBs>0 || out.length===0) out.push(repRow(r,'base'));
   return out;
+}
+/* Una sola linea para el cobro de solo 25% de IVA (pago) o retencion (comprobante). */
+function repRowSolo(r){
+  const b=r.facturaBase, i=r.facturaIva, tf=r.facturaTasa;
+  const hasBI=(b!=null&&i!=null);
+  const baseOrig=(b!=null&&tf)?r2(b*tf):'';
+  const ivaFact=(r.facturaIvaBs!=null)?r.facturaIvaBs:((i!=null&&tf)?r2(i*tf):'');
+  const totalBs=(hasBI&&tf)?r2((b+i)*tf):'';
+  const iva25=(r.facturaIva25!=null)?r.facturaIva25:(ivaFact!==''?r2(ivaFact*0.25):'');
+  const retIva=(ivaFact!=='')?r2(ivaFact*0.75):'';
+  const montoBs=(r.montoAplicadoBs!=null)?r.montoAplicadoBs:(r.monto!=null?r.monto:'');
+  const tp=r.tasaPago;
+  const pago$=(tp&&montoBs)?r2(montoBs/tp):'';
+  return [r.facturaFecha||'',r.factura||'',r.cliNom||'',tf||'',b!=null?b:'',i!=null?i:'',
+    hasBI?r2(b+i):'',baseOrig,ivaFact,totalBs,iva25,retIva,r.formaPago||'','$',
+    montoBs,r.fecha||'',r.tasaPago||'',r.monedaPago||'',pago$,'',
+    (r.cobroTipo==='retencion')?'RETENCION':'25% del IVA'];
 }
 function repRow(r,modo){
   const b=r.facturaBase, i=r.facturaIva, tf=r.facturaTasa;
@@ -1267,6 +1376,7 @@ const EDC_HEAD=['Código Cliente','N Factura','Nombre Cliente','Base Original','
 /* Lo que ese pago aplico a la factura, en $: la parte del IVA (Bs / tasa) mas la
    parte que fue a la base. No incluye el sobrante (diferencial). */
 function pagoUsdAplicado(r){
+  if(r.cobroTipo)return 0;   // cobro de 25% IVA / retencion: no toca la base, no descuenta el saldo $
   const tp=r.tasaPago||0;
   const ivaUsd=(r.iva25Aplicado&&tp)?(r.iva25Aplicado/tp):0;
   const baseUsd=(r.pagoAplicadoUsd!=null)?r.pagoAplicadoUsd:0;
