@@ -1431,12 +1431,20 @@ async function onAdminFile(ev){
     let hdrRow=-1;
     for(let r=0;r<Math.min(15,filas.length);r++){const fila=filas[r];const kA=keyHdr(cellText(fila[POS.codigo])),kC=keyHdr(cellText(fila[POS.fecha])),kD=keyHdr(cellText(fila[POS.factura]));if(kD==='factura'||kA==='codigo'||kC==='fechafactura'||kC==='fecha'){hdrRow=r;break;}}
     const idx=getCliIdx(),cods=getCliCods();
-    const nuevo={},cxcRows=[],sinCod={};let nFac=0,sinTasa=0;
+    const nuevo={},cxcRows=[],sinCod={},nuevosCli=[];let nFac=0,sinTasa=0;
     for(let r=(hdrRow>=0?hdrRow+1:0);r<filas.length;r++){
       const row=filas[r];const get=lg=>{const i=POS[lg];return (i!=null&&i<row.length)?cellVal(row[i]):null;};
       const facturaV=cellText(get('factura')).trim(),clienteV=cellText(get('cliente')).trim();
       if(!facturaV&&!clienteV)continue;
-      let cod=cellText(get('codigo')).trim();if(cod&&!cods.has(cod))cod='';if(!cod)cod=idx[normCliName(clienteV)]||'';
+      let cod=cellText(get('codigo')).trim();
+      if(/^\d+$/.test(cod)&&cod.length<6)cod=('000000'+cod).slice(-6);
+      if(cod&&!cods.has(cod)){
+        // codigo en la columna A que NO esta en el maestro: se da de alta como cliente
+        // NUEVO (codigo = col A, nombre = col N) y la factura entra bajo ese codigo
+        if(clienteV){CLIENTES.push([cod,clienteV]);cods.add(cod);const k=normCliName(clienteV);if(k&&!(k in idx))idx[k]=cod;nuevosCli.push([cod,clienteV]);}
+        else cod='';
+      }
+      if(!cod)cod=idx[normCliName(clienteV)]||'';
       const iso=admISO(get('fecha')),tasa=(iso&&TASAS[iso])?TASAS[iso][0]:null;
       if(iso&&tasa==null)sinTasa++;
       const base=admNum(get('base')),iva=admNum(get('iva')),total=admNum(get('total'));
@@ -1450,21 +1458,31 @@ async function onAdminFile(ev){
     }
     if(nFac===0)throw new Error('No se reconoció ninguna factura con un cliente válido. Revisa los nombres o completa la columna Código.');
     FACTURAS=nuevo;guardarFacturasAdmin(nuevo);
+    // clientes nuevos (codigo en la col A que no existia): se cargan al maestro de este equipo
+    if(nuevosCli.length){
+      let prev=[];try{const o=JSON.parse(localStorage.getItem('clientesAdmin')||'null');if(o&&Array.isArray(o.data))prev=o.data;}catch(e){}
+      const mp={};prev.forEach(d=>mp[String(d[0])]=d[1]);nuevosCli.forEach(d=>mp[String(d[0])]=d[1]);
+      guardarClientesAdmin(Object.keys(mp).map(k=>[k,mp[k]]));
+      cliIdx=null;cliCods=null;
+      admGenCli=toCsv([['Codigo','Nombre']].concat(CLIENTES.map(c=>[String(c[0]),c[1]])));
+    }
     if(chosenCli)renderFacturas();
     admGen={facturasJson:JSON.stringify(nuevo),cxcCsv:toCsv([CXC_HEAD].concat(cxcRows))};
     const sinList=Object.keys(sinCod);
     admSinCod=sinList;
     let h='<div class="card"><div style="font-weight:600;margin-bottom:6px">Plantilla procesada</div>'+
       '<div class="usd" style="margin:0">'+nFac+' facturas · '+Object.keys(nuevo).length+' clientes'+(sinTasa?' · '+sinTasa+' sin tasa':'')+'</div>'+
+      (nuevosCli.length?'<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; <b>'+nuevosCli.length+' cliente(s) nuevo(s)</b> agregado(s) al maestro (código de la columna A):<br>'+nuevosCli.slice(0,10).map(function(d){return esc(d[0]+' — '+d[1]);}).join('<br>')+(nuevosCli.length>10?'<br>…y '+(nuevosCli.length-10)+' más':'')+'</div>':'')+
       '<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; Cuentas por cobrar actualizadas en este equipo.</div>';
     if(sinList.length){
-      h+='<div style="color:var(--danger);font-size:12px;margin-top:8px"><b>'+sinList.length+' cliente(s) sin código</b> (no entraron; corrige el nombre o pon el Código):<br>'+sinList.slice(0,15).map(esc).join('<br>')+(sinList.length>15?'<br>…y '+(sinList.length-15)+' más':'')+'</div>';
+      h+='<div style="color:var(--danger);font-size:12px;margin-top:8px"><b>'+sinList.length+' cliente(s) sin código</b> (no entraron: no traen código en la columna A y el nombre no coincide con el maestro):<br>'+sinList.slice(0,15).map(esc).join('<br>')+(sinList.length>15?'<br>…y '+(sinList.length-15)+' más':'')+'</div>';
       h+='<button class="btn btn-ghost" style="margin-top:10px" onclick="descargarPlantillaClientes(admSinCod)">Descargar estos para la Plantilla-Clientes</button>';
     }
     h+='</div>';
     h+='<div class="card"><div style="font-weight:600;margin-bottom:6px">Publicar a todos los equipos</div>'+
-      '<div class="hint" style="text-align:left;margin:0 0 10px">Lo de arriba solo cambió este equipo. Para que <b>todos los vendedores</b> reciban la cartera nueva, descarga estos archivos y súbelos al proyecto (reemplazan <b>data/cxc.csv</b> y <b>facturas.json</b>).</div>'+
-      '<button class="btn btn-ok" onclick="admDescargar()">Descargar cxc.csv + facturas.json</button></div>';
+      '<div class="hint" style="text-align:left;margin:0 0 10px">Lo de arriba solo cambió este equipo. Para que <b>todos los vendedores</b> lo reciban, descarga estos archivos y súbelos al proyecto'+(nuevosCli.length?' (reemplazan <b>data/cxc.csv</b>, <b>facturas.json</b> y <b>data/clientes.csv</b>)':' (reemplazan <b>data/cxc.csv</b> y <b>facturas.json</b>)')+'.</div>'+
+      '<button class="btn btn-ok" onclick="admDescargar()">Descargar cxc.csv + facturas.json</button>'+
+      (nuevosCli.length?'<button class="btn btn-ok" style="margin-top:8px" onclick="admDescargarCli()">Descargar clientes.csv (con los nuevos)</button>':'')+'</div>';
     res.innerHTML=h;renderAdmin();
   }catch(e){res.innerHTML='<div class="card"><div style="color:var(--danger)">No se pudo cargar la plantilla: '+esc(e.message||'error')+'</div></div>';}
 }

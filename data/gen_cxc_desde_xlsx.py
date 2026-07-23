@@ -143,14 +143,22 @@ def get(r, logic):
     return r[i] if (i is not None and i < len(r)) else None
 
 
-rows, sin_cod, sin_tasa = [], collections.Counter(), 0
+rows, sin_cod, sin_tasa, nuevos_cli = [], collections.Counter(), 0, {}
 for r in rows_iter[hdr_row + 1:]:
     if get(r, 'factura') in (None, '') and get(r, 'cliente') in (None, ''):
         continue                                   # fila vacia
     nombre = str(get(r, 'cliente') or '').strip()
     cod = str(get(r, 'codigo') or '').strip()
+    if cod.isdigit() and len(cod) < 6:
+        cod = cod.zfill(6)
     if cod and cod not in cods:
-        cod = ''                                   # codigo escrito que no existe: se ignora
+        # codigo en la col A que no esta en el maestro: alta de cliente NUEVO (cod + nombre col N)
+        if nombre:
+            nuevos_cli[cod] = nombre
+            cods.add(cod)
+            idx.setdefault(norm(nombre), cod)
+        else:
+            cod = ''
     if not cod:
         cod = idx.get(norm(nombre), '')
     if not cod:
@@ -188,6 +196,30 @@ with open(OUT, 'w', newline='', encoding='utf-8') as f:
     w.writerow(['Codigo', 'Cliente', 'Factura', 'Tipo', 'FechaFactura', 'TasaFact',
                 'Vencimiento', 'Base', 'IVA', 'IVABs', 'IVA25', 'TotalPorPagar', 'Observacion'])
     w.writerows(rows)
+
+# los clientes nuevos (codigo en col A que no existia) se dan de alta en el maestro
+if nuevos_cli:
+    orden, base_cli = [], {}
+    with open(CLI, encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            c = (row['Codigo'] or '').strip()
+            if c and c not in base_cli:
+                orden.append(c)
+            base_cli[c] = (row['Nombre'] or '').strip()
+    agregados = 0
+    for c, nom in nuevos_cli.items():
+        if c not in base_cli:
+            orden.append(c)
+            agregados += 1
+        base_cli[c] = nom
+    with open(CLI, 'w', newline='', encoding='utf-8') as f:
+        w = csv.writer(f)
+        w.writerow(['Codigo', 'Nombre'])
+        for c in orden:
+            w.writerow([c, base_cli[c]])
+    print('clientes NUEVOS agregados al maestro (data/clientes.csv):', agregados)
+    for c, nom in nuevos_cli.items():
+        print('   +', c, nom)
 
 con = sum(1 for r in rows if r[0])
 print('facturas:', len(rows), '| con codigo:', con, '| sin codigo:', len(rows) - con)
