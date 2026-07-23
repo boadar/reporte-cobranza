@@ -5,3 +5,5 @@ _test_*
 # NO se publican en el repo publico; viven solo en la carpeta local / OneDrive.
 Plantilla-CxC.xlsx
 Plantilla-Clientes.xlsx
+Plantilla-CxC_backup_*.xlsx
+Clientes-nuevos.xlsx

@@ -251,6 +251,14 @@ table.ftbl .nc{color:var(--danger)}
       <div class="hint" style="text-align:left;margin:10px 2px 0">Carga la plantilla <b>Plantilla-CxC.xlsx</b> con las facturas pendientes. Reemplaza toda la cartera: incluye <b>todas</b> las facturas por cobrar (una ya cobrada simplemente no se incluye).</div>
     </div>
     <div id="admResultado"></div>
+    <div class="card">
+      <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:8px;font-weight:500">Clientes</label>
+      <div id="admClientesEstado" class="usd" style="margin:0 0 12px"></div>
+      <button class="btn btn-primary" onclick="document.getElementById('admFileCli').click()">ACTUALIZAR CLIENTES</button>
+      <input type="file" id="admFileCli" accept=".xlsx" style="display:none" onchange="onAdminFileClientes(event)">
+      <div class="hint" style="text-align:left;margin:10px 2px 0">Carga la plantilla <b>Plantilla-Clientes.xlsx</b> para agregar clientes nuevos o corregir nombres. Agrega y actualiza; no borra a nadie.</div>
+    </div>
+    <div id="admResultadoCli"></div>
     <button class="btn btn-ghost" onclick="go('scInicio');setTab('tabHome')">Volver</button>
   </div>
 
@@ -1130,6 +1138,17 @@ function openEdit(id){
 function loadScriptOnce(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=()=>res();s.onerror=()=>rej(new Error('no se pudo cargar '+url));document.head.appendChild(s);});}
 let exceljsLoading=null;
 function ensureExcelJS(){if(window.ExcelJS)return Promise.resolve();if(!exceljsLoading)exceljsLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');return exceljsLoading;}
+/* SheetJS solo para LEER plantillas: ExcelJS no lee bien los xlsx que genera openpyxl
+   (falla si el archivo no paso por Excel). SheetJS lee cualquiera. */
+let sheetjsLoading=null;
+function ensureSheetJS(){if(window.XLSX)return Promise.resolve();if(!sheetjsLoading)sheetjsLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');return sheetjsLoading;}
+async function leerFilasXlsx(file,hoja){
+  await ensureSheetJS();
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+  const ws=wb.Sheets[hoja]||wb.Sheets[wb.SheetNames[0]];
+  if(!ws)return [];
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+}
 const REP_HEAD=['Fecha','N Factura','Nombre Cliente','Tasa Fact','Base $','IVA $','TOTAL $','Base Original','IVA Fact','Total Bs. Fact','25% IVA','RET IVA','Forma de Pago','Moneda','Monto Bs','Fecha del pago','Tasa del pago','Moneda','Pago $','Diferencial','Observaciones'];
 function r2(n){return Math.round(n*100)/100;}
 /* Cada cobro genera 2 filas: la porcion aplicada a la Base y la aplicada al 25% del IVA.
@@ -1342,8 +1361,9 @@ async function refrescarDatos(){
   if(fac && !Array.isArray(fac) && Object.keys(fac).length>0){
     FACTURAS=fac;cambio=true;
   }
-  // si en este equipo un administrador cargo una cartera manual, esa manda sobre la del servidor
+  // si en este equipo un administrador cargo cartera o clientes manuales, mandan sobre el servidor
   if(aplicarFacturasAdmin())cambio=true;
+  if(aplicarClientesAdmin())cambio=true;
   if(cambio){
     try{if(chosenCli)renderFacturas();calcUsd();}catch(e){}
     const el=document.getElementById('hdrsub');
@@ -1356,7 +1376,7 @@ async function refrescarDatos(){
    Igual el riesgo es bajo: cargar una plantilla solo actualiza la cartera en ESTE
    equipo y genera archivos para descargar; no escribe nada en el servidor. */
 const ADMIN_PASS='Solita.2026';
-let cliIdx=null, cliCods=null, admGen=null;
+let cliIdx=null, cliCods=null, admGen=null, admGenCli=null, admSinCod=[];
 function openAdmin(){
   const p=prompt('Ventana de Administración\n\nClave:');
   if(p==null)return;
@@ -1366,11 +1386,13 @@ function openAdmin(){
   renderAdmin();
 }
 function renderAdmin(){
-  const el=document.getElementById('admFacturasEstado');
   let nCli=0,nFac=0;for(const k in FACTURAS){nCli++;nFac+=(FACTURAS[k]||[]).length;}
   const ov=overrideInfo();
-  el.innerHTML='Cartera actual: <b>'+nFac+'</b> facturas de <b>'+nCli+'</b> clientes.'+
+  document.getElementById('admFacturasEstado').innerHTML='Cartera actual: <b>'+nFac+'</b> facturas de <b>'+nCli+'</b> clientes.'+
     (ov?'<br><span style="color:var(--ok)">Cargada en este equipo el '+ov+'.</span> <a class="link" onclick="quitarFacturasAdmin()" style="cursor:pointer">Volver a lo publicado</a>':'');
+  const ovc=overrideClientesInfo();
+  document.getElementById('admClientesEstado').innerHTML='Base actual: <b>'+CLIENTES.length+'</b> clientes.'+
+    (ovc?'<br><span style="color:var(--ok)">Actualizada en este equipo el '+ovc+'.</span> <a class="link" onclick="quitarClientesAdmin()" style="cursor:pointer">Volver a lo publicado</a>':'');
 }
 /* nombre normalizado igual que gen_cxc_desde_xlsx.py (quita acentos, signos y sufijos c.a/s.a...) */
 function normCliName(s){
@@ -1386,7 +1408,7 @@ function cellText(v){if(v==null)return '';if(typeof v==='object'){if(v.text!=nul
 function cellVal(v){if(v!=null&&typeof v==='object'&&!(v instanceof Date)){if('result' in v)return v.result;if('text' in v)return v.text;if(v.richText)return v.richText.map(t=>t.text).join('');}return v;}
 function admNum(v){if(typeof v==='number')return Math.round(v*100)/100;if(v==null)return null;let s=String(v).trim();if(!s)return null;if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?null:Math.round(n*100)/100;}
 function admISO(v){
-  if(v instanceof Date&&!isNaN(v))return v.getUTCFullYear()+'-'+pad(v.getUTCMonth()+1)+'-'+pad(v.getUTCDate());
+  if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate());
   const s=String(v==null?'':v).trim();
   let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
   m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);if(m){let y=+m[3];if(y<100)y+=2000;return y+'-'+pad(+m[2])+'-'+pad(+m[1]);}
@@ -1400,11 +1422,8 @@ async function onAdminFile(ev){
   const res=document.getElementById('admResultado');
   res.innerHTML='<div class="card"><div class="usd" style="margin:0">Procesando la plantilla…</div></div>';
   try{
-    await ensureExcelJS();
-    const wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());
-    const ws=wb.getWorksheet('Facturas')||wb.worksheets[0];
-    if(!ws)throw new Error('No se encontró la hoja «Facturas».');
-    const filas=[];ws.eachRow({includeEmpty:false},function(row){const v=row.values;const arr=[];for(let i=1;i<v.length;i++)arr.push(v[i]);filas.push(arr);});
+    const filas=await leerFilasXlsx(f,'Facturas');
+    if(!filas.length)throw new Error('La plantilla está vacía o no tiene la hoja «Facturas».');
     // detectar la fila de encabezados (puede haber titulo arriba)
     let hdrRow=-1,colmap={};
     for(let r=0;r<Math.min(10,filas.length);r++){const m={};const fila=filas[r];for(let i=0;i<fila.length;i++){const k=keyHdr(cellText(fila[i]));for(const lg in ADM_ALIAS){if(ADM_ALIAS[lg].indexOf(k)>=0&&!(lg in m))m[lg]=i;}}if(Object.keys(m).length>Object.keys(colmap).length){colmap=m;hdrRow=r;}}
@@ -1433,10 +1452,14 @@ async function onAdminFile(ev){
     if(chosenCli)renderFacturas();
     admGen={facturasJson:JSON.stringify(nuevo),cxcCsv:toCsv([CXC_HEAD].concat(cxcRows))};
     const sinList=Object.keys(sinCod);
+    admSinCod=sinList;
     let h='<div class="card"><div style="font-weight:600;margin-bottom:6px">Plantilla procesada</div>'+
       '<div class="usd" style="margin:0">'+nFac+' facturas · '+Object.keys(nuevo).length+' clientes'+(sinTasa?' · '+sinTasa+' sin tasa':'')+'</div>'+
       '<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; Cuentas por cobrar actualizadas en este equipo.</div>';
-    if(sinList.length){h+='<div style="color:var(--danger);font-size:12px;margin-top:8px"><b>'+sinList.length+' cliente(s) sin código</b> (no entraron; corrige el nombre o pon el Código):<br>'+sinList.slice(0,15).map(esc).join('<br>')+(sinList.length>15?'<br>…y '+(sinList.length-15)+' más':'')+'</div>';}
+    if(sinList.length){
+      h+='<div style="color:var(--danger);font-size:12px;margin-top:8px"><b>'+sinList.length+' cliente(s) sin código</b> (no entraron; corrige el nombre o pon el Código):<br>'+sinList.slice(0,15).map(esc).join('<br>')+(sinList.length>15?'<br>…y '+(sinList.length-15)+' más':'')+'</div>';
+      h+='<button class="btn btn-ghost" style="margin-top:10px" onclick="descargarPlantillaClientes(admSinCod)">Descargar estos para la Plantilla-Clientes</button>';
+    }
     h+='</div>';
     h+='<div class="card"><div style="font-weight:600;margin-bottom:6px">Publicar a todos los equipos</div>'+
       '<div class="hint" style="text-align:left;margin:0 0 10px">Lo de arriba solo cambió este equipo. Para que <b>todos los vendedores</b> reciban la cartera nueva, descarga estos archivos y súbelos al proyecto (reemplazan <b>data/cxc.csv</b> y <b>facturas.json</b>).</div>'+
@@ -1450,7 +1473,67 @@ function guardarFacturasAdmin(data){try{localStorage.setItem('facturasAdmin',JSO
 function overrideInfo(){try{const o=JSON.parse(localStorage.getItem('facturasAdmin')||'null');if(o&&o.ts){const d=new Date(o.ts);return d.toLocaleDateString('es-VE')+' '+d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}}catch(e){}return '';}
 function aplicarFacturasAdmin(){try{const o=JSON.parse(localStorage.getItem('facturasAdmin')||'null');if(o&&o.data&&typeof o.data==='object'&&!Array.isArray(o.data)&&Object.keys(o.data).length){FACTURAS=o.data;return true;}}catch(e){}return false;}
 function quitarFacturasAdmin(){if(!confirm('¿Quitar la cartera cargada en este equipo y volver a las cuentas por cobrar publicadas?'))return;try{localStorage.removeItem('facturasAdmin');}catch(e){}location.reload();}
-aplicarFacturasAdmin();
+
+/* ---------- Administración: CLIENTES ---------- */
+async function onAdminFileClientes(ev){
+  const f=ev.target.files[0];ev.target.value='';if(!f)return;
+  const res=document.getElementById('admResultadoCli');
+  res.innerHTML='<div class="card"><div class="usd" style="margin:0">Procesando la plantilla…</div></div>';
+  try{
+    const filas=await leerFilasXlsx(f,'Clientes');
+    if(!filas.length)throw new Error('La plantilla está vacía o no tiene la hoja «Clientes».');
+    let hdrRow=-1,cm={};
+    for(let r=0;r<Math.min(10,filas.length);r++){const m={};const fila=filas[r];for(let i=0;i<fila.length;i++){const k=keyHdr(cellText(fila[i]));if(['codigo','cod','codcliente','codigocliente'].indexOf(k)>=0&&m.codigo==null)m.codigo=i;if(['nombre','nombrecliente','cliente','razonsocial'].indexOf(k)>=0&&m.nombre==null)m.nombre=i;}if(Object.keys(m).length>Object.keys(cm).length){cm=m;hdrRow=r;}}
+    if(cm.codigo==null||cm.nombre==null)throw new Error('La plantilla debe tener columnas Codigo y Nombre.');
+    const pos={};for(let i=0;i<CLIENTES.length;i++)pos[String(CLIENTES[i][0])]=i;
+    const deltas=[];let nuevos=0,actualizados=0,sinCod=0;
+    for(let r=hdrRow+1;r<filas.length;r++){
+      const row=filas[r];
+      let cod=cellText(cellVal(row[cm.codigo])).trim();const nom=cellText(cellVal(row[cm.nombre])).trim();
+      if(!nom)continue;
+      if(!cod){sinCod++;continue;}
+      if(/^\d+$/.test(cod)&&cod.length<6)cod=('000000'+cod).slice(-6);
+      if(pos[cod]!=null){if(CLIENTES[pos[cod]][1]!==nom){CLIENTES[pos[cod]][1]=nom;deltas.push([cod,nom]);actualizados++;}}
+      else{CLIENTES.push([cod,nom]);pos[cod]=CLIENTES.length-1;deltas.push([cod,nom]);nuevos++;}
+    }
+    if(!deltas.length){res.innerHTML='<div class="card"><div style="color:var(--danger)">No se encontraron clientes nuevos ni cambios'+(sinCod?(' ('+sinCod+' fila(s) sin código, se omitieron)'):'')+'.</div></div>';return;}
+    // se acumulan con lo que ya se hubiera cargado antes en este equipo
+    let prev=[];try{const o=JSON.parse(localStorage.getItem('clientesAdmin')||'null');if(o&&Array.isArray(o.data))prev=o.data;}catch(e){}
+    const mp={};prev.forEach(d=>mp[String(d[0])]=d[1]);deltas.forEach(d=>mp[String(d[0])]=d[1]);
+    guardarClientesAdmin(Object.keys(mp).map(k=>[k,mp[k]]));
+    cliIdx=null;cliCods=null;
+    admGenCli=toCsv([['Codigo','Nombre']].concat(CLIENTES.map(c=>[String(c[0]),c[1]])));
+    document.getElementById('hdrsub').textContent='OFICA · '+CLIENTES.length+' clientes · '+APPVER;
+    let h='<div class="card"><div style="font-weight:600;margin-bottom:6px">Clientes procesados</div>'+
+      '<div class="usd" style="margin:0">'+nuevos+' nuevos · '+actualizados+' actualizados'+(sinCod?(' · '+sinCod+' sin código (omitidos)'):'')+'. Base: '+CLIENTES.length+' clientes.</div>'+
+      '<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; Clientes actualizados en este equipo.</div></div>'+
+      '<div class="card"><div style="font-weight:600;margin-bottom:6px">Publicar a todos los equipos</div>'+
+      '<div class="hint" style="text-align:left;margin:0 0 10px">Lo de arriba solo cambió este equipo. Para que todos reciban los clientes nuevos, descarga y sube <b>data/clientes.csv</b> al proyecto.</div>'+
+      '<button class="btn btn-ok" onclick="admDescargarCli()">Descargar clientes.csv</button></div>';
+    res.innerHTML=h;renderAdmin();
+  }catch(e){res.innerHTML='<div class="card"><div style="color:var(--danger)">No se pudo cargar la plantilla: '+esc(e.message||'error')+'</div></div>';}
+}
+function admDescargarCli(){if(admGenCli)descargarTexto('clientes.csv',admGenCli,'text/csv');}
+function guardarClientesAdmin(deltas){try{localStorage.setItem('clientesAdmin',JSON.stringify({ts:new Date().toISOString(),data:deltas}));}catch(e){}}
+function overrideClientesInfo(){try{const o=JSON.parse(localStorage.getItem('clientesAdmin')||'null');if(o&&o.ts){const d=new Date(o.ts);return d.toLocaleDateString('es-VE')+' '+d.toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});}}catch(e){}return '';}
+function aplicarClientesAdmin(){try{const o=JSON.parse(localStorage.getItem('clientesAdmin')||'null');if(o&&Array.isArray(o.data)&&o.data.length){const pos={};for(let i=0;i<CLIENTES.length;i++)pos[String(CLIENTES[i][0])]=i;for(const d of o.data){const c=String(d[0]);if(pos[c]!=null)CLIENTES[pos[c]][1]=d[1];else{CLIENTES.push([c,d[1]]);pos[c]=CLIENTES.length-1;}}cliIdx=null;cliCods=null;return true;}}catch(e){}return false;}
+function quitarClientesAdmin(){if(!confirm('¿Quitar los clientes cargados en este equipo y volver a la base publicada?'))return;try{localStorage.removeItem('clientesAdmin');}catch(e){}location.reload();}
+/* Genera una Plantilla-Clientes.xlsx con estos nombres (código en blanco) para darlos de alta. */
+async function descargarPlantillaClientes(nombres){
+  if(!nombres||!nombres.length)return;
+  try{
+    await ensureExcelJS();
+    const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('Clientes');
+    ws.addRow(['Codigo','Nombre']);ws.getRow(1).font={bold:true};
+    ws.getColumn(1).numFmt='@';ws.getColumn(1).width=16;ws.getColumn(2).width=52;
+    nombres.forEach(function(n){ws.addRow(['',n]);});
+    const buf=await wb.xlsx.writeBuffer();
+    descargarBlob(new File([buf],'Clientes-nuevos.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  }catch(e){alert('No se pudo generar la plantilla de clientes: '+(e.message||''));}
+}
+function descargarBlob(f){const u=URL.createObjectURL(f);const a=document.createElement('a');a.href=u;a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);}
+
+aplicarFacturasAdmin();aplicarClientesAdmin();
 
 refrescarDatos();
 </script>
