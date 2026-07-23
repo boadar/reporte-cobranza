@@ -109,6 +109,11 @@ table.ftbl .nc{color:var(--danger)}
 .tabbar button.on{color:var(--acc)}
 .hint{font-size:12px;color:var(--mut);text-align:center;margin-top:14px;line-height:1.5}
 .link{color:var(--acc);background:none;border:none;font:inherit;cursor:pointer;text-decoration:underline;padding:0}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-card{background:var(--card);border-radius:14px;padding:20px 18px;width:100%;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.modal-card h3{margin:0 0 4px;font-size:16px}
+.modal-card .ms{color:var(--mut);font-size:13px;margin:0 0 14px}
+.modal-card .btn{margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -267,6 +272,17 @@ table.ftbl .nc{color:var(--danger)}
 <div class="tabbar">
   <button id="tabHome" class="on" onclick="go('scInicio');setTab('tabHome')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Inicio</button>
   <button id="tabList" onclick="openList();setTab('tabList')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Cobranzas</button>
+</div>
+
+<!-- eleccion de formato del estado de cuenta -->
+<div class="modal-bg" id="edcModal" style="display:none">
+  <div class="modal-card">
+    <h3 id="edcTitulo">Estado de cuenta</h3>
+    <p class="ms">Con las facturas pendientes del cliente, ya descontando este pago. ¿En qué formato lo quieres?</p>
+    <button class="btn btn-ok" onclick="edcElegir('xlsx')">Excel</button>
+    <button class="btn btn-primary" onclick="edcElegir('pdf')">PDF</button>
+    <button class="btn btn-ghost" onclick="edcElegir(null)">No, gracias</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -1259,7 +1275,43 @@ function pagoUsdAplicado(r){
   const u=parseMonto(r.usd);          // registros viejos sin el desglose
   return (u!=null&&u>0)?u:0;
 }
-async function descargarEstadoCuenta(sel){
+/* Pregunta el formato. Devuelve 'xlsx' | 'pdf' | null (si no lo quiere). */
+let edcResolver=null;
+function pedirFormatoEDC(quien){
+  return new Promise(function(res){
+    const m=document.getElementById('edcModal');
+    document.getElementById('edcTitulo').textContent='Estado de cuenta'+(quien?(' de '+quien):'');
+    m.style.display='flex';
+    edcResolver=function(v){m.style.display='none';edcResolver=null;res(v);};
+  });
+}
+function edcElegir(v){if(edcResolver)edcResolver(v);}
+let jspdfLoading=null;
+function ensureJsPDF(){
+  if(window.jspdf&&window.jspdf.jsPDF)return Promise.resolve();
+  if(!jspdfLoading)jspdfLoading=loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+    .then(function(){return loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');});
+  return jspdfLoading;
+}
+async function edcPdf(rows,base,titulo){
+  await ensureJsPDF();
+  const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  doc.setFontSize(15);doc.setTextColor(40,40,40);
+  doc.text('Estado de Cuenta',40,42);
+  doc.setFontSize(10);doc.setTextColor(110,110,110);
+  doc.text(titulo,40,60);
+  doc.autoTable({
+    head:[EDC_HEAD],
+    body:rows.map(function(r){return r.map(function(c){return (typeof c==='number')?fmtBs(c):String(c==null?'':c);});}),
+    startY:74,
+    theme:'grid',
+    styles:{fontSize:8,cellPadding:4,textColor:[40,40,40]},
+    headStyles:{fillColor:[0,157,220],textColor:255,fontStyle:'bold'},
+    columnStyles:{3:{halign:'right'},4:{halign:'right'},5:{halign:'right'},6:{halign:'right'},7:{halign:'right'}}
+  });
+  doc.save(base+'.pdf');
+}
+async function descargarEstadoCuenta(sel,formato){
   // lo pagado por (cliente|factura) en este reporte
   const pagos={};
   sel.forEach(function(r){
@@ -1284,6 +1336,11 @@ async function descargarEstadoCuenta(sel){
   const base=(codigos.length===1)
     ? ('Estado-de-cuenta_'+(slugArchivo(nombreCorto(rows[0][2]))||'Cliente')+'_'+hoy)
     : ('Estado-de-cuenta_'+hoy+'_'+codigos.length+'clientes');
+  const titulo=((codigos.length===1)?rows[0][2]:(codigos.length+' clientes'))+'  ·  '+new Date().toLocaleDateString('es-VE');
+  if(formato==='pdf'){
+    try{await edcPdf(rows,base,titulo);return;}
+    catch(e){console.error(e);alert('No se pudo generar el PDF. Se descargará en Excel.');}
+  }
   try{
     await ensureExcelJS();
     const wb=new ExcelJS.Workbook();
@@ -1360,10 +1417,8 @@ async function reportar(){
   marcarReportadas(sel);
   // estado de cuenta de lo que le queda pendiente al cliente, ya descontado este pago
   try{
-    const quien=(nombres.length===1)?(' de '+nombres[0]):'';
-    if(confirm('¿Quieres generar el estado de cuenta'+quien+' con las facturas pendientes, descontando este pago?')){
-      await descargarEstadoCuenta(sel);
-    }
+    const formato=await pedirFormatoEDC(nombres.length===1?nombres[0]:'');
+    if(formato)await descargarEstadoCuenta(sel,formato);
   }catch(e){console.error(e);}
 }
 function abrirCorreo(subject,body){
