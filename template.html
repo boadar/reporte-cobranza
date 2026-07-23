@@ -1537,13 +1537,14 @@ function cellVal(v){if(v!=null&&typeof v==='object'&&!(v instanceof Date)){if('r
 function admNum(v){if(typeof v==='number')return Math.round(v*100)/100;if(v==null)return null;let s=String(v).trim();if(!s)return null;if(/,\d{1,2}$/.test(s))s=s.replace(/\./g,'').replace(',','.');const n=parseFloat(s);return isNaN(n)?null:Math.round(n*100)/100;}
 function admISO(v){
   if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate());
+  if(typeof v==='number'&&v>30000&&v<60000){const d=new Date(Date.UTC(1899,11,30)+v*86400000);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}
   const s=String(v==null?'':v).trim();
   let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
   m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);if(m){let y=+m[3];if(y<100)y+=2000;return y+'-'+pad(+m[2])+'-'+pad(+m[1]);}
   return '';
 }
 function admDMY(v){const iso=admISO(v);if(iso){const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];}return String(v==null?'':v).trim();}
-const CXC_HEAD=['Codigo','Cliente','Factura','Tipo','FechaFactura','TasaFact','Vencimiento','Base','IVA','IVABs','IVA25','TotalPorPagar','Observacion'];
+const CXC_HEAD=['Codigo','Cliente','Factura','Tipo','FechaFactura','TasaFact','Vencimiento','Base','IVA','IVABs','IVA25','TotalPorPagar','Observacion','25% de IVA PENDIENTE','RETENCION PENDIENTE'];
 function toCsv(rows){return rows.map(r=>r.map(c=>{const s=(c==null?'':String(c));return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\r\n');}
 async function onAdminFile(ev){
   const f=ev.target.files[0];ev.target.value='';if(!f)return;
@@ -1554,7 +1555,7 @@ async function onAdminFile(ev){
     if(!filas.length)throw new Error('La plantilla está vacía o no tiene la hoja «Facturas».');
     // columnas FIJAS por posición (A=0). Solo se leen estas; el resto de la plantilla se ignora.
     // A=Codigo C=FechaFactura D=Factura E=Tipo N=Cliente T=Vencimiento V=Base W=IVA Z=TotalPorPagar AI=Observacion
-    const POS={codigo:0,fecha:2,factura:3,tipo:4,cliente:13,venc:19,base:21,iva:22,total:25,obs:34};
+    const POS={codigo:0,fecha:2,factura:3,tipo:4,cliente:13,venc:19,base:21,iva:22,x25p:23,retp:24,total:25,obs:34};
     // ubicar la fila de encabezado (la que dice Factura en D o Codigo en A) para saber dónde empiezan los datos
     let hdrRow=-1;
     for(let r=0;r<Math.min(15,filas.length);r++){const fila=filas[r];const kA=keyHdr(cellText(fila[POS.codigo])),kC=keyHdr(cellText(fila[POS.fecha])),kD=keyHdr(cellText(fila[POS.factura]));if(kD==='factura'||kA==='codigo'||kC==='fechafactura'||kC==='fecha'){hdrRow=r;break;}}
@@ -1577,11 +1578,14 @@ async function onAdminFile(ev){
       if(iso&&tasa==null)sinTasa++;
       const base=admNum(get('base')),iva=admNum(get('iva')),total=admNum(get('total'));
       const ib=(iva!=null&&tasa)?Math.round(iva*tasa*100)/100:0,i25=ib?Math.round(ib*25)/100:0;
+      // 25% de IVA pendiente y retencion pendiente vienen en $ (col X, Y); a Bs con la tasa de la fecha
+      const x25=admNum(get('x25p')),retp=admNum(get('retp'));
+      const x25bs=(x25!=null&&tasa)?Math.round(x25*tasa*100)/100:0,retbs=(retp!=null&&tasa)?Math.round(retp*tasa*100)/100:0;
       const tipo=cellText(get('tipo')).trim()||'Factura',venc=admDMY(get('venc')),fd=admDMY(get('fecha')),obs=cellText(get('obs')).trim();
       const tf=tasa?Math.round(tasa*10000)/10000:'';
-      cxcRows.push([cod,clienteV,facturaV,tipo,fd,tf,venc,base==null?'':base,iva==null?'':iva,ib||'',i25||'',total==null?'':total,obs]);
+      cxcRows.push([cod,clienteV,facturaV,tipo,fd,tf,venc,base==null?'':base,iva==null?'':iva,ib||'',i25||'',total==null?'':total,obs,x25bs||'',retbs||'']);
       if(!cod){sinCod[clienteV]=(sinCod[clienteV]||0)+1;continue;}   // sin codigo: no entra a la app (igual que build.py)
-      (nuevo[cod]=nuevo[cod]||[]).push({f:facturaV,t:tipo,v:venc,fd:fd,tf:tf||0,b:base||0,i:iva||0,ib:ib,i25:i25,p:total||0,o:obs});
+      (nuevo[cod]=nuevo[cod]||[]).push({f:facturaV,t:tipo,v:venc,fd:fd,tf:tf||0,b:base||0,i:iva||0,ib:ib,i25:i25,p:total||0,o:obs,i25p:x25bs,rtp:retbs});
       nFac++;
     }
     if(nFac===0)throw new Error('No se reconoció ninguna factura con un cliente válido. Revisa los nombres o completa la columna Código.');

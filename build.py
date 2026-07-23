@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json, sys, subprocess
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v58'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v59'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -58,6 +58,9 @@ def gen_data():
                     'b': fnum(r['Base']), 'i': fnum(r['IVA']),
                     'ib': fnum(r.get('IVABs', '')), 'i25': fnum(r.get('IVA25', '')),
                     'p': fnum(r['TotalPorPagar']), 'o': r['Observacion'],
+                    # 25% de IVA pendiente y retencion pendiente, ya en Bs.
+                    'i25p': fnum(r.get('25% de IVA PENDIENTE', '')),
+                    'rtp': fnum(r.get('RETENCION PENDIENTE', '')),
                 })
                 n += 1
         write('facturas.json', json.dumps(fac, ensure_ascii=False, separators=(',', ':')))
@@ -133,6 +136,7 @@ sw = (
 write('sw.js', sw)
 
 print('OK  index.html (%d KB) + manifest.webmanifest + sw.js  [%s]' % (len(html)//1024, CACHE_NAME))
+
 
 
 

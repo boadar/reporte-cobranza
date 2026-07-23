@@ -79,11 +79,13 @@ def num(v):
 
 
 def as_date(v):
-    """Devuelve un date desde un datetime o un texto dd/mm/aaaa (o aaaa-mm-dd)."""
+    """Devuelve un date desde un datetime, un serial de Excel o un texto dd/mm/aaaa."""
     if isinstance(v, datetime.datetime):
         return v.date()
     if isinstance(v, datetime.date):
         return v
+    if isinstance(v, (int, float)) and 30000 < v < 60000:   # serial de fecha de Excel
+        return (datetime.datetime(1899, 12, 30) + datetime.timedelta(days=int(v))).date()
     s = str(v or '').strip()
     for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d', '%d/%m/%y'):
         try:
@@ -123,8 +125,9 @@ if not rows_iter:
 
 # Columnas FIJAS por posicion (A=0). Solo se leen estas; el resto de la plantilla se ignora.
 # A=Codigo C=FechaFactura D=Factura E=Tipo N=Cliente T=Vencimiento V=Base W=IVA Z=TotalPorPagar AI=Observacion
+# X=25% de IVA pendiente ($)  Y=Retencion pendiente ($)  -> se pasan a Bs con la tasa de la fecha (C)
 POS = {'codigo': 0, 'fecha': 2, 'factura': 3, 'tipo': 4, 'cliente': 13,
-       'venc': 19, 'base': 21, 'iva': 22, 'total': 25, 'obs': 34}
+       'venc': 19, 'base': 21, 'iva': 22, 'x25p': 23, 'retp': 24, 'total': 25, 'obs': 34}
 
 # ubicar la fila de encabezado (dice Factura en D o Codigo en A) para saber donde empiezan los datos
 hdr_row = -1
@@ -175,6 +178,11 @@ for r in rows_iter[hdr_row + 1:]:
     total = num(get(r, 'total'))
     iva_bs = round(iva * tasa, 2) if (iva is not None and tasa) else None
     iva25 = round(iva_bs * 0.25, 2) if iva_bs is not None else None
+    # 25% de IVA pendiente y retencion pendiente: vienen en $ (col X, Y); a Bs con la tasa de la fecha
+    x25 = num(get(r, 'x25p'))
+    retp = num(get(r, 'retp'))
+    x25_bs = round(x25 * tasa, 2) if (x25 is not None and tasa) else ''
+    retp_bs = round(retp * tasa, 2) if (retp is not None and tasa) else ''
 
     rows.append([
         cod, nombre,
@@ -189,12 +197,15 @@ for r in rows_iter[hdr_row + 1:]:
         iva25 if iva25 is not None else '',
         total if total is not None else '',
         str(get(r, 'obs') or '').strip(),
+        x25_bs,
+        retp_bs,
     ])
 
 with open(OUT, 'w', newline='', encoding='utf-8') as f:
     w = csv.writer(f)
     w.writerow(['Codigo', 'Cliente', 'Factura', 'Tipo', 'FechaFactura', 'TasaFact',
-                'Vencimiento', 'Base', 'IVA', 'IVABs', 'IVA25', 'TotalPorPagar', 'Observacion'])
+                'Vencimiento', 'Base', 'IVA', 'IVABs', 'IVA25', 'TotalPorPagar', 'Observacion',
+                '25% de IVA PENDIENTE', 'RETENCION PENDIENTE'])
     w.writerows(rows)
 
 # los clientes nuevos (codigo en col A que no existia) se dan de alta en el maestro
