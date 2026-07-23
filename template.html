@@ -1247,7 +1247,7 @@ async function buildReportFile(sel,baseName){
   }
 }
 /* ---------- estado de cuenta del cliente (al terminar de reportar) ---------- */
-const EDC_HEAD=['Código Cliente','N Factura','Nombre Cliente','Base Original','IVA Original','Total por Pagar','Observaciones'];
+const EDC_HEAD=['Código Cliente','N Factura','Nombre Cliente','Base Original','IVA Original','Saldo Anterior','Pago Recibido','Total por Pagar','Observaciones'];
 /* Lo que ese pago aplico a la factura, en $: la parte del IVA (Bs / tasa) mas la
    parte que fue a la base. No incluye el sobrante (diferencial). */
 function pagoUsdAplicado(r){
@@ -1275,7 +1275,8 @@ async function descargarEstadoCuenta(sel){
     const nom=(sel.find(function(r){return r.cliCod===cod;})||{}).cliNom||'';
     facturasDe(cod).forEach(function(f){
       const pagado=pagos[cod+'|'+String(f.f||'').trim()]||0;
-      rows.push([cod,String(f.f||''),nom,r2(f.b||0),r2(f.i||0),r2((f.p||0)-pagado),f.o||'']);
+      const saldoAnt=r2(f.p||0);            // lo que estaba pendiente antes de este pago
+      rows.push([cod,String(f.f||''),nom,r2(f.b||0),r2(f.i||0),saldoAnt,r2(pagado),r2(saldoAnt-pagado),f.o||'']);
     });
   });
   if(!rows.length){alert('Ese cliente no tiene facturas pendientes registradas: no hay estado de cuenta que generar.');return;}
