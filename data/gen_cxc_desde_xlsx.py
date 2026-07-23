@@ -121,33 +121,25 @@ if not rows_iter:
     sys.exit(1)
 
 
-def mapear(fila):
-    m = {}
-    for i, cell in enumerate(fila):
-        k = key(cell)
-        for logic, aliases in ALIAS.items():
-            if k in aliases and logic not in m:
-                m[logic] = i
-    return m
+# Columnas FIJAS por posicion (A=0). Solo se leen estas; el resto de la plantilla se ignora.
+# A=Codigo C=FechaFactura D=Factura E=Tipo N=Cliente T=Vencimiento V=Base W=IVA Z=TotalPorPagar AI=Observacion
+POS = {'codigo': 0, 'fecha': 2, 'factura': 3, 'tipo': 4, 'cliente': 13,
+       'venc': 19, 'base': 21, 'iva': 22, 'total': 25, 'obs': 34}
 
-
-# la fila de encabezados puede no ser la primera (hay titulo y subtitulo arriba):
-# se busca entre las primeras filas la que mapee mas columnas conocidas.
-hdr_row, colmap = 0, {}
-for idx_row, fila in enumerate(rows_iter[:10]):
-    m = mapear(fila)
-    if len(m) > len(colmap):
-        colmap, hdr_row = m, idx_row
-
-faltan = [c for c in ('fecha', 'factura', 'cliente', 'base', 'iva', 'total') if c not in colmap]
-if faltan:
-    print('Faltan columnas obligatorias en la plantilla:', ', '.join(faltan))
-    print('Revisa que la hoja "Facturas" tenga los encabezados correctos.')
-    sys.exit(1)
+# ubicar la fila de encabezado (dice Factura en D o Codigo en A) para saber donde empiezan los datos
+hdr_row = -1
+for idx_row, fila in enumerate(rows_iter[:15]):
+    kA = key(fila[POS['codigo']]) if len(fila) > POS['codigo'] else ''
+    kC = key(fila[POS['fecha']]) if len(fila) > POS['fecha'] else ''
+    kD = key(fila[POS['factura']]) if len(fila) > POS['factura'] else ''
+    if kD == 'factura' or kA == 'codigo' or kC in ('fechafactura', 'fecha'):
+        hdr_row = idx_row
+        break
+# si no se hallo encabezado (hdr_row=-1), rows_iter[hdr_row+1:] = rows_iter[0:] procesa todo
 
 
 def get(r, logic):
-    i = colmap.get(logic)
+    i = POS.get(logic)
     return r[i] if (i is not None and i < len(r)) else None
 
 

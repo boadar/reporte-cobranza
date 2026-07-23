@@ -1424,15 +1424,16 @@ async function onAdminFile(ev){
   try{
     const filas=await leerFilasXlsx(f,'Facturas');
     if(!filas.length)throw new Error('La plantilla está vacía o no tiene la hoja «Facturas».');
-    // detectar la fila de encabezados (puede haber titulo arriba)
-    let hdrRow=-1,colmap={};
-    for(let r=0;r<Math.min(10,filas.length);r++){const m={};const fila=filas[r];for(let i=0;i<fila.length;i++){const k=keyHdr(cellText(fila[i]));for(const lg in ADM_ALIAS){if(ADM_ALIAS[lg].indexOf(k)>=0&&!(lg in m))m[lg]=i;}}if(Object.keys(m).length>Object.keys(colmap).length){colmap=m;hdrRow=r;}}
-    const faltan=['fecha','factura','cliente','base','iva','total'].filter(c=>!(c in colmap));
-    if(faltan.length)throw new Error('Faltan columnas en la plantilla: '+faltan.join(', ')+'. Usa la Plantilla-CxC.xlsx.');
+    // columnas FIJAS por posición (A=0). Solo se leen estas; el resto de la plantilla se ignora.
+    // A=Codigo C=FechaFactura D=Factura E=Tipo N=Cliente T=Vencimiento V=Base W=IVA Z=TotalPorPagar AI=Observacion
+    const POS={codigo:0,fecha:2,factura:3,tipo:4,cliente:13,venc:19,base:21,iva:22,total:25,obs:34};
+    // ubicar la fila de encabezado (la que dice Factura en D o Codigo en A) para saber dónde empiezan los datos
+    let hdrRow=-1;
+    for(let r=0;r<Math.min(15,filas.length);r++){const fila=filas[r];const kA=keyHdr(cellText(fila[POS.codigo])),kC=keyHdr(cellText(fila[POS.fecha])),kD=keyHdr(cellText(fila[POS.factura]));if(kD==='factura'||kA==='codigo'||kC==='fechafactura'||kC==='fecha'){hdrRow=r;break;}}
     const idx=getCliIdx(),cods=getCliCods();
     const nuevo={},cxcRows=[],sinCod={};let nFac=0,sinTasa=0;
-    for(let r=hdrRow+1;r<filas.length;r++){
-      const row=filas[r];const get=lg=>{const i=colmap[lg];return (i!=null&&i<row.length)?cellVal(row[i]):null;};
+    for(let r=(hdrRow>=0?hdrRow+1:0);r<filas.length;r++){
+      const row=filas[r];const get=lg=>{const i=POS[lg];return (i!=null&&i<row.length)?cellVal(row[i]):null;};
       const facturaV=cellText(get('factura')).trim(),clienteV=cellText(get('cliente')).trim();
       if(!facturaV&&!clienteV)continue;
       let cod=cellText(get('codigo')).trim();if(cod&&!cods.has(cod))cod='';if(!cod)cod=idx[normCliName(clienteV)]||'';
