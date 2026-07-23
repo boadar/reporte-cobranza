@@ -1246,6 +1246,62 @@ async function buildReportFile(sel,baseName){
     return new File(['﻿'+csv],base+'.csv',{type:'text/csv'});
   }
 }
+/* ---------- estado de cuenta del cliente (al terminar de reportar) ---------- */
+const EDC_HEAD=['Código Cliente','N Factura','Nombre Cliente','Base Original','IVA Original','Total por Pagar','Observaciones'];
+/* Lo que ese pago aplico a la factura, en $: la parte del IVA (Bs / tasa) mas la
+   parte que fue a la base. No incluye el sobrante (diferencial). */
+function pagoUsdAplicado(r){
+  const tp=r.tasaPago||0;
+  const ivaUsd=(r.iva25Aplicado&&tp)?(r.iva25Aplicado/tp):0;
+  const baseUsd=(r.pagoAplicadoUsd!=null)?r.pagoAplicadoUsd:0;
+  const t=r2(ivaUsd+baseUsd);
+  if(t>0)return t;
+  const u=parseMonto(r.usd);          // registros viejos sin el desglose
+  return (u!=null&&u>0)?u:0;
+}
+async function descargarEstadoCuenta(sel){
+  // lo pagado por (cliente|factura) en este reporte
+  const pagos={};
+  sel.forEach(function(r){
+    const cod=(r.cliCod||'').trim(),fac=String(r.factura||'').trim();
+    if(!cod||!fac)return;
+    const k=cod+'|'+fac;
+    pagos[k]=(pagos[k]||0)+pagoUsdAplicado(r);
+  });
+  const codigos=[];
+  sel.forEach(function(r){if(r.cliCod&&codigos.indexOf(r.cliCod)<0)codigos.push(r.cliCod);});
+  const rows=[];
+  codigos.forEach(function(cod){
+    const nom=(sel.find(function(r){return r.cliCod===cod;})||{}).cliNom||'';
+    facturasDe(cod).forEach(function(f){
+      const pagado=pagos[cod+'|'+String(f.f||'').trim()]||0;
+      rows.push([cod,String(f.f||''),nom,r2(f.b||0),r2(f.i||0),r2((f.p||0)-pagado),f.o||'']);
+    });
+  });
+  if(!rows.length){alert('Ese cliente no tiene facturas pendientes registradas: no hay estado de cuenta que generar.');return;}
+  const hoy=new Date().toLocaleDateString('es-VE').replace(/\//g,'-');
+  const base=(codigos.length===1)
+    ? ('Estado-de-cuenta_'+(slugArchivo(nombreCorto(rows[0][2]))||'Cliente')+'_'+hoy)
+    : ('Estado-de-cuenta_'+hoy+'_'+codigos.length+'clientes');
+  try{
+    await ensureExcelJS();
+    const wb=new ExcelJS.Workbook();
+    const ws=wb.addWorksheet('Estado de cuenta',{views:[{zoomScale:85}]});
+    ws.addRow(EDC_HEAD);ws.getRow(1).font={bold:true};
+    rows.forEach(function(r){ws.addRow(r);});
+    for(let c=0;c<EDC_HEAD.length;c++){
+      let max=String(EDC_HEAD[c]).length;
+      for(let k=0;k<rows.length;k++){const v=rows[k][c];const len=(v==null?0:String(v).length);if(len>max)max=len;}
+      ws.getColumn(c+1).width=Math.min(60,Math.max(8,max+2));
+    }
+    const buf=await wb.xlsx.writeBuffer();
+    descargarBlob(new File([buf],base+'.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  }catch(e){
+    console.error(e);
+    const csv=[EDC_HEAD].concat(rows).map(function(row){return row.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
+    descargarBlob(new File(['﻿'+csv],base+'.csv',{type:'text/csv'}));
+  }
+}
 function dataUrlToFile(dataUrl,name){
   try{if(!/^data:image\//.test(dataUrl))return null;const parts=dataUrl.split(',');const mime=(parts[0].match(/data:([^;]+)/)||[])[1]||'image/jpeg';const bin=atob(parts[1]);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new File([arr],name,{type:mime});}catch(e){return null;}
 }
@@ -1301,6 +1357,13 @@ async function reportar(){
     alert('Listo: se descargó el Excel'+(nimg>0?' y '+nimg+' imagen(es)':'')+' en tu carpeta de Descargas.\n\nAbrí un correo dirigido a '+REPORT_EMAIL+': solo adjunta esos archivos y envíalo.\n\n(El envío con adjuntos automáticos solo funciona desde el teléfono.)');
   }
   marcarReportadas(sel);
+  // estado de cuenta de lo que le queda pendiente al cliente, ya descontado este pago
+  try{
+    const quien=(nombres.length===1)?(' de '+nombres[0]):'';
+    if(confirm('¿Quieres generar el estado de cuenta'+quien+' con las facturas pendientes, descontando este pago?')){
+      await descargarEstadoCuenta(sel);
+    }
+  }catch(e){console.error(e);}
 }
 function abrirCorreo(subject,body){
   try{
