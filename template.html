@@ -1493,6 +1493,41 @@ function nombreArchivo(r,ext){
   const partes=[cli,fecha,fac].filter(Boolean);
   return partes.join('_')+'.'+ext;
 }
+/* --- correo .eml con los archivos YA adjuntos (igual que la app de Pedidos) ---
+   Al abrir el .eml, el correo se abre dirigido y con los adjuntos, listo para enviar. */
+function bytesToBase64(bytes){let bin='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk){bin+=String.fromCharCode.apply(null,bytes.subarray(i,Math.min(i+chunk,bytes.length)));}return btoa(bin);}
+function b64lines(b64){return b64.replace(/(.{76})/g,'$1\r\n');}
+function emlHeaderVal(s){return /[^\x00-\x7F]/.test(s)?'=?UTF-8?B?'+btoa(unescape(encodeURIComponent(s)))+'?=':s;}
+function buildEml(to,subject,bodyText,attachments){
+  const CRLF='\r\n';
+  const boundary='=_OFICA_'+Date.now().toString(36)+Math.floor(1e9*(0.5+((Date.now()%1000)/2000))).toString(36);
+  let e='';
+  e+='X-Unsent: 1'+CRLF;                          // Outlook lo abre como borrador editable
+  if(to)e+='To: '+to+CRLF;
+  e+='Subject: '+emlHeaderVal(subject)+CRLF;
+  e+='MIME-Version: 1.0'+CRLF;
+  e+='Content-Type: multipart/mixed; boundary="'+boundary+'"'+CRLF+CRLF;
+  e+='--'+boundary+CRLF;
+  e+='Content-Type: text/plain; charset="UTF-8"'+CRLF+'Content-Transfer-Encoding: base64'+CRLF+CRLF;
+  e+=b64lines(bytesToBase64(new TextEncoder().encode(bodyText)))+CRLF+CRLF;
+  attachments.forEach(function(a){
+    e+='--'+boundary+CRLF;
+    e+='Content-Type: '+a.mime+'; name="'+a.name+'"'+CRLF;
+    e+='Content-Transfer-Encoding: base64'+CRLF;
+    e+='Content-Disposition: attachment; filename="'+a.name+'"'+CRLF+CRLF;
+    e+=b64lines(bytesToBase64(a.bytes))+CRLF+CRLF;
+  });
+  e+='--'+boundary+'--'+CRLF;
+  return e;
+}
+async function descargarCorreoEml(files,subject,cuerpo,cliStr){
+  const att=[];
+  for(const f of files){att.push({name:f.name,bytes:new Uint8Array(await f.arrayBuffer()),mime:f.type||'application/octet-stream'});}
+  const eml=buildEml(REPORT_EMAIL,subject,cuerpo,att);
+  const nombre='Correo-'+((cliStr?slugArchivo(cliStr):'')||'Cobranza')+'.eml';
+  descargarBlob(new File([new TextEncoder().encode(eml)],nombre,{type:'message/rfc822'}));
+  return nombre;
+}
 async function reportar(){
   const db=loadDb();const sel=db.filter(r=>selected.has(r.id));
   if(!sel.length){alert('Selecciona al menos una cobranza para reportar (toca la casilla a la izquierda).');return;}
@@ -1517,12 +1552,17 @@ async function reportar(){
     catch(e){if(e&&e.name==='AbortError')return;}   // si falla, se cae a descarga + correo
   }
   if(!compartido){
-    // En computadora no existe el menu de compartir con archivos: se descargan
-    // y se abre el correo ya dirigido, para solo adjuntar y enviar.
-    fallbackDownload(files);
-    abrirCorreo(subject,cuerpo);
-    const nimg=files.length-1;
-    alert('Listo: se descargó el Excel'+(nimg>0?' y '+nimg+' imagen(es)':'')+' en tu carpeta de Descargas.\n\nAbrí un correo dirigido a '+REPORT_EMAIL+': solo adjunta esos archivos y envíalo.\n\n(El envío con adjuntos automáticos solo funciona desde el teléfono.)');
+    // En PC: se genera un CORREO .eml con el Excel y las imágenes YA adjuntos.
+    // Al abrirlo (doble clic), el correo se abre dirigido a cobranzas y listo para enviar.
+    try{
+      const nombre=await descargarCorreoEml(files,subject,cuerpo,cliStr);
+      const nimg=files.length-1;
+      alert('Se generó el correo "'+nombre+'" con el Excel'+(nimg>0?' y '+nimg+' imagen(es)':'')+' YA adjuntos.\n\nÁbrelo (doble clic) y se abrirá tu correo dirigido a '+REPORT_EMAIL+', listo para revisar y enviar.');
+    }catch(e){
+      console.error(e);
+      fallbackDownload(files);abrirCorreo(subject,cuerpo);   // respaldo
+      alert('Se descargó el Excel y las imágenes en Descargas. Abrí un correo a '+REPORT_EMAIL+': adjunta esos archivos y envíalo.');
+    }
   }
   marcarReportadas(sel);
   // estado de cuenta de lo que le queda pendiente al cliente, ya descontado este pago
