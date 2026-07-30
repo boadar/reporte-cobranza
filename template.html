@@ -866,9 +866,14 @@ function renderFacturas(){
   if(!chosenCli){el.innerHTML='<div class="fnone">Selecciona primero el cliente para ver sus facturas pendientes.</div>';updateSaldo();return;}
   const arr=facturasDe(chosenCli.cod);
   if(!arr.length){el.innerHTML='<div class="fnone">Este cliente no tiene facturas pendientes en el listado.</div>';updateSaldo();return;}
+  // IVA a mostrar en Bs (a la tasa de la factura, ya calculado en ib/i25): si el cliente es
+  // agente de retencion se muestra el 25% del IVA (i25); si no, el 100% (ib).
+  const chkAg=document.getElementById('fAgenteRet');
+  const esAgente=chkAg?chkAg.checked:true;
   let h='<div class="ftbl-wrap"><table class="ftbl"><thead><tr><th>Factura</th><th>Tipo</th><th>Vence</th><th class="num">Base $</th><th class="num">Saldo $</th><th class="num">IVA Bs.</th><th class="num">Total x Pagar</th><th>Observación</th></tr></thead><tbody>';
   arr.forEach((f,i)=>{
     const nc=f.b<0?' nc':'';
+    const ivaBsCol=esAgente?(f.i25!=null?f.i25:r2((f.ib||0)*0.25)):(f.ib||0);  // 25% o 100% del IVA Bs
     const est=estadoFactura(f,chosenCli.cod);
     const saldoBase=r2(f.b-baseYaCobrado(f.f,chosenCli.cod));      // base pendiente actual
     const pagada=(f.b>0 && saldoBase<=0.01);
@@ -885,7 +890,7 @@ function renderFacturas(){
       saldoTd='<td class="num'+(pagada?'':nc)+'"'+(pagada?' style="color:var(--ok);font-weight:600"':(saldoBase<f.b?' style="font-weight:600"':''))+'>'+(pagada?'PAGADA':fmtUsd(saldoBase))+'</td>';
       pendTd='<td class="num'+nc+'">'+fmtUsd(f.p)+'</td>';
     }
-    h+='<tr id="frow'+i+'"'+(est.soloIva?' class="rojo"':'')+' onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td>'+saldoTd+'<td class="num'+nc+'">'+(f.ib!=null&&f.ib!==0?fmtUsd(f.ib):'—')+'</td>'+pendTd+'<td>'+obsTxt+'</td></tr>';
+    h+='<tr id="frow'+i+'"'+(est.soloIva?' class="rojo"':'')+' onclick="pickFactura('+i+')"><td><b>'+esc(f.f)+'</b></td><td>'+esc(f.t||'')+'</td><td>'+esc(f.v||'')+'</td><td class="num'+nc+'">'+fmtUsd(f.b)+'</td>'+saldoTd+'<td class="num'+nc+'">'+(ivaBsCol!=null&&ivaBsCol!==0?fmtUsd(ivaBsCol):'—')+'</td>'+pendTd+'<td>'+obsTxt+'</td></tr>';
   });
   h+='</tbody></table></div><div class="hint" style="text-align:left;margin:6px 0 0">Base y Saldo en $. Las filas en <b style="color:var(--danger)">rojo</b> tienen la base pagada: solo falta el 25% de IVA o la retención (en Bs). Toca una fila para asignarle el pago.</div>';
   el.innerHTML=h;
@@ -940,7 +945,18 @@ function r2(n){return Math.round(n*100)/100;}
 function loadAgentes(){try{return JSON.parse(localStorage.getItem('agentesRet')||'{}');}catch(e){return {};}}
 function esAgentePref(cod){const m=loadAgentes();return (cod in m)?!!m[cod]:true;}
 function setAgentePref(cod,val){if(!cod)return;const m=loadAgentes();m[cod]=!!val;localStorage.setItem('agentesRet',JSON.stringify(m));}
-function onAgenteChange(){if(chosenCli)setAgentePref(chosenCli.cod,document.getElementById('fAgenteRet').checked);updateSaldo();}
+/* Re-dibuja la tabla de facturas (para refrescar la columna IVA Bs. 25%/100%) manteniendo
+   seleccionada la misma factura que estaba elegida. */
+function rerenderFacturasSel(){
+  const selF=selFactura?selFactura.f:null;
+  renderFacturas();
+  if(selF!=null){
+    const arr=chosenCli?facturasDe(chosenCli.cod):[];
+    const i=arr.findIndex(f=>String(f.f)===String(selF));
+    if(i>=0)pickFactura(i);
+  }
+}
+function onAgenteChange(){if(chosenCli)setAgentePref(chosenCli.cod,document.getElementById('fAgenteRet').checked);rerenderFacturasSel();}
 /* Si no se cobra el IVA primero, el agente de retencion no aplica: se deshabilita y desmarca. */
 function refreshAgenteState(){
   const cob=document.getElementById('fCobrarIva').checked;
@@ -954,7 +970,7 @@ function onCobrarIvaChange(){
   const ag=document.getElementById('fAgenteRet');
   if(cob)ag.checked=chosenCli?esAgentePref(chosenCli.cod):true;   // al reactivar, restaura la preferencia del cliente
   refreshAgenteState();
-  updateSaldo();
+  rerenderFacturasSel();
 }
 /* IVA ya cobrado de una factura en cobranzas anteriores (Bs) */
 function ivaYaCobrado(factura,cod){
