@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Cobranza Local</title>
+    <meta name="theme-color" content="#282828">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     
     <style>
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
@@ -178,6 +183,7 @@
                     <button id="btnGuardarVendedor" onclick="guardarUnicoVendedorActual()" class="btn-snapshot">📥 GUARDAR VENDEDOR</button>
 <button id="btnGuardarTodos" onclick="guardarTodosLosVendedoresMasivo()" class="btn-snapshot btn-snapshot-blue">📦 COMPRIMIR (.ZIP)</button>
                 </div>
+                <button id="btnGenerarCartera" onclick="generarCarteraJson()" class="btn-snapshot" style="background-color:#475569;border-color:#334155;" title="Descarga la cartera actual como cartera.json para publicarla en GitHub y que todos la reciban automáticamente">💾 GENERAR cartera.json (publicar)</button>
             </div>
         </header>
 
@@ -445,12 +451,76 @@
             tasasPorFecha = snapshotTasasPorFecha;
         }
 
+        // Archivos de datos publicados en el repositorio (GitHub Pages). La cartera y las tasas
+        // se leen de aquí al abrir la app, así el vendedor NO tiene que cargar el Excel a mano.
+        // Para actualizar: se reemplaza cartera.json / tasas.json en GitHub (ver botón "GENERAR
+        // cartera.json" y el README). Si no hay señal o los archivos no existen todavía, la app
+        // sigue permitiendo cargar el Excel manualmente, como antes.
+        const CARTERA_URL = 'cartera.json';
+        const TASAS_URL = 'tasas.json';
+
         window.addEventListener('DOMContentLoaded', () => {
             conectarEventoInput();
             if (registrosOriginales.length > 0) {
                 inicializarInterfazConDatos();
+            } else if (typeof snapshotDatosInyectados === 'undefined') {
+                // No es un reporte exportado con datos incrustados: intentamos traer la cartera de GitHub.
+                cargarDatosDesdeGitHub();
             }
         });
+
+        // Trae cartera.json (facturas) y tasas.json (tasas BCV) del repositorio y arranca la app.
+        // Cada archivo se valida por separado: si uno falla, no daña al otro. No pisa datos que ya
+        // hayas cargado a mano en esta sesión.
+        async function cargarDatosDesdeGitHub() {
+            // Tasas: se mezclan con las que ya haya (formato del repo: { "2026-07-16": [usd, eur] }).
+            try {
+                const rt = await fetch(TASAS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+                if (rt.ok) {
+                    const tj = await rt.json();
+                    if (tj && typeof tj === 'object' && !Array.isArray(tj)) {
+                        for (const k in tj) {
+                            const v = tj[k];
+                            const usd = Array.isArray(v) ? v[0] : v;
+                            if (usd != null && !isNaN(usd)) tasasPorFecha[k] = Number(usd);
+                        }
+                    }
+                }
+            } catch (e) { /* sin señal: se podrán cargar tasas a mano */ }
+
+            // Cartera: array de facturas en el formato de esta app (lo que produce cargar el Excel).
+            try {
+                const rc = await fetch(CARTERA_URL + '?t=' + Date.now(), { cache: 'no-store' });
+                if (!rc.ok) return; // aún no se ha publicado la cartera: queda la carga manual
+                const data = await rc.json();
+                if (Array.isArray(data) && data.length > 0 && registrosOriginales.length === 0) {
+                    registrosOriginales = data;
+                    secretarioCongeladoPrevio = "TODO";
+                    pagosAbonadosEnSesion = {};
+                    historialTransacciones = [];
+                    inicializarInterfazConDatos();
+                    const sub = document.querySelector('header div p');
+                    if (sub) sub.textContent = '✔ Cartera al día desde GitHub · ' + data.length + ' documentos.';
+                }
+            } catch (e) { /* sin señal / archivo dañado: queda la carga manual */ }
+        }
+
+        // Descarga cartera.json con la cartera actual, para publicarla en GitHub y que todos la
+        // reciban automáticamente. (El navegador no puede subir a GitHub; este archivo se sube al repo.)
+        function generarCarteraJson() {
+            if (!registrosOriginales || registrosOriginales.length === 0) {
+                alert('Primero carga el Excel de cuentas por cobrar; luego genero el cartera.json para publicar.');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(registrosOriginales)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'cartera.json';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
+            alert('Listo: se descargó "cartera.json".\n\nSúbelo al repositorio (o envíamelo) y la app cargará esa cartera automáticamente para todos.');
+        }
 
         function parsearFechaSegura(fVen) {
             if (fVen instanceof Date) return fVen;
@@ -1968,6 +2038,15 @@ function ejecutarEditarCobro() {
     ventana.print();
 }
 
+    </script>
+    <script>
+    /* Registro del service worker para que el Control de Cobranza se instale y funcione
+       offline. No recarga sola al actualizar (evita perder un Excel cargado en pantalla). */
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('sw.js').then(function (reg) { reg.update(); }).catch(function () {});
+        });
+    }
     </script>
 </body>
 </html>
