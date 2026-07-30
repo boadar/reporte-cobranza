@@ -543,9 +543,17 @@ function matchOficaCuenta(dest){
   return null;
 }
 function findOficaDest(t){
-  const toks=t.match(/[\d*]{4,}/g)||[];
-  for(const tk of toks){if(matchOficaCuenta(tk))return tk;}
-  return '';
+  const buscar=function(txt){
+    const toks=txt.match(/[\d*]{4,}/g)||[];
+    for(const tk of toks){
+      const m=matchOficaCuenta(tk);
+      if(m)return m.num?m.num:tk;   // si se identifico la cuenta OFICA, devuelve el numero COMPLETO y correcto
+    }
+    return '';
+  };
+  // 1) intento normal. 2) por si el numero viene partido por guiones/espacios
+  //    (ej. 0134-0031-82-0313234827): se unen los grupos de digitos y se reintenta.
+  return buscar(t) || buscar(t.replace(/(\d)[\s\-]+(?=\d)/g,'$1'));
 }
 
 /* ---------- carga y OCR ---------- */
