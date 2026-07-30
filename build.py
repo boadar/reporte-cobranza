@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json, sys, subprocess
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v63'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v64'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -110,7 +110,9 @@ html = (tpl
 # sincroniza APPVER con el numero de cache
 ver = re.search(r'-v(\d+)$', CACHE_NAME).group(1)
 html = re.sub(r'const APPVER\s*=\s*"[^"]*";', 'const APPVER = "v%s";' % ver, html)
-write('index.html', html)
+# El lector de comprobantes (OCR) es una pagina secundaria: la pagina de inicio (index.html)
+# es el Control de Cobranza, y su boton "Reportar con Comprobante" abre esta.
+write('comprobante.html', html)
 
 manifest = (
     '{"name":"Reporte de Cobranza","short_name":"Cobranza","start_url":"./","scope":"./",'
@@ -125,17 +127,17 @@ write('manifest.webmanifest', manifest)
 
 sw = (
     "const CACHE='%s';\n"
-    "const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];\n"
+    "const ASSETS=['./','./index.html','./comprobante.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];\n"
     "self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});\n"
     "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!=='shared-file').map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});\n"
     "self.addEventListener('fetch',e=>{const req=e.request;const u=new URL(req.url);\n"
-    " if(req.method==='POST'&&u.pathname.endsWith('/share-target')){e.respondWith((async function(){try{const f=await req.formData();let file=f.get('file');if(!file){const all=f.getAll('file');file=all&&all[0];}if(file){const c=await caches.open('shared-file');await c.put('shared',new Response(file,{headers:{'content-type':file.type||'application/octet-stream','x-filename':file.name||''}}));}}catch(err){}return Response.redirect('./?shared=1',303);})());return;}\n"
+    " if(req.method==='POST'&&u.pathname.endsWith('/share-target')){e.respondWith((async function(){try{const f=await req.formData();let file=f.get('file');if(!file){const all=f.getAll('file');file=all&&all[0];}if(file){const c=await caches.open('shared-file');await c.put('shared',new Response(file,{headers:{'content-type':file.type||'application/octet-stream','x-filename':file.name||''}}));}}catch(err){}return Response.redirect('./comprobante.html?shared=1',303);})());return;}\n"
     " if(req.method!=='GET')return;\n"
     " e.respondWith(fetch(req).then(res=>{const cp=res.clone();caches.open(CACHE).then(c=>c.put(req,cp)).catch(()=>{});return res;}).catch(()=>caches.match(req).then(m=>m||caches.match('./index.html'))));});\n"
 ) % CACHE_NAME
 write('sw.js', sw)
 
-print('OK  index.html (%d KB) + manifest.webmanifest + sw.js  [%s]' % (len(html)//1024, CACHE_NAME))
+print('OK  comprobante.html (%d KB) + manifest.webmanifest + sw.js  [%s]  (index.html = Control de Cobranza)' % (len(html)//1024, CACHE_NAME))
 
 
 

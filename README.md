@@ -1,20 +1,28 @@
 # Reporte de Cobranza
 
-PWA para registrar pagos de clientes desde una foto o PDF del comprobante.
-Lee el comprobante con OCR (imágenes) o texto (PDF), aplica plantillas por banco
-(Banesco, BDV, Bancaribe), calcula el monto en $ con la tasa BCV del día,
-sugiere el cliente por el nombre del archivo y lo asigna a un cliente.
+App de cobranza en dos partes, servidas juntas como una sola PWA instalable:
+
+- **`index.html` — Control de Cobranza (pantalla de inicio).** Carga un Excel/CSV de
+  cuentas por cobrar y muestra facturas vencidas / por vencer / notas de crédito /
+  pendientes, filtra por vendedor, año/mes y cliente, y exporta el reporte por vendedor
+  (HTML individual o ZIP de todos). Es el archivo `control_cobranza_final`.
+- **`comprobante.html` — Reporte con Comprobante (OCR).** Se abre desde el botón
+  "📸 Reportar con Comprobante" del control. Lee el comprobante con OCR (imágenes) o
+  texto (PDF), aplica plantillas por banco (Banesco, BDV, Bancaribe, Mercantil…),
+  calcula el monto en $ con la tasa BCV del día y lo asigna a un cliente. Tiene un
+  botón "‹ Volver" que regresa al control.
 
 **App en vivo:** https://boadar.github.io/reporte-cobranza/
 
 ## Estructura
 
-- `template.html` — fuente de la verdad (marcadores `__CLIENTES__`, `__TASAS__`, `__PWA_HEAD__`, `__PWA_HOOK__`).
-- `build.py` — regenera los JSON desde `data/*.csv`, inyecta todo y genera `index.html` + `manifest.webmanifest` + `sw.js`.
+- `template.html` — fuente de la verdad del lector OCR (marcadores `__CLIENTES__`, `__TASAS__`, `__PWA_HEAD__`, `__PWA_HOOK__`).
+- `build.py` — regenera los JSON desde `data/*.csv`, inyecta todo y genera `comprobante.html` (el lector OCR) + `manifest.webmanifest` + `sw.js`.
+- `index.html` — el Control de Cobranza (pantalla de inicio). Es un archivo autónomo; NO lo genera `build.py`, se edita directo.
 - `data/clientes.csv` — base de clientes (`Codigo`, `Nombre`).
 - `data/tasas_bcv.csv` — tasas BCV por día (`Fecha`, `Dia`, `USD`, `EUR`).
 - `data/cxc.csv` — facturas pendientes por cobrar (`Codigo`, `Cliente`, `Factura`, `Tipo`, `Vencimiento`, `Base`, `IVA`, `TotalPorPagar`, `Observacion`). Montos en **$**. El `Codigo` se resuelve por nombre desde el archivo CxC original.
-- `index.html`, `manifest.webmanifest`, `sw.js`, `icon-*.png` — generados / assets.
+- `comprobante.html`, `manifest.webmanifest`, `sw.js`, `icon-*.png` — generados / assets.
 
 ## Cómo actualizar (incluso desde Claude Code en la web)
 

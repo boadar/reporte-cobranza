@@ -14,6 +14,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 .hdr{background:var(--ofica);color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;text-align:center;position:sticky;top:0;z-index:10}
 .hdr h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
 .hdr .sub{font-size:12px;opacity:.7;margin-top:2px}
+.hdr .back{position:absolute;left:6px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:3px;color:#fff;opacity:.9;text-decoration:none;font-size:14px;font-weight:600;padding:8px 10px;border-radius:9px}
+.hdr .back:active{background:rgba(255,255,255,.16)}
 .wrap{max-width:520px;margin:0 auto;padding:16px}
 .screen{display:none}
 .screen.active{display:block}
@@ -121,7 +123,7 @@ table.ftbl .nc{color:var(--danger)}
 </style>
 </head>
 <body>
-<div class="hdr"><h1>Reporte de Cobranza</h1><div class="sub" id="hdrsub">OFICA Representaciones</div></div>
+<div class="hdr"><a class="back" href="index.html" title="Volver al control de cobranza">‹ Volver</a><h1>Reporte de Cobranza</h1><div class="sub" id="hdrsub">OFICA Representaciones</div></div>
 
 <div class="wrap">
 
