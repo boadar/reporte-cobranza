@@ -111,6 +111,15 @@ table.ftbl .nc{color:var(--danger)}
 .tabbar button{flex:1;background:none;border:none;padding:10px 0 12px;font-size:11px;color:var(--mut);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px}
 .tabbar button svg{width:22px;height:22px;stroke:currentColor}
 .tabbar button.on{color:var(--acc)}
+/* pantalla Analisis: ocupa todo el ancho (el dashboard es de escritorio) y embebe la app local */
+#scAnalisis{padding:0}
+#scAnalisis.active{display:flex;flex-direction:column}
+.an-bar{display:flex;align-items:center;gap:10px;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px;font-size:12px;color:var(--mut)}
+.an-bar .an-t{font-weight:600;color:var(--txt);white-space:nowrap}
+.an-bar .an-d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.an-bar a{color:var(--acc);font-weight:600;white-space:nowrap;text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.an-frame{width:100%;border:0;display:block;background:#f8fafc}
+.an-load{padding:40px 16px;text-align:center;color:var(--mut);font-size:14px}
 .hint{font-size:12px;color:var(--mut);text-align:center;margin-top:14px;line-height:1.5}
 .link{color:var(--acc);background:none;border:none;font:inherit;cursor:pointer;text-decoration:underline;padding:0}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -287,9 +296,20 @@ table.ftbl .nc{color:var(--danger)}
 
 </div>
 
+<!-- PANTALLA 7: ANALISIS (Control de Cobranza Local, embebido a todo el ancho) -->
+<div class="screen" id="scAnalisis">
+  <div class="an-bar">
+    <span class="an-t">📊 Análisis de cartera</span>
+    <span class="an-d">Carga tu Excel de cuentas por cobrar, revisa vencidas / por vencer / notas de crédito y exporta el reporte por vendedor.</span>
+    <a href="control-local.html" target="_blank" rel="noopener" title="Abrir a pantalla completa en una pestaña nueva">⤢ Pantalla completa</a>
+  </div>
+  <iframe id="anFrame" class="an-frame" title="Control de Cobranza"></iframe>
+</div>
+
 <div class="tabbar">
   <button id="tabHome" class="on" onclick="go('scInicio');setTab('tabHome')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>Inicio</button>
   <button id="tabList" onclick="openList();setTab('tabList')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Cobranzas</button>
+  <button id="tabAnalisis" onclick="openAnalisis()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>Análisis</button>
 </div>
 
 <!-- eleccion de formato del estado de cuenta -->
@@ -321,6 +341,22 @@ function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remo
 function setTab(id){document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('on'));document.getElementById(id).classList.add('on');}
 function showChoice(){go('scChoice');setTab('tabHome');}
 function resetAndHome(){current=null;editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;go('scInicio');setTab('tabHome');}
+/* ---------- pestaña Análisis (app local embebida) ---------- */
+function ajustarAltoAnalisis(){
+  const f=document.getElementById('anFrame');if(!f)return;
+  const tb=document.querySelector('.tabbar');const tbh=tb?tb.offsetHeight:0;
+  const top=f.getBoundingClientRect().top;
+  f.style.height=Math.max(360,Math.round(window.innerHeight-top-tbh))+'px';
+}
+function openAnalisis(){
+  go('scAnalisis');setTab('tabAnalisis');
+  const f=document.getElementById('anFrame');
+  if(f&&!f.getAttribute('src'))f.setAttribute('src','control-local.html');
+  ajustarAltoAnalisis();requestAnimationFrame(ajustarAltoAnalisis);setTimeout(ajustarAltoAnalisis,300);
+}
+/* la app local embebida llama a esto para saltar al lector de comprobantes (OCR) de la PWA */
+function abrirCapturaComprobante(){showChoice();}
+window.addEventListener('resize',function(){var s=document.getElementById('scAnalisis');if(s&&s.classList.contains('active'))ajustarAltoAnalisis();});
 
 /* ---------- plantillas por banco ---------- */
 function parseMonto(s){

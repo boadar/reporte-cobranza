@@ -8,7 +8,7 @@ Para actualizar datos: editar data/clientes.csv o data/tasas_bcv.csv y correr bu
 """
 import os, re, csv, json, sys, subprocess
 D = os.path.dirname(os.path.abspath(__file__))
-CACHE_NAME = 'reporte-cobranza-v63'  # subir el numero en cada despliegue para refrescar cache
+CACHE_NAME = 'reporte-cobranza-v64'  # subir el numero en cada despliegue para refrescar cache
 
 def read(p):
     with open(os.path.join(D, p), encoding='utf-8') as f:
@@ -125,7 +125,7 @@ write('manifest.webmanifest', manifest)
 
 sw = (
     "const CACHE='%s';\n"
-    "const ASSETS=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];\n"
+    "const ASSETS=['./','./index.html','./control-local.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];\n"
     "self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});\n"
     "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!=='shared-file').map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});\n"
     "self.addEventListener('fetch',e=>{const req=e.request;const u=new URL(req.url);\n"

@@ -7,6 +7,19 @@ sugiere el cliente por el nombre del archivo y lo asigna a un cliente.
 
 **App en vivo:** https://boadar.github.io/reporte-cobranza/
 
+## App unificada (3 pestañas)
+
+La app reúne dos herramientas de cobranza en un solo lugar, con barra de pestañas abajo:
+
+- **Inicio / Cobranzas** — lectura de comprobantes por OCR, asignación a cliente/factura y reporte por correo (el flujo original).
+- **Análisis** — el "Control de Cobranza Local" (`control-local.html`): carga un Excel/CSV de cuentas por cobrar, muestra facturas vencidas / por vencer / notas de crédito / pendientes, filtra por vendedor, año/mes y cliente, y exporta el reporte por vendedor (HTML individual o ZIP de todos).
+
+`control-local.html` es una app autocontenida (funciona también abierta suelta). Se integra
+embebida en un `<iframe>` dentro de la pestaña Análisis, así que no comparte estilos ni
+variables con la PWA. Su botón "📸 Reportar con Comprobante" salta a la pantalla OCR de la
+PWA cuando está embebido, o abre la app en vivo si se usa suelta. Está precacheada en el
+service worker para funcionar offline.
+
 ## Estructura
 
 - `template.html` — fuente de la verdad (marcadores `__CLIENTES__`, `__TASAS__`, `__PWA_HEAD__`, `__PWA_HOOK__`).

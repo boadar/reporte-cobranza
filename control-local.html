@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Cobranza Local</title>
+    
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
+        .container { max-width: 85rem; margin: 0 auto; padding: 1rem; }
+        
+        header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; gap: 1rem; }
+        header div h1 { font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0; tracking: -0.025em; display: inline-block; vertical-align: middle; }
+        header div p { color: #64748b; margin-top: 0.1rem; margin-bottom: 0; font-size: 0.75rem; }
+        
+        .contenedor-botones-header { display: flex; flex-direction: column; gap: 0.35rem; min-width: 260px; }
+        .fila-botones-exportacion { display: flex; gap: 0.35rem; width: 100%; }
+        
+        .btn-snapshot { background-color: #059669; color: white; border: 1px solid #047857; padding: 0.35rem 0.75rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; border-radius: 0.375rem; cursor: pointer; transition: all 0.2s; height: 32px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; width: 100%; }
+        .btn-snapshot:hover:not(:disabled) { background-color: #047857; }
+        .btn-snapshot-blue { background-color: #025a91; border: 1px solid #024b7a; }
+        .btn-snapshot-blue:hover:not(:disabled) { background-color: #024b7a; }
+        
+        .btn-snapshot-amber { background-color: #d97706; border: 1px solid #b45309; }
+        .btn-snapshot-amber:hover:not(:disabled) { background-color: #b45309; }
+        
+        .btn-snapshot:disabled { background-color: #cbd5e1 !important; color: #94a3b8 !important; border-color: #cbd5e1 !important; cursor: not-allowed !important; }
+
+        .barra-herramientas { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem; background-color: white; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; align-items: flex-start; }
+        
+        .campo-control { display: flex; flex-direction: column; gap: 0.2rem; min-width: 180px; }
+        .campo-control-ajustado { display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start; flex-shrink: 0; }
+        .campo-control-ajustado select { width: max-content; min-width: 160px; max-width: 100%; }
+        .campo-control-expandido { display: flex; flex-direction: column; gap: 0.2rem; flex-grow: 2; min-width: 280px; }
+
+        .grupo-busqueda-boton { display: flex; gap: 0.35rem; align-items: center; width: 100%; }
+        
+        .btn-reportar-cobranza { background-color: #7c3aed; color: white; border: 1px solid #6d28d9; padding: 0 0.75rem; font-size: 0.7rem; font-weight: 800; border-radius: 0.375rem; cursor: pointer; transition: all 0.2s; height: 32px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; box-sizing: border-box; }
+        .btn-reportar-cobranza:hover:not(:disabled) { background-color: #6d28d9; }
+        .btn-reportar-cobranza:disabled { background-color: #cbd5e1 !important; color: #94a3b8 !important; border-color: #cbd5e1 !important; cursor: not-allowed !important; }
+
+        .btn-ocr-comprobante { background-color: #0d9488; color: white; border: 1px solid #0f766e; padding: 0 0.75rem; font-size: 0.7rem; font-weight: 800; border-radius: 0.375rem; cursor: pointer; transition: all 0.2s; height: 32px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; text-transform: uppercase; box-sizing: border-box; text-decoration: none; }
+        .btn-ocr-comprobante:hover { background-color: #0f766e; }
+
+        .btn-editar-cobro { background-color: #ea580c; color: white; border: 1px solid #c2410c; padding: 0.125rem 0.5rem; font-size: 0.65rem; font-weight: 800; border-radius: 0.25rem; cursor: pointer; transition: all 0.2s; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin-left: 0.5rem; height: 22px; }
+        .btn-editar-cobro:hover:not(:disabled) { background-color: #c2410c; }
+        .btn-editar-cobro:disabled { background-color: #cbd5e1 !important; color: #94a3b8 !important; border-color: #cbd5e1 !important; cursor: not-allowed !important; }
+
+        label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+        input[type="file"], input[type="text"], select { width: 100%; padding: 0.35rem 0.5rem; font-size: 0.8rem; border-radius: 0.375rem; border: 1px solid #cbd5e1; background-color: #f8fafc; box-sizing: border-box; height: 32px; }
+        input[type="file"] { font-size: 0.7rem; padding: 0.2rem; }
+        input[type="text"]:focus, select:focus { outline: none; border-color: #3b82f6; background-color: white; }
+        select:disabled { background-color: #e2e8f0 !important; color: #64748b !important; cursor: not-allowed !important; font-weight: normal !important; }
+        
+        .select-active { background-color: #2563eb !important; color: white !important; border-color: #1d4ed8 !important; cursor: pointer !important; font-weight: bold; }
+        .select-sec-active { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca !important; cursor: pointer !important; font-weight: bold; }
+        
+        .contenedor-filtros-fecha { background-color: #f1f5f9; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid #cbd5e1; margin-bottom: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+        .bloque-botones-fecha { display: flex; align-items: center; gap: 0.5rem; }
+        .bloque-botones-fecha label { margin-bottom: 0; white-space: nowrap; }
+        .grupo-botones { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+        
+        .btn-filtro-fecha { background-color: white; color: #334155; border: 1px solid #cbd5e1; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 600; border-radius: 0.25rem; cursor: pointer; transition: all 0.15s ease; user-select: none; height: 26px; }
+        .btn-filtro-fecha:hover:not(:disabled) { background-color: #e2e8f0; border-color: #94a3b8; }
+        .btn-filtro-fecha:disabled { cursor: not-allowed; opacity: 0.6; background-color: #f1f5f9; }
+        
+        .btn-filtro-fecha.activo-anio { background-color: #0f172a !important; color: white !important; border-color: #020617 !important; }
+        .btn-filtro-fecha.activo-mes { background-color: #0369a1 !important; color: white !important; border-color: #0369a1 !important; }
+
+        .btn-clear-date { background-color: #ef4444; color: white; border: none; padding: 0.2rem 0.75rem; font-size: 0.7 ramp; font-weight: 700; text-transform: uppercase; border-radius: 0.25rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; height: 26px; box-sizing: border-box; }
+        .btn-clear-date:hover:not(:disabled) { background-color: #dc2626; }
+        .btn-clear-disabled { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+
+        .bloque-resumen-unico { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.75rem; }
+        @media (min-width: 640px) { .bloque-resumen-unico { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 900px) { .bloque-resumen-unico { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 1200px) { .bloque-resumen-unico { grid-template-columns: repeat(5, 1fr); } }
+        
+        .caja-resumen { padding: 0.6rem 0.85rem; border-radius: 0.5rem; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; min-height: 64px; }
+        .caja-resumen-titulo { font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.025em; margin-bottom: 0.15rem; }
+        .caja-resumen-monto { font-size: 1.15rem; font-weight: 900; margin: 0; line-height: 1.2; }
+        .caja-resumen-subtxt { font-size: 0.6rem; margin-top: 0.1rem; }
+
+        .bg-blue-box { background: linear-gradient(to bottom right, #0f172a, #1e293b); color: white; border: 1px solid #1e293b; }
+        .bg-rose-box { background: linear-gradient(to bottom right, #4c0519, #2d0611); color: white; border: 1px solid #881337; }
+        .bg-sky-box { background: linear-gradient(to bottom right, #0c4a6e, #082f49); color: white; border: 1px solid #075985; }
+        .bg-emerald-box { background: linear-gradient(to bottom right, #064e3b, #022c22); color: white; border: 1px solid #065f46; }
+        .bg-neto-box { background: linear-gradient(to bottom right, #1e1b4b, #0f0e26); color: white; border: 1px solid #312e81; }
+
+        .space-y { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.25rem; }
+        .tabla-contenedor { background-color: white; border-radius: 0.5rem; border: 1px solid #e2e8f0; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8125rem; min-width: 550px; }
+        th { background-color: #f1f5f9; color: #475569; font-weight: 700; text-transform: uppercase; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e2e8f0; font-size: 0.7rem; }
+        td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f5f9; }
+        tr:hover { background-color: #f8fafc; }
+        .fila-total td { background-color: #f1f5f9; font-weight: 800; color: #0f172a; border-top: 2px solid #cbd5e1; border-bottom: none; }
+        .fila-total:hover td { background-color: #f1f5f9; }
+        .text-right { text-align: right; } .text-center { text-align: center; }
+        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        
+        .badge { display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.65rem; font-weight: 700; border-radius: 9999px; }
+        .badge-red { background-color: #fee2e2; color: #991b1b; }
+        .badge-green { background-color: #dcfce7; color: #166534; }
+        .badge-amber { background-color: #fef3c7; color: #92400e; }
+        .count-badge { background-color: #2563eb; color: white; padding: 0.125rem 0.4rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; margin-left: 0.5rem; }
+        .count-badge-emerald { background-color: #059669; color: white; padding: 0.125rem 0.4rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; margin-left: 0.5rem; }
+        .count-badge-amber { background-color: #d97706; color: white; padding: 0.125rem 0.4rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; margin-left: 0.5rem; }
+        .count-badge-purple { background-color: #7c3aed; color: white; padding: 0.125rem 0.4rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; margin-left: 0.5rem; }
+        
+        .tabla-header-flex { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #e2e8f0; font-weight: bold; font-size: 0.8125rem; margin-bottom: 0.35rem; }
+        .th-blue { background-color: #eff6ff; color: #1e3a8a; border-color: #bfdbfe; }
+        .th-emerald { background-color: #ecfdf5; color: #064e3b; border-color: #a7f3d0; }
+        .th-amber { background-color: #fffbeb; color: #78350f; border-color: #fde68a; }
+        .th-purple { background-color: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
+        .th-rose { background-color: #fff1f2; color: #881337; border-color: #fecdd3; }
+        .th-sky { background-color: #f0f9ff; color: #075985; border-color: #bae6fd; }
+        .bg-amber-row { background-color: rgba(254, 243, 199, 0.15); }
+        
+        .hidden { display: none !important; }
+        .btn-print { background-color: #4f46e5; color: white; padding: 0.4rem 1rem; border: none; border-radius: 0.375rem; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em; width: 100%; transition: all 0.2s; border: 1px solid #4338ca; }
+        .btn-print:hover { background-color: #4338ca; }
+        
+        .flex-items-center { display: flex; align-items: center; }
+
+        .modal-cobranza-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem; box-sizing: border-box; }
+        .modal-cobranza-content { background: white; width: 100%; max-width: 480px; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; display: flex; flex-direction: column; }
+        .modal-cobranza-header { background-color: #7c3aed; color: white; padding: 0.75rem 1rem; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .modal-cobranza-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
+        .modal-cobranza-footer { background-color: #f8fafc; padding: 0.75rem 1rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem; }
+        .btn-modal-action { padding: 0.4rem 1rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border-radius: 0.375rem; cursor: pointer; border: 1px solid transparent; height: 32px; display: inline-flex; align-items: center; }
+        .btn-modal-save { background-color: #7c3aed; color: white; border-color: #6d28d9; }
+        .btn-modal-save:hover { background-color: #6d28d9; }
+        .btn-modal-cancel { background-color: #e2e8f0; color: #475569; border-color: #cbd5e1; }
+        .btn-modal-cancel:hover { background-color: #cbd5e1; }
+
+        @media (max-width: 639px) {
+            header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .contenedor-botones-header { width: 100%; }
+            .fila-botones-exportacion { flex-direction: column; }
+            .barra-herramientas { flex-direction: column; width: 100%; }
+            .campo-control, .campo-control-ajustado, .campo-control-expandido { width: 100%; }
+            .campo-control-ajustado select { width: 100%; }
+            .grupo-busqueda-boton { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+            .btn-reportar-cobranza { width: 100%; }
+            .btn-ocr-comprobante { width: 100%; }
+            .contenedor-filtros-fecha { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .bloque-botones-fecha { width: 100%; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+            .contenedor-filtros-fecha div:last-child { width: 100%; margin-left: 0; }
+            .btn-clear-date { width: 100%; text-align: center; justify-content: center; }
+            .tabla-header-flex { font-size: 0.75rem; padding: 0.4rem 0.5rem; }
+            table { font-size: 0.75rem; }
+            th, td { padding: 0.4rem 0.5rem; }
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: #fff !important; }
+        }
+    </style>
+
+    <script id="xlsx-library-script" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header class="no-print">
+            <div>
+                <h1>Control de Cobranza Local</h1>
+                <p>Análisis interno en tiempo real sin transferencia de datos.</p>
+            </div>
+            
+            <input type="file" id="inputTasasOculto" accept=".xlsx, .xls, .csv" style="display: none;" onchange="procesarArchivoTasas(event)">
+            
+            <div id="zonaBotonesExportacion" class="contenedor-botones-header">
+                <button id="btnCargarTasas" onclick="document.getElementById('inputTasasOculto').click()" class="btn-snapshot btn-snapshot-amber">🪙 CARGAR TASAS DE CAMBIO</button>
+                <div class="fila-botones-exportacion">
+                    <button id="btnGuardarVendedor" onclick="guardarUnicoVendedorActual()" class="btn-snapshot">📥 GUARDAR VENDEDOR</button>
+<button id="btnGuardarTodos" onclick="guardarTodosLosVendedoresMasivo()" class="btn-snapshot btn-snapshot-blue">📦 COMPRIMIR (.ZIP)</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="barra-herramientas no-print">
+            <div id="contenedorCampoArchivo" class="campo-control">
+                <label>1. Archivo (.xlsx / .csv)</label>
+                <input type="file" id="inputArchivo" accept=".xlsx, .xls, .csv"/>
+            </div>
+
+            <div id="contenedorCampoEstatus" class="campo-control-ajustado">
+                <label>2. Filtrar por Estatus</label>
+                <select id="selectEstatus" onchange="filtrarDatos()" disabled style="cursor: not-allowed;">
+                    <option value="TODO">📂 VER: Todo</option>
+                    <option value="PENDIENTE" selected>⏳ Solo PENDIENTE</option>
+                    <option value="PAGADO">✅ Solo PAGADO</option>
+                </select>
+            </div>
+
+            <div id="contenedorCampoSecretario" class="campo-control-ajustado">
+                <label>3. Secretario de Ventas</label>
+                <select id="selectSecretario" onchange="filtrarDatos()" disabled style="cursor: not-allowed;">
+                    <option value="TODO">👤 [ TODOS ]</option>
+                </select>
+            </div>
+
+            <div id="contenedorCampoBusqueda" class="campo-control-expandido">
+                <label id="lblBuscarCliente">4. Buscar Cliente</label>
+                <div class="grupo-busqueda-boton">
+                    <input type="text" id="inputBusqueda" oninput="filtrarDatos()" disabled placeholder="Cargue archivo..." style="cursor: not-allowed;"/>
+                    <button id="btnCobranza" onclick="ejecutarReportarCobranza()" class="btn-reportar-cobranza">💰 Reportar Cobranza</button>
+                    <a href="https://boadar.github.io/reporte-cobranza/" target="_blank" rel="noopener noreferrer" class="btn-ocr-comprobante" onclick="return reportarConComprobante(event)" title="Reporta la cobranza a partir de una foto/PDF del comprobante (OCR)">📸 Reportar con Comprobante</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="contenedor-filtros-fecha no-print">
+            <div class="bloque-botones-fecha">
+                <label>Años:</label>
+                <div id="contenedorAniosBotones" class="grupo-botones">
+                    <span style="color:#94a3b8; font-size:0.75rem; font-style:italic;">Cargue un archivo...</span>
+                </div>
+            </div>
+
+            <div class="bloque-botones-fecha" id="separadorMesesMobil" style="border-left: 1px solid #cbd5e1; padding-left: 1rem;">
+                <label>Meses:</label>
+                <div id="contenedorMesesBotones" class="grupo-botones">
+                    <button class="btn-filtro-fecha" data-mes="01" onclick="toggleFiltroMes(this)" disabled>Ene</button>
+                    <button class="btn-filtro-fecha" data-mes="02" onclick="toggleFiltroMes(this)" disabled>Feb</button>
+                    <button class="btn-filtro-fecha" data-mes="03" onclick="toggleFiltroMes(this)" disabled>Mar</button>
+                    <button class="btn-filtro-fecha" data-mes="04" onclick="toggleFiltroMes(this)" disabled>Abr</button>
+                    <button class="btn-filtro-fecha" data-mes="05" onclick="toggleFiltroMes(this)" disabled>May</button>
+                    <button class="btn-filtro-fecha" data-mes="06" onclick="toggleFiltroMes(this)" disabled>Jun</button>
+                    <button class="btn-filtro-fecha" data-mes="07" onclick="toggleFiltroMes(this)" disabled>Jul</button>
+                    <button class="btn-filtro-fecha" data-mes="08" onclick="toggleFiltroMes(this)" disabled>Ago</button>
+                    <button class="btn-filtro-fecha" data-mes="09" onclick="toggleFiltroMes(this)" disabled>Sep</button>
+                    <button class="btn-filtro-fecha" data-mes="10" onclick="toggleFiltroMes(this)" disabled>Oct</button>
+                    <button class="btn-filtro-fecha" data-mes="11" onclick="toggleFiltroMes(this)" disabled>Nov</button>
+                    <button class="btn-filtro-fecha" data-mes="12" onclick="toggleFiltroMes(this)" disabled>Dic</button>
+                </div>
+            </div>
+
+            <div style="margin-left: auto;">
+                <button id="btnLimpiarFechas" onclick="limpiarFiltrosFecha()" class="btn-clear-date btn-clear-disabled" disabled>❌ Limpiar Fechas</button>
+            </div>
+        </div>
+
+        <div id="areaCapturaReporte">
+            
+            <div id="resumenSuperior" class="hidden">
+                <h2 style="font-size: 0.95rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.5rem 0;">📊 Resumen de Cobranza</h2>
+                <div class="bloque-resumen-unico">
+                    <div class="caja-resumen bg-blue-box">
+                        <span class="caja-resumen-titulo" style="color: #93c5fd;">Total Facturas</span>
+                        <h3 id="sumaSuperiorFacturas" class="caja-resumen-monto">$ 0,00</h3>
+                    </div>
+
+                    <div class="caja-resumen bg-rose-box">
+                        <span class="caja-resumen-titulo" style="color: #fca5a5;">Facturas Vencidas</span>
+                        <h3 id="sumaSuperiorFacturasVencidas" class="caja-resumen-monto" style="color: #f87171;">$ 0,00</h3>
+                    </div>
+
+                    <div class="caja-resumen bg-sky-box">
+                        <span class="caja-resumen-titulo" style="color: #7dd3fc;">Facturas Por Vencer</span>
+                        <h3 id="sumaSuperiorFacturasPorVencer" class="caja-resumen-monto" style="color: #38bdf8;">$ 0,00</h3>
+                    </div>
+
+                    <div class="caja-resumen bg-emerald-box">
+                        <span class="caja-resumen-titulo" style="color: #6ee7b7;">Notas de Crédito</span>
+                        <h3 id="sumaSuperiorNC" class="caja-resumen-monto">$ 0,00</h3>
+                    </div>
+
+                    <div class="caja-resumen bg-neto-box">
+                        <span class="caja-resumen-titulo" style="color: #a5b4fc;">Total Pendiente Neto</span>
+                        <h3 id="sumaTotalPendiente" class="caja-resumen-monto" style="color: #facc15;">$ 0,00</h3>
+                        <span class="caja-resumen-subtxt" style="color: #94a3b8;">(Vencidas + NC visibles)</span>
+                    </div>
+                </div>
+
+                <div class="no-print" style="margin-bottom: 0.5rem;">
+                    <button onclick="window.print()" class="btn-print">💾 Guardar Reporte como PDF / Imprimir</button>
+                </div>
+            </div>
+
+            <div id="vistaDatos" class="hidden space-y">
+                
+                <div>
+                    <div class="tabla-header-flex th-rose">
+                        <span>⛔ Facturas Vencidas</span>
+                        <span id="badgeCountFacturasVencidas" class="count-badge" style="background-color:#e11d48;">0</span>
+                    </div>
+                    <div class="tabla-contenedor">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th class="text-center">N° Factura</th>
+                                    <th class="text-center">Vencimiento</th>
+                                    <th class="text-center">Estatus</th>
+                                    <th class="text-right">Monto Base</th>
+                                    <th class="text-right">IVA</th>
+                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">💰 Por Pagar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoFacturasVencidas"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="tabla-header-flex th-sky">
+                        <span>🗓️ Facturas Por Vencer</span>
+                        <span id="badgeCountFacturasPorVencer" class="count-badge" style="background-color:#0284c7;">0</span>
+                    </div>
+                    <div class="tabla-contenedor">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th class="text-center">N° Factura</th>
+                                    <th class="text-center">Vencimiento</th>
+                                    <th class="text-center">Estatus</th>
+                                    <th class="text-right">Monto Base</th>
+                                    <th class="text-right">IVA</th>
+                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">💰 Por Pagar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoFacturasPorVencer"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="tabla-header-flex th-emerald">
+                        <span>💳 Listado de Notas de Crédito</span>
+                        <span id="badgeCountNC" class="count-badge-emerald">0</span>
+                    </div>
+                    <div class="tabla-contenedor">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th class="text-center">N° Documento</th>
+                                    <th class="text-center">Vencimiento</th>
+                                    <th class="text-center">Estatus</th>
+                                    <th class="text-right">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoNC"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="tabla-header-flex th-amber">
+                        <span>📂 Documentos Pendientes (Saldo Cero / Ajustes)</span>
+                        <span id="badgeCountPendientes" class="count-badge-amber">0</span>
+                    </div>
+                    <div class="tabla-contenedor">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th class="text-center">N° Factura</th>
+                                    <th class="text-center">Vencimiento</th>
+                                    <th class="text-center">Estatus</th>
+                                    <th>Observación</th>
+                                    <th class="text-right">Monto Base</th>
+                                    <th class="text-right">IVA</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoPendientesCero"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="tabla-header-flex th-purple">
+                        <span>💜 Historial de Cobranzas y Abonos Reportados</span>
+                        <div class="flex-items-center no-print">
+                            <span id="badgeCountHistorial" class="count-badge-purple">0</span>
+	<button id="btnEditarCobro" onclick="ejecutarEditarCobro()" class="btn-editar-cobro" disabled style="cursor: not-allowed;">✏️ Editar Cobro</button>
+        <button id="btnCambiarIdCobro" onclick="ejecutarCambiarIdCobro()" class="btn-editar-cobro" disabled style="cursor: not-allowed; background-color: #2563eb; border-color: #1d4ed8;">🔢 Cambiar Número de Cobro</button>
+	<button id="btnExportarHistorial" 
+	onclick="exportarHistorial()" 
+	class="btn-editar-cobro" 
+	style="cursor: pointer; background-color: #059669; border-color: #047857;">🖨️ EXPORTAR COBRANZA
+	</button>
+                        </div>
+                    </div>
+                    <div class="tabla-contenedor">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="text-center">N° de Cobro</th>
+                                    <th class="text-center">Factura</th>
+                                    <th>Monto en Bs.</th>
+				    <th class="text-center">Fecha</th>
+                                    <th class="text-center">Tasa de Cambio</th>
+                                    <th class="text-center" style="color: #15803d; background-color: #f0fdf4;">Monto en $</th>
+                                    <th class="text-right">Saldo Anterior</th>
+                                    <th class="text-right" style="color: #5b21b6; background-color: #f3e8ff;">Saldo Nuevo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoHistorialAbonos"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Si esta app está embebida dentro de la PWA "Reporte de Cobranza" (pestaña Análisis),
+        // el botón "Reportar con Comprobante" cambia a la pantalla OCR de la PWA en vez de abrir
+        // otra pestaña del navegador. Si se abre suelta (archivo standalone), abre la app en vivo.
+        function reportarConComprobante(ev) {
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.abrirCapturaComprobante === 'function') {
+                    if (ev) ev.preventDefault();
+                    window.parent.abrirCapturaComprobante();
+                    return false;
+                }
+            } catch (e) { /* cross-origin u otro: caemos al enlace normal */ }
+            return true; // deja que el enlace abra la app en vivo en una pestaña nueva
+        }
+
+        let registrosOriginales = [];
+        let secretarioCongeladoPrevio = "TODO";
+        let pagosAbonadosEnSesion = {}; 
+        let historialTransacciones = []; 
+        let tasasPorFecha = {}; 
+
+        if (typeof snapshotDatosInyectados !== 'undefined' && snapshotDatosInyectados !== null) {
+            registrosOriginales = snapshotDatosInyectados;
+        }
+        if (typeof snapshotSecretarioSeleccionado !== 'undefined' && snapshotSecretarioSeleccionado !== null) {
+            secretarioCongeladoPrevio = snapshotSecretarioSeleccionado;
+        }
+        if (typeof snapshotPagosCobranza !== 'undefined' && snapshotPagosCobranza !== null) {
+            pagosAbonadosEnSesion = snapshotPagosCobranza;
+        }
+        if (typeof snapshotHistorialTransacciones !== 'undefined' && snapshotHistorialTransacciones !== null) {
+            historialTransacciones = snapshotHistorialTransacciones;
+        }
+        if (typeof snapshotTasasPorFecha !== 'undefined' && snapshotTasasPorFecha !== null) {
+            tasasPorFecha = snapshotTasasPorFecha;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            conectarEventoInput();
+            if (registrosOriginales.length > 0) {
+                inicializarInterfazConDatos();
+            }
+        });
+
+        function parsearFechaSegura(fVen) {
+            if (fVen instanceof Date) return fVen;
+            if (typeof fVen === 'number') {
+                // Manejar números de serie de fecha nativos de Excel
+                return XLSX.SSF.parse_date_code(fVen);
+            }
+            if (typeof fVen === 'string' && fVen.trim() !== '') {
+                let stringLimpio = fVen.trim().replace(/-/g, '/');
+                let objD = new Date(stringLimpio);
+                if (!isNaN(objD.getTime())) return objD;
+
+                if (fVen.includes('T')) {
+                    let base = fVen.split('T')[0].replace(/-/g, '/');
+                    let objISO = new Date(base);
+                    if (!isNaN(objISO.getTime())) return objISO;
+                }
+            }
+            return null;
+        }
+
+        // Formatea un número a texto con formato venezolano: miles con punto, decimales con coma. Ej: 1234.5 -> "1.234,50"
+        function formatearMontoVE(numero) {
+            if (isNaN(numero)) return '';
+            return numero.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        // Convierte un texto con formato venezolano ("1.234,56") a número float (1234.56).
+        function parsearMontoVE(texto) {
+            if (!texto) return NaN;
+            const limpio = String(texto).trim().replace(/\./g, '').replace(/,/g, '.');
+            return parseFloat(limpio);
+        }
+
+        // Aplica formato en vivo (miles con punto, decimales con coma) a un input de texto mientras el usuario escribe.
+        function activarFormatoMilesEnInput(inputEl) {
+            inputEl.addEventListener('input', function(e) {
+                let valor = e.target.value;
+                valor = valor.replace(/[^\d,]/g, ''); // Solo dígitos y coma
+
+                const partes = valor.split(',');
+                let parteEntera = partes[0] || '';
+                parteEntera = parteEntera.replace(/^0+(?=\d)/, ''); // Quita ceros iniciales redundantes
+                parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+                let resultado = parteEntera;
+                if (partes.length > 1) {
+                    const parteDecimal = partes.slice(1).join('').substring(0, 2);
+                    resultado += ',' + parteDecimal;
+                }
+
+                e.target.value = resultado;
+            });
+        }
+
+        // Convierte una fecha 'yyyy-mm-dd' (formato interno de <input type="date">) a 'dd-mm-yyyy' SOLO para mostrar en pantalla.
+        // No modifica el valor almacenado internamente (necesario para que el input de fecha siga funcionando al editar).
+        function formatearFechaDMY(fechaISO) {
+            if (!fechaISO || typeof fechaISO !== 'string') return fechaISO || '';
+            const partes = fechaISO.trim().split('-');
+            if (partes.length !== 3) return fechaISO;
+            const [anio, mes, dia] = partes;
+            if (anio.length !== 4) return fechaISO;
+            return `${dia}-${mes}-${anio}`;
+        }
+
+        // FUNCIÓN ACTUALIZADA: Búsqueda flexible de columnas e interpretación de fechas nativas de Excel
+        function procesarArchivoTasas(e) {
+            const archivo = e.target.files[0];
+            if (!archivo) return;
+
+            const lector = new FileReader();
+            const esCSV = archivo.name.toLowerCase().endsWith('.csv');
+
+            lector.onload = function(evt) {
+                let libro;
+                try {
+                    if (esCSV) {
+                        libro = XLSX.read(evt.target.result, { type: 'string', cellDates: true });
+                    } else {
+                        const datosBinarios = new Uint8Array(evt.target.result);
+                        libro = XLSX.read(datosBinarios, { type: 'array', cellDates: true });
+                    }
+                } catch(err) {
+                    alert("Error local al procesar la estructura del archivo de tasas.");
+                    return;
+                }
+
+                const primeraHoja = libro.Sheets[libro.SheetNames[0]];
+                const filasJsonCrudas = XLSX.utils.sheet_to_json(primeraHoja, { defval: "" });
+
+                let contadorCargadas = 0;
+                filasJsonCrudas.forEach(fila => {
+                    let filaLimpia = {};
+                    // Normalizar claves quitando espacios e ignorando mayúsculas/minúsculas
+                    for (let clave in fila) {
+                        filaLimpia[clave.trim().toLowerCase()] = fila[clave];
+                    }
+
+                    // Buscar la columna correcta de fecha dinámicamente
+                    let campoFechaRaw = undefined;
+                    for (let k in filaLimpia) {
+                        if (k.includes('fecha') || k.includes('ven')) {
+                            campoFechaRaw = filaLimpia[k];
+                            break;
+                        }
+                    }
+
+                    // Buscar la columna correcta de tasa dinámicamente
+                    let campoTasaRaw = undefined;
+                    for (let k in filaLimpia) {
+                        if (k.includes('tasa') || k.includes('cambio')) {
+                            campoTasaRaw = filaLimpia[k];
+                            break;
+                        }
+                    }
+
+                    if (campoFechaRaw !== undefined && campoTasaRaw !== undefined) {
+                        let objD = parsearFechaSegura(campoFechaRaw);
+                        if (objD) {
+                            let yyyy = objD.getFullYear();
+                            let mm = String(objD.getMonth() + 1).padStart(2, '0');
+                            let dd = String(objD.getDate()).padStart(2, '0');
+                            let llaveFecha = `${yyyy}-${mm}-${dd}`; 
+
+                            let tasaNum = parseFloat(String(campoTasaRaw).replace(/[^0-9.-]/g, '').replace(/,/g, '.'));
+                            if (!isNaN(tasaNum) && tasaNum > 0) {
+                                tasasPorFecha[llaveFecha] = tasaNum;
+                                contadorCargadas++;
+                            }
+                        }
+                    }
+                });
+
+                alert(`🎯 Carga de tasas finalizada.\nSe han importado exitosamente ${contadorCargadas} tasas de cambio referenciadas por fecha.`);
+                e.target.value = ''; // Limpiar input
+                filtrarDatos(); // Refrescar las vistas por si hay cambios aplicables en caliente
+            };
+
+            if (esCSV) {
+                lector.readAsText(archivo, 'UTF-8');
+            } else {
+                lector.readAsArrayBuffer(archivo);
+            }
+        }
+
+        function conectarEventoInput() {
+            const inputElement = document.getElementById('inputArchivo');
+            if (!inputElement) return;
+            inputElement.replaceWith(inputElement.cloneNode(true));
+            
+            document.getElementById('inputArchivo').addEventListener('change', function(e) {
+                const archivo = e.target.files[0];
+                if (!archivo) return;
+
+                const lector = new FileReader();
+                const esCSV = archivo.name.toLowerCase().endsWith('.csv');
+
+                lector.onload = function(evt) {
+                    let libro;
+                    try {
+                        if (esCSV) {
+                            libro = XLSX.read(evt.target.result, { type: 'string', cellDates: true });
+                        } else {
+                            const datosBinarios = new Uint8Array(evt.target.result);
+                            libro = XLSX.read(datosBinarios, { type: 'array', cellDates: true });
+                        }
+                    } catch(err) {
+                        alert("Error local al procesar la estructura del archivo.");
+                        return;
+                    }
+
+                    const primeraHoja = libro.Sheets[libro.SheetNames[0]];
+
+                    // La plantilla puede tener varias hojas (por ejemplo una hoja vacía antes de "Facturas"),
+                    // así que buscamos la hoja y la fila de encabezados reales, en vez de asumir que son
+                    // siempre la primera hoja / primera fila. Preferimos una hoja llamada "Facturas" si existe.
+                    const nombreHojaPreferida = libro.SheetNames.find(n => n.trim().toLowerCase() === 'facturas');
+                    const ordenHojas = nombreHojaPreferida
+                        ? [nombreHojaPreferida, ...libro.SheetNames.filter(n => n !== nombreHojaPreferida)]
+                        : libro.SheetNames;
+
+                    let filasCrudasMatriz = null;
+                    let indiceFilaEncabezados = -1;
+                    let mapaColumnas = {};
+
+                    for (const nombreHoja of ordenHojas) {
+                        const hoja = libro.Sheets[nombreHoja];
+                        if (!hoja) continue;
+                        const matriz = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: "", raw: true });
+
+                        for (let i = 0; i < Math.min(matriz.length, 15); i++) {
+                            const filaTest = matriz[i];
+                            const idxDenominacion = filaTest.findIndex(c => String(c).trim() === 'Denominación social');
+                            const idxCliente = filaTest.findIndex(c => String(c).trim() === 'Cliente'); // compatibilidad con plantillas anteriores
+
+                            if (idxDenominacion !== -1 || idxCliente !== -1) {
+                                filasCrudasMatriz = matriz;
+                                indiceFilaEncabezados = i;
+                                filaTest.forEach((valorCelda, idx) => {
+                                    const nombre = String(valorCelda).trim();
+                                    if (nombre !== "") mapaColumnas[nombre] = idx;
+                                });
+
+                                if (idxDenominacion === -1) {
+                                    // Layout anterior: "Cliente" en vez de "Denominación social", y el vendedor
+                                    // va en la columna inmediatamente a la derecha de "Cliente".
+                                    mapaColumnas['Denominación social'] = idxCliente;
+                                    if (mapaColumnas['Secretario de ventas'] === undefined) {
+                                        mapaColumnas['Secretario de ventas'] = idxCliente + 1;
+                                    }
+                                    if (mapaColumnas['Numero de Factura'] === undefined) mapaColumnas['Numero de Factura'] = mapaColumnas['Factura'];
+                                    if (mapaColumnas['Tipo de documento'] === undefined) mapaColumnas['Tipo de documento'] = mapaColumnas['Tipo'];
+                                    if (mapaColumnas['Fecha de Ven'] === undefined) mapaColumnas['Fecha de Ven'] = mapaColumnas['Vencimiento'];
+                                    if (mapaColumnas['Total Fac X Pagar'] === undefined) mapaColumnas['Total Fac X Pagar'] = mapaColumnas['TotalPorPagar'];
+                                }
+                                break;
+                            }
+                        }
+                        if (indiceFilaEncabezados !== -1) break;
+                    }
+
+                    let registrosMapeados;
+                    if (indiceFilaEncabezados === -1) {
+                        // No se detectó el layout de plantilla en ninguna hoja; se procesa como Excel plano
+                        // con encabezados en la fila 1 de la primera hoja, tal como antes.
+                        const filasJsonCrudas = XLSX.utils.sheet_to_json(primeraHoja, { defval: "" });
+                        registrosMapeados = filasJsonCrudas.map(fila => {
+                            let filaLimpia = {};
+                            for (let clave in fila) {
+                                filaLimpia[clave.trim()] = fila[clave];
+                            }
+                            return filaLimpia;
+                        });
+                    } else {
+                        const obtenerCelda = (fila, nombreCampo) => {
+                            const idx = mapaColumnas[nombreCampo];
+                            return (idx === undefined) ? "" : (fila[idx] !== undefined ? fila[idx] : "");
+                        };
+
+                        registrosMapeados = [];
+                        for (let f = indiceFilaEncabezados + 1; f < filasCrudasMatriz.length; f++) {
+                            const filaCruda = filasCrudasMatriz[f];
+                            if (!filaCruda) continue;
+
+                            const cliente = String(obtenerCelda(filaCruda, 'Denominación social')).trim();
+                            const nroFactura = String(obtenerCelda(filaCruda, 'Numero de Factura')).trim();
+                            if (!cliente && !nroFactura) continue; // fila vacía / separador
+
+                            registrosMapeados.push({
+                                'Denominación social': cliente,
+                                'Numero de Factura': nroFactura,
+                                'Tipo de documento': String(obtenerCelda(filaCruda, 'Tipo de documento')).trim(),
+                                'ESTATUS': String(obtenerCelda(filaCruda, 'ESTATUS')).trim() || 'PENDIENTE',
+                                'Fecha de Ven': obtenerCelda(filaCruda, 'Fecha de Ven'),
+                                'Total Fac X Pagar': obtenerCelda(filaCruda, 'Total Fac X Pagar'),
+                                'Base': obtenerCelda(filaCruda, 'Base'),
+                                'IVA': obtenerCelda(filaCruda, 'IVA'),
+                                'Observacion': obtenerCelda(filaCruda, 'Observacion'),
+                                'Secretario de ventas': String(obtenerCelda(filaCruda, 'Secretario de ventas')).trim()
+                            });
+                        }
+                    }
+
+                    registrosOriginales = registrosMapeados;
+
+                    if (registrosOriginales.length > 0) {
+                        secretarioCongeladoPrevio = "TODO";
+                        pagosAbonadosEnSesion = {}; 
+                        historialTransacciones = [];
+                        tasasPorFecha = {};
+                        inicializarInterfazConDatos();
+                    }
+                };
+
+                if (esCSV) {
+                    lector.readAsText(archivo, 'UTF-8');
+                } else {
+                    lector.readAsArrayBuffer(archivo);
+                }
+            });
+        }
+
+        function inicializarInterfazConDatos() {
+            configurarSelectorSecretarios();
+            configurarBotonesAnios();
+
+            document.getElementById('selectEstatus').disabled = false;
+            document.getElementById('selectEstatus').className = "select-active";
+            document.getElementById('selectEstatus').style.cursor = "pointer";
+            
+            document.querySelectorAll('#contenedorMesesBotones .btn-filtro-fecha').forEach(btn => {
+                btn.disabled = false;
+            });
+            
+            const btnClear = document.getElementById('btnLimpiarFechas');
+            if(btnClear) {
+                btnClear.disabled = false;
+                btnClear.className = "btn-clear-date";
+            }
+
+            const btnVendedor = document.getElementById('btnGuardarVendedor');
+            const btnTodos = document.getElementById('btnGuardarTodos');
+            const selectSecretario = document.getElementById('selectSecretario');
+            const btnCobranza = document.getElementById('btnCobranza');
+            const btnEditarCobro = document.getElementById('btnEditarCobro');
+            const btnCambiarIdCobro = document.getElementById('btnCambiarIdCobro');
+
+            if (btnCobranza) {
+                btnCobranza.disabled = false;
+                btnCobranza.style.cursor = "pointer";
+            }
+            if (btnEditarCobro) {
+                btnEditarCobro.disabled = false;
+                btnEditarCobro.style.cursor = "pointer";
+            }
+            if (btnCambiarIdCobro) {
+                btnCambiarIdCobro.disabled = false;
+                btnCambiarIdCobro.style.cursor = "pointer";
+            }
+
+            if (typeof snapshotDatosInyectados === 'undefined') {
+                if (btnVendedor) {
+                    btnVendedor.disabled = false;
+                    btnVendedor.style.cursor = "pointer";
+                }
+                if (btnTodos) {
+                    btnTodos.disabled = false;
+                    btnTodos.style.cursor = "pointer";
+                }
+                if (selectSecretario) {
+                    selectSecretario.disabled = false;
+                    selectSecretario.className = "select-sec-active";
+                    selectSecretario.style.cursor = "pointer";
+                }
+            } else {
+                if (btnVendedor) btnVendedor.remove();
+                if (btnTodos) btnTodos.remove();
+                if (selectSecretario) {
+                    selectSecretario.disabled = true;
+                    selectSecretario.style.cursor = "not-allowed";
+                }
+            }
+
+            const buscador = document.getElementById('inputBusqueda');
+            if(buscador) {
+                buscador.disabled = false;
+                buscador.style.cursor = "text";
+                buscador.placeholder = "🔍 Escriba para buscar cliente...";
+            }
+
+            document.getElementById('resumenSuperior').classList.remove('hidden');
+            document.getElementById('vistaDatos').classList.remove('hidden');
+            
+            filtrarDatos();
+        }
+
+        let aniosSeleccionados = new Set();
+        let mesesSeleccionados = new Set();
+
+        function obtenerListaSecretariosUnicos() {
+            const secretariosUnicos = new Set();
+            registrosOriginales.forEach(fila => {
+                const sec = String(fila['Secretario de ventas'] || '').trim();
+                if (sec !== "") secretariosUnicos.add(sec);
+            });
+            return Array.from(secretariosUnicos).sort();
+        }
+
+        function configurarSelectorSecretarios() {
+            const selectSecretario = document.getElementById('selectSecretario');
+            if(!selectSecretario) return;
+            selectSecretario.innerHTML = '<option value="TODO">👤 [ TODOS ]</option>';
+
+            const listaVendedores = obtenerListaSecretariosUnicos();
+            listaVendedores.forEach(sec => {
+                const opt = document.createElement('option');
+                opt.value = sec;
+                opt.innerText = sec;
+                selectSecretario.appendChild(opt);
+            });
+
+            selectSecretario.disabled = (typeof snapshotDatosInyectados !== 'undefined');
+            selectSecretario.className = selectSecretario.disabled ? "" : "select-sec-active";
+            
+            if (secretarioCongeladoPrevio !== "TODO" && listaVendedores.includes(secretarioCongeladoPrevio)) {
+                selectSecretario.value = secretarioCongeladoPrevio;
+            } else {
+                selectSecretario.value = "TODO";
+            }
+        }
+
+        function configurarBotonesAnios() {
+            const contenedor = document.getElementById('contenedorAniosBotones');
+            if(!contenedor) return;
+            contenedor.innerHTML = '';
+
+            const aniosUnicos = new Set();
+            registrosOriginales.forEach(fila => {
+                let objD = parsearFechaSegura(fila['Fecha de Ven']);
+                if (objD) {
+                    aniosUnicos.add(String(objD.getFullYear()));
+                }
+            });
+
+            const tieneInyeccion = (typeof snapshotDatosInyectados !== 'undefined');
+
+            Array.from(aniosUnicos).sort().forEach(anio => {
+                const btn = document.createElement('button');
+                btn.className = "btn-filtro-fecha";
+                btn.innerText = ranio = anio;
+                btn.setAttribute('data-anio', anio);
+                if (tieneInyeccion) {
+                    btn.disabled = false;
+                }
+                btn.onclick = function() { toggleFiltroAnio(this); };
+                contenedor.appendChild(btn);
+            });
+        }
+
+        function toggleFiltroAnio(btn) {
+            const anio = btn.getAttribute('data-anio');
+            if (aniosSeleccionados.has(anio)) {
+                aniosSeleccionados.delete(anio);
+                btn.classList.remove('activo-anio');
+            } else {
+                aniosSeleccionados.add(anio);
+                btn.classList.add('activo-anio');
+            }
+            filtrarDatos();
+        }
+
+        function toggleFiltroMes(btn) {
+            const mes = btn.getAttribute('data-mes');
+            if (mesesSeleccionados.has(mes)) {
+                mesesSeleccionados.delete(mes);
+                btn.classList.remove('activo-mes');
+            } else {
+                mesesSeleccionados.add(mes);
+                btn.classList.add('activo-mes');
+            }
+            filtrarDatos();
+        }
+
+        function limpiarFiltrosFecha() {
+            aniosSeleccionados.clear();
+            mesesSeleccionados.clear();
+            
+            document.querySelectorAll('.btn-filtro-fecha').forEach(btn => {
+                btn.classList.remove('activo-anio');
+                btn.classList.remove('activo-mes');
+            });
+            
+            filtrarDatos();
+        }
+
+        function ejecutarReportarCobranza(facturaPredefinida = null, prellenado = null) {
+            const elBusqueda = document.getElementById('inputBusqueda');
+            const clienteBuscado = elBusqueda ? elBusqueda.value.trim() : '';
+
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-cobranza-overlay';
+            modalOverlay.id = 'dinamicModalCobranza';
+
+            let opcionesFacturasCliente = [];
+            if (clienteBuscado !== "") {
+                opcionesFacturasCliente = registrosOriginales.filter(fila => {
+                    const clienteFila = String(fila['Denominación social'] || '').toLowerCase();
+                    const estatusFila = String(fila['ESTATUS'] || '').trim().toUpperCase();
+                    const tipoDoc = String(fila['Tipo de documento'] || '').trim().toUpperCase();
+                    const montoRaw = String(fila['Total Fac X Pagar']).replace(/[^0-9.-]/g, '');
+                    const montoOriginal = parseFloat(montoRaw) || 0;
+
+                    return clienteFila.includes(clienteBuscado.toLowerCase()) && 
+                           estatusFila === 'PENDIENTE' && 
+                           !tipoDoc.includes('CRÉDITO') && 
+                           tipoDoc !== 'NC' && 
+                           montoOriginal > 0;
+                });
+            }
+
+            modalOverlay.innerHTML = `
+                <div class="modal-cobranza-content">
+                    <div class="modal-cobranza-header">Reportar Nueva Cobranza</div>
+                    <div class="modal-cobranza-body">
+                        <div class="campo-control">
+                            <label>1. Fecha de Cobranza:</label>
+                            <input type="date" id="modFechaCobro" required>
+                        </div>
+                        <div class="campo-control">
+                            <label>2. Tasa de Cambio del Día:</label>
+                            <input type="text" id="modTasaCobro" placeholder="Ingrese tasa o elija fecha...">
+                            <span id="modAvisoTasa" style="font-size:0.65rem; color:#059669; font-weight:bold; display:none;">✓ Tasa cargada automáticamente de esta fecha</span>
+                        </div>
+                        <div class="campo-control" id="modGrupoPreguntaCliente" style="display:none; flex-direction:row; align-items:center; gap:0.5rem; padding: 0.25rem 0;">
+                            <input type="checkbox" id="modCheckMismoCliente" checked style="width:auto; height:auto; cursor:pointer;">
+                            <label for="modCheckMismoCliente" style="cursor:pointer; color:#1e293b;">¿La factura pertenece al cliente "${clienteBuscado}"?</label>
+                        </div>
+                        <div class="campo-control" id="modGrupoSelectorFacturas" style="display:none;">
+                            <label>3. Seleccione Factura Pendiente:</label>
+                            <select id="modSelectFacturaCliente"></select>
+                        </div>
+                        <div class="campo-control" id="modGrupoManualFactura">
+                            <label>3. Número de Factura (Ingreso Manual):</label>
+                            <input type="text" id="modInputFacturaManual" placeholder="Escriba N° de factura...">
+                        </div>
+                        <div class="campo-control">
+                            <label>4. Monto en Bs.:</label>
+                            <input type="text" id="modMontoBs" placeholder="Ej. 1.500,50">
+                        </div>
+                    </div>
+                    <div class="modal-cobranza-footer">
+                        <button class="btn-modal-action btn-modal-cancel" id="modBtnCancelar">Cancelar</button>
+                        <button class="btn-modal-action btn-modal-save" id="modBtnGuardar">Procesar Pago</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modalOverlay);
+
+            const inputFecha = document.getElementById('modFechaCobro');
+            const inputTasa = document.getElementById('modTasaCobro');
+            const avisoTasa = document.getElementById('modAvisoTasa');
+            const grupoPreguntaCliente = document.getElementById('modGrupoPreguntaCliente');
+            const checkMismoCliente = document.getElementById('modCheckMismoCliente');
+            const grupoSelectorFacturas = document.getElementById('modGrupoSelectorFacturas');
+            const selectFacturaCliente = document.getElementById('modSelectFacturaCliente');
+            const grupoManualFactura = document.getElementById('modGrupoManualFactura');
+            const inputFacturaManual = document.getElementById('modInputFacturaManual');
+            const inputMontoBs = document.getElementById('modMontoBs');
+            activarFormatoMilesEnInput(inputMontoBs);
+
+            const hoyString = new Date().toISOString().split('T')[0];
+            inputFecha.value = (prellenado && prellenado.fecha) ? prellenado.fecha : hoyString;
+
+            let actualizarEtiquetasFacturas = null;
+
+            function verificarTasaDeFecha(fechaStr) {
+                if (tasasPorFecha[fechaStr]) {
+                    inputTasa.value = tasasPorFecha[fechaStr];
+                    avisoTasa.style.display = 'block';
+                } else {
+                    inputTasa.value = '';
+                    avisoTasa.style.display = 'none';
+                }
+                if (typeof actualizarEtiquetasFacturas === 'function') actualizarEtiquetasFacturas();
+            }
+            verificarTasaDeFecha(inputFecha.value);
+
+            if (prellenado && prellenado.montoBs) {
+                inputMontoBs.value = formatearMontoVE(prellenado.montoBs);
+            }
+
+            inputFecha.addEventListener('change', function() {
+                verificarTasaDeFecha(this.value);
+            });
+
+            inputTasa.addEventListener('input', function() {
+                if (typeof actualizarEtiquetasFacturas === 'function') actualizarEtiquetasFacturas();
+            });
+
+            if (clienteBuscado !== "" && opcionesFacturasCliente.length > 0) {
+                grupoPreguntaCliente.style.display = 'flex';
+                
+                selectFacturaCliente.innerHTML = '';
+                opcionesFacturasCliente.forEach(fila => {
+                    const opt = document.createElement('option');
+                    opt.value = String(fila['Numero de Factura'] || '').trim();
+                    const saldoRaw = String(fila['Total Fac X Pagar']).replace(/[^0-9.-]/g, '');
+                    const saldoNum = parseFloat(saldoRaw) || 0;
+                    let abonoPrevio = pagosAbonadosEnSesion[opt.value] || 0;
+
+                    // Si estamos EDITANDO un cobro que ya afectaba a esta misma factura, se le "devuelve" su efecto
+                    // para mostrar el pendiente como si ese cobro no existiera todavía.
+                    if (prellenado && prellenado.registroEditado && String(prellenado.registroEditado.factura || '').trim() === opt.value) {
+                        const regEd = prellenado.registroEditado;
+                        const montoAplicadoOriginal = (typeof regEd.montoDolaresAplicado === 'number')
+                            ? regEd.montoDolaresAplicado
+                            : (regEd.tasa > 0 ? (regEd.montoBs / regEd.tasa) : 0);
+                        abonoPrevio -= montoAplicadoOriginal;
+                    }
+
+                    let saldoPendienteReal = saldoNum - abonoPrevio;
+                    if(saldoPendienteReal < 0) saldoPendienteReal = 0;
+
+                    opt.dataset.pendienteDolares = saldoPendienteReal;
+                    selectFacturaCliente.appendChild(opt);
+                });
+
+                actualizarEtiquetasFacturas = function() {
+                    const tasaActualRaw = (inputTasa.value || '').trim().replace(/,/g, '.');
+                    const tasaActual = parseFloat(tasaActualRaw) || 0;
+                    Array.from(selectFacturaCliente.options).forEach(opt => {
+                        const pendienteDolares = parseFloat(opt.dataset.pendienteDolares) || 0;
+                        let etiqueta = `N° ${opt.value} (Pendiente: $ ${pendienteDolares.toLocaleString('es-VE', {minimumFractionDigits:2})}`;
+                        if (tasaActual > 0) {
+                            const pendienteBs = pendienteDolares * tasaActual;
+                            etiqueta += ` / Pendiente en Bs. ${pendienteBs.toLocaleString('es-VE', {minimumFractionDigits:2})}`;
+                        }
+                        etiqueta += `)`;
+                        opt.innerText = etiqueta;
+                    });
+                };
+                actualizarEtiquetasFacturas();
+
+                function actualizarVistaCamposFactura() {
+                    if (checkMismoCliente.checked) {
+                        grupoSelectorFacturas.style.display = 'flex';
+                        grupoManualFactura.style.display = 'none';
+                    } else {
+                        grupoSelectorFacturas.style.display = 'none';
+                        grupoManualFactura.style.display = 'flex';
+                    }
+                }
+                checkMismoCliente.addEventListener('change', actualizarVistaCamposFactura);
+                actualizarVistaCamposFactura();
+            } else {
+                grupoPreguntaCliente.style.display = 'none';
+                grupoSelectorFacturas.style.display = 'none';
+                grupoManualFactura.style.display = 'flex';
+            }
+
+            if (facturaPredefinida) {
+                grupoPreguntaCliente.style.display = 'none';
+                grupoSelectorFacturas.style.display = 'none';
+                grupoManualFactura.style.display = 'flex';
+                inputFacturaManual.value = facturaPredefinida;
+                inputFacturaManual.disabled = true;
+            }
+
+            document.getElementById('modBtnCancelar').onclick = function() {
+                if (prellenado && typeof prellenado.alCancelar === 'function') {
+                    prellenado.alCancelar();
+                }
+                modalOverlay.remove();
+            };
+
+            document.getElementById('modBtnGuardar').onclick = function() {
+                const fechaElegida = inputFecha.value;
+                if (!fechaElegida) {
+                    alert("Por favor, seleccione una fecha válida.");
+                    return;
+                }
+
+                const tasaRaw = inputTasa.value.trim().replace(/,/g, '.');
+                const tasaCambio = parseFloat(tasaRaw);
+                if (isNaN(tasaCambio) || tasaCambio <= 0) {
+                    alert("Por favor, ingrese una tasa de cambio válida.");
+                    return;
+                }
+
+                tasasPorFecha[fechaElegida] = tasaCambio;
+
+                let facturaDestino = "";
+                if (facturaPredefinida) {
+                    facturaDestino = facturaPredefinida;
+                } else if (clienteBuscado !== "" && opcionesFacturasCliente.length > 0 && checkMismoCliente.checked) {
+                    facturaDestino = selectFacturaCliente.value;
+                } else {
+                    facturaDestino = inputFacturaManual.value.trim();
+                }
+
+                if (facturaDestino === "") {
+                    alert("El número de factura no puede estar vacío.");
+                    return;
+                }
+
+                let filaFactura = registrosOriginales.find(fila => String(fila['Numero de Factura'] || '').trim() === facturaDestino);
+                if (!filaFactura) {
+                    alert(`La factura N° ${facturaDestino} no fue encontrada en la base de datos.`);
+                    return;
+                }
+
+                const montoBs = parsearMontoVE(inputMontoBs.value);
+                if (isNaN(montoBs) || montoBs <= 0) {
+                    alert("Por favor, ingrese un monto en Bs. válido.");
+                    return;
+                }
+
+                let montoOriginalRaw = String(filaFactura['Total Fac X Pagar']).replace(/[^0-9.-]/g, '');
+                let totalOriginalDolares = parseFloat(montoOriginalRaw) || 0;
+                
+                let abonosPrevios = pagosAbonadosEnSesion[facturaDestino] || 0;
+                let saldoAnteriorDolares = totalOriginalDolares - abonosPrevios;
+                if (saldoAnteriorDolares < 0) saldoAnteriorDolares = 0;
+
+                let abonoEnDolares = montoBs / tasaCambio;
+                let saldoNuevoDolares = saldoAnteriorDolares - abonoEnDolares;
+                // Si el abono es mayor al saldo anterior, el saldo nuevo puede quedar negativo (indica pago en exceso / a favor del cliente).
+
+                if (!pagosAbonadosEnSesion[facturaDestino]) {
+                    pagosAbonadosEnSesion[facturaDestino] = 0;
+                }
+                pagosAbonadosEnSesion[facturaDestino] += abonoEnDolares;
+
+                let nuevoNumeroCobranza = historialTransacciones.length + 1;
+
+                const nuevoRegistro = {
+                    idCobranza: nuevoNumeroCobranza,
+                    montoBs: montoBs,
+                    tasa: tasaCambio,
+                    factura: facturaDestino,
+                    saldoAnterior: saldoAnteriorDolares,
+                    saldoNuevo: saldoNuevoDolares,
+                    fechaCobroLog: fechaElegida,
+                    montoDolaresAplicado: abonoEnDolares // Por defecto, se asume que todo el pago se aplica a esta factura.
+                };
+                historialTransacciones.push(nuevoRegistro);
+
+                modalOverlay.remove();
+
+                let mensajeExito = `Cobranza N° ${nuevoNumeroCobranza} procesada con éxito.\n` +
+                                   `Equivalente: $ ${abonoEnDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} aplicados a la factura N° ${facturaDestino}.`;
+                
+                alert(mensajeExito);
+
+                if (saldoNuevoDolares < 0) {
+                    const excedenteDolares = Math.abs(saldoNuevoDolares);
+                    const clienteAsociado = String(filaFactura['Denominación social'] || '').trim();
+                    const aplicarExcedente = confirm(
+                        `El pago ingresado superó el saldo pendiente de la factura N° ${facturaDestino} por $ ${excedenteDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.\n\n` +
+                        `¿Desea aplicar este excedente a otra factura del cliente "${clienteAsociado}"?`
+                    );
+
+                    if (aplicarExcedente) {
+                        // El "Monto en $" de este cobro debe reflejar solo lo que efectivamente se aplicó a ESTA factura.
+                        // El excedente se registrará como un cobro aparte, sobre otra factura.
+                        nuevoRegistro.montoDolaresAplicado = saldoAnteriorDolares;
+                        nuevoRegistro.saldoNuevo = 0;
+                        pagosAbonadosEnSesion[facturaDestino] -= excedenteDolares;
+
+                        filtrarDatos();
+
+                        if (elBusqueda) {
+                            elBusqueda.value = clienteAsociado;
+                        }
+                        const montoBsExcedente = excedenteDolares * tasaCambio;
+
+                        // Si el usuario cancela el modal donde aplicaría el excedente a otra factura,
+                        // se revierte todo: el cobro original vuelve a mostrar el monto total pagado
+                        // y el saldo nuevo negativo, ya que el excedente no quedó aplicado a ninguna factura.
+                        const revertirExcedente = function() {
+                            nuevoRegistro.montoDolaresAplicado = abonoEnDolares;
+                            nuevoRegistro.saldoNuevo = saldoNuevoDolares;
+                            pagosAbonadosEnSesion[facturaDestino] += excedenteDolares;
+                            filtrarDatos();
+                        };
+
+                        setTimeout(() => {
+                            ejecutarReportarCobranza(null, { fecha: fechaElegida, montoBs: montoBsExcedente, alCancelar: revertirExcedente });
+                        }, 50);
+                        return;
+                    }
+                }
+
+                filtrarDatos();
+
+                let reportarOtro = confirm("¿Desea reportar un nuevo cobro?");
+                if (reportarOtro) {
+                    let mismaFactura = confirm(`¿El nuevo cobro pertenece a la misma factura anterior (N° ${facturaDestino})?`);
+                    if (mismaFactura) {
+                        setTimeout(() => { ejecutarReportarCobranza(facturaDestino); }, 50);
+                    } else {
+                        setTimeout(() => { ejecutarReportarCobranza(); }, 50);
+                    }
+                }
+            };
+        }
+
+function ejecutarEditarCobro() {
+    const numCobro = prompt("Ingrese el N° de cobro a editar:");
+    if (!numCobro) return;
+
+    // Buscamos el registro usando idCobranza
+    const registro = historialTransacciones.find(t => String(t.idCobranza) === String(numCobro));
+    if (!registro) {
+        alert("No se encontró ese cobro.");
+        return;
+    }
+
+    // Identificamos el cliente de la factura asociada, para que el buscador muestre sus facturas pendientes
+    const filaFacturaAsociada = registrosOriginales.find(f => String(f['Numero de Factura'] || '').trim() === String(registro.factura || '').trim());
+    const clienteDelCobro = filaFacturaAsociada ? String(filaFacturaAsociada['Denominación social'] || '').trim() : '';
+    const elBusquedaGlobal = document.getElementById('inputBusqueda');
+    if (elBusquedaGlobal && clienteDelCobro) {
+        elBusquedaGlobal.value = clienteDelCobro;
+    }
+
+    // 1. Abrimos el modal original, indicando que se trata de la edición de este registro
+    // (para que el pendiente de su factura se calcule como si este cobro no existiera todavía)
+    ejecutarReportarCobranza(null, { registroEditado: registro }); 
+    
+    // 2. Rellenamos los datos
+    setTimeout(() => {
+        const modal = document.getElementById('dinamicModalCobranza');
+        if (!modal) return;
+        
+        // Cambiamos el título
+        const header = modal.querySelector('h2') || modal.querySelector('.modal-cobranza-header');
+        if (header) header.innerText = "EDITAR COBRO N° " + numCobro;
+        
+        // ASIGNACIÓN DE VALORES (usando los IDs correctos y la variable fechaCobroLog)
+        const f = document.getElementById('modFechaCobro');
+        if (f) f.value = registro.fechaCobroLog || ""; // Usamos la variable exacta que me diste
+        
+        const t = document.getElementById('modTasaCobro');
+        if (t) t.value = registro.tasa || "";
+        
+        const m = document.getElementById('modMontoBs');
+        if (m) m.value = formatearMontoVE(registro.montoBs) || "";
+        
+        const fact = document.getElementById('modInputFacturaManual');
+        const selectFact = document.getElementById('modSelectFacturaCliente');
+        const checkMismo = document.getElementById('modCheckMismoCliente');
+        const grupoSelector = document.getElementById('modGrupoSelectorFacturas');
+        const grupoManual = document.getElementById('modGrupoManualFactura');
+
+        // Si la factura de este cobro aparece en el combo de facturas pendientes del cliente, la preseleccionamos allí.
+        // Si no aparece (por ejemplo, ya no tiene saldo pendiente o pertenece a otro cliente), usamos el campo manual.
+        let facturaEncontradaEnSelect = false;
+        if (selectFact) {
+            for (let i = 0; i < selectFact.options.length; i++) {
+                if (selectFact.options[i].value === String(registro.factura || '').trim()) {
+                    selectFact.value = selectFact.options[i].value;
+                    facturaEncontradaEnSelect = true;
+                    break;
+                }
+            }
+        }
+
+        if (facturaEncontradaEnSelect) {
+            if (checkMismo) checkMismo.checked = true;
+            if (grupoSelector) grupoSelector.style.display = 'flex';
+            if (grupoManual) grupoManual.style.display = 'none';
+        } else {
+            if (checkMismo) checkMismo.checked = false;
+            if (grupoSelector) grupoSelector.style.display = 'none';
+            if (grupoManual) grupoManual.style.display = 'flex';
+            if (fact) fact.value = registro.factura || "";
+        }
+
+        // 3. Modificamos el botón de procesamiento
+        const btnProcesar = modal.querySelector('button[onclick*="guardar"]') || modal.querySelector('.btn-modal-save');
+        
+        if (btnProcesar) {
+            btnProcesar.innerText = "ACTUALIZAR DATOS";
+            btnProcesar.onclick = function() {
+                const nuevaFecha = document.getElementById('modFechaCobro').value;
+                const nuevaTasaRaw = document.getElementById('modTasaCobro').value;
+                const nuevaTasa = parseFloat(String(nuevaTasaRaw).replace(',', '.'));
+                const nuevoMontoBs = parsearMontoVE(document.getElementById('modMontoBs').value);
+
+                const checkMismoActual = document.getElementById('modCheckMismoCliente');
+                const selectFactActual = document.getElementById('modSelectFacturaCliente');
+                let nuevaFactura;
+                if (checkMismoActual && checkMismoActual.checked && selectFactActual && selectFactActual.value) {
+                    nuevaFactura = selectFactActual.value;
+                } else {
+                    nuevaFactura = document.getElementById('modInputFacturaManual').value.trim();
+                }
+
+                if (!nuevaFecha) { alert("Por favor, seleccione una fecha."); return; }
+                if (isNaN(nuevaTasa) || nuevaTasa <= 0) { alert("Por favor, ingrese una tasa de cambio válida."); return; }
+                if (isNaN(nuevoMontoBs) || nuevoMontoBs <= 0) { alert("Por favor, ingrese un monto en Bs. válido."); return; }
+                if (!nuevaFactura) { alert("Por favor, indique el número de factura."); return; }
+
+                // Deshacemos el efecto que este cobro tenía sobre su factura anterior, antes de recalcular con los datos nuevos
+                const facturaAnterior = registro.factura;
+                const montoAplicadoAnterior = (typeof registro.montoDolaresAplicado === 'number')
+                    ? registro.montoDolaresAplicado
+                    : (registro.tasa > 0 ? (registro.montoBs / registro.tasa) : 0);
+                pagosAbonadosEnSesion[facturaAnterior] = (pagosAbonadosEnSesion[facturaAnterior] || 0) - montoAplicadoAnterior;
+
+                // Buscamos la factura destino (nueva o la misma) para recalcular su saldo
+                const filaFacturaDestino = registrosOriginales.find(f => String(f['Numero de Factura'] || '').trim() === String(nuevaFactura).trim());
+                let totalOriginalDolares = 0;
+                if (filaFacturaDestino) {
+                    const montoOriginalRaw = String(filaFacturaDestino['Total Fac X Pagar']).replace(/[^0-9.-]/g, '');
+                    totalOriginalDolares = parseFloat(montoOriginalRaw) || 0;
+                }
+
+                const abonosPreviosDestino = pagosAbonadosEnSesion[nuevaFactura] || 0;
+                let saldoAnteriorDolares = totalOriginalDolares - abonosPreviosDestino;
+                if (saldoAnteriorDolares < 0) saldoAnteriorDolares = 0;
+
+                const nuevoAbonoEnDolares = nuevoMontoBs / nuevaTasa;
+                let nuevoSaldoDolares = saldoAnteriorDolares - nuevoAbonoEnDolares;
+
+                pagosAbonadosEnSesion[nuevaFactura] = (pagosAbonadosEnSesion[nuevaFactura] || 0) + nuevoAbonoEnDolares;
+
+                // Actualizamos el registro con los valores recalculados
+                registro.fechaCobroLog = nuevaFecha;
+                registro.tasa = nuevaTasa;
+                registro.montoBs = nuevoMontoBs;
+                registro.factura = nuevaFactura;
+                registro.saldoAnterior = saldoAnteriorDolares;
+                registro.saldoNuevo = nuevoSaldoDolares;
+                registro.montoDolaresAplicado = nuevoAbonoEnDolares; // Por defecto, se asume que todo se aplica a esta factura.
+
+                localStorage.setItem('historialTransacciones', JSON.stringify(historialTransacciones));
+
+                modal.remove();
+                if (typeof filtrarDatos === 'function') filtrarDatos();
+
+                alert("Cobro actualizado correctamente.");
+
+                if (nuevoSaldoDolares < 0 && filaFacturaDestino) {
+                    const excedenteDolares = Math.abs(nuevoSaldoDolares);
+                    const clienteAsociado = String(filaFacturaDestino['Denominación social'] || '').trim();
+                    const aplicarExcedente = confirm(
+                        `El pago actualizado superó el saldo pendiente de la factura N° ${nuevaFactura} por $ ${excedenteDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.\n\n` +
+                        `¿Desea aplicar este excedente a otra factura del cliente "${clienteAsociado}"?`
+                    );
+
+                    if (aplicarExcedente) {
+                        registro.montoDolaresAplicado = saldoAnteriorDolares;
+                        registro.saldoNuevo = 0;
+                        pagosAbonadosEnSesion[nuevaFactura] -= excedenteDolares;
+                        localStorage.setItem('historialTransacciones', JSON.stringify(historialTransacciones));
+
+                        filtrarDatos();
+
+                        const elBusquedaGlobal2 = document.getElementById('inputBusqueda');
+                        if (elBusquedaGlobal2) elBusquedaGlobal2.value = clienteAsociado;
+
+                        const montoBsExcedente = excedenteDolares * nuevaTasa;
+
+                        const revertirExcedente = function() {
+                            registro.montoDolaresAplicado = nuevoAbonoEnDolares;
+                            registro.saldoNuevo = nuevoSaldoDolares;
+                            pagosAbonadosEnSesion[nuevaFactura] += excedenteDolares;
+                            localStorage.setItem('historialTransacciones', JSON.stringify(historialTransacciones));
+                            filtrarDatos();
+                        };
+
+                        setTimeout(() => {
+                            ejecutarReportarCobranza(null, { fecha: nuevaFecha, montoBs: montoBsExcedente, alCancelar: revertirExcedente });
+                        }, 50);
+                    }
+                }
+            };
+        }
+    }, 500);
+}
+
+        function ejecutarCambiarIdCobro() {
+            if (historialTransacciones.length === 0) {
+                alert("No hay ningún cobro registrado en el historial para modificar.");
+                return;
+            }
+
+            let idOrigenRaw = prompt("Ingrese el N° de Cobro que desea cambiar:");
+            if (idOrigenRaw === null) return;
+            let idOrigen = parseInt(idOrigenRaw.trim());
+
+            if (isNaN(idOrigen)) {
+                alert("Por favor, ingrese un número válido.");
+                return;
+            }
+
+            let transaccionIndex = historialTransacciones.findIndex(t => t.idCobranza === idOrigen);
+            if (transaccionIndex === -1) {
+                alert(`El N° de Cobro ${idOrigen} no existe en el historial.`);
+                return;
+            }
+
+            let idDestinoRaw = prompt(`Ingrese el NUEVO número para el cobro N° ${idOrigen}:`);
+            if (idDestinoRaw === null) return;
+            let idDestino = parseInt(idDestinoRaw.trim());
+
+            if (isNaN(idDestino) || idDestino <= 0) {
+                alert("El nuevo número de cobro debe ser un entero positivo válido.");
+                return;
+            }
+
+            let existeDestino = historialTransacciones.some(t => t.idCobranza === idDestino);
+            if (existeDestino) {
+                alert(`Error: El número de cobro ${idDestino} ya se encuentra asignado a otra transacción.`);
+                return;
+            }
+
+            historialTransacciones[transaccionIndex].idCobranza = idDestino;
+
+            alert(`Éxito: El cobro N° ${idOrigen} ha sido renombrado correctamente al N° ${idDestino}.`);
+            filtrarDatos();
+        }
+
+        function filtrarDatos() {
+            const elBusqueda = document.getElementById('inputBusqueda');
+            const terminoBusqueda = elBusqueda ? elBusqueda.value.toLowerCase() : '';
+            const estatusSeleccionado = document.getElementById('selectEstatus').value;
+            
+            const elSecretario = document.getElementById('selectSecretario');
+            const secretarioSeleccionado = elSecretario ? elSecretario.value : 'TODO';
+
+            const datosFiltrados = registrosOriginales.filter(fila => {
+                const cliente = String(fila['Denominación social'] || '').toLowerCase();
+                const estatusFila = String(fila['ESTATUS'] || '').trim().toUpperCase();
+                const secretarioFila = String(fila['Secretario de ventas'] || '').trim();
+                
+                let objD = parsearFechaSegura(fila['Fecha de Ven']);
+                let filaAnio = "";
+                let filaMes = "";
+
+                if (objD) {
+                    filaAnio = String(objD.getFullYear());
+                    filaMes = String(objD.getMonth() + 1).padStart(2, '0');
+                }
+
+                const coincideCliente = cliente.includes(terminoBusqueda);
+                let coincideEstatus = (estatusSeleccionado === 'TODO') ? true : (estatusFila === estatusSeleccionado);
+                let coincideSecretario = (secretarioSeleccionado === 'TODO') ? true : (secretarioFila === secretarioSeleccionado);
+                
+                let coincideAnio = (aniosSeleccionados.size === 0) ? true : aniosSeleccionados.has(filaAnio);
+                let coincideMes = (mesesSeleccionados.size === 0) ? true : mesesSeleccionados.has(filaMes);
+
+                return coincideCliente && coincideEstatus && coincideSecretario && coincideAnio && coincideMes;
+            });
+
+            distribuirYMostrarTablas(datosFiltrados, terminoBusqueda, secretarioSeleccionado);
+        }
+
+        function distribuirYMostrarTablas(listaDatos, terminoBusqueda, secretarioSeleccionado) {
+            const tbodyFacturasVencidas = document.getElementById('cuerpoFacturasVencidas');
+            const tbodyFacturasPorVencer = document.getElementById('cuerpoFacturasPorVencer');
+            const tbodyNC = document.getElementById('cuerpoNC');
+            const tbodyPendientesCero = document.getElementById('cuerpoPendientesCero');
+            const tbodyHistorial = document.getElementById('cuerpoHistorialAbonos');
+            
+            if(!tbodyFacturasVencidas || !tbodyFacturasPorVencer || !tbodyNC || !tbodyPendientesCero || !tbodyHistorial) return;
+            
+            tbodyFacturasVencidas.innerHTML = '';
+            tbodyFacturasPorVencer.innerHTML = '';
+            tbodyNC.innerHTML = '';
+            tbodyPendientesCero.innerHTML = '';
+            tbodyHistorial.innerHTML = '';
+
+            let sumaFacturas = 0, countFacturas = 0;
+            let sumaFacturasVencidas = 0, countFacturasVencidas = 0;
+            let sumaFacturasPorVencer = 0, countFacturasPorVencer = 0;
+            let sumaNC = 0, countNC = 0;
+            let countPendientesCero = 0;
+
+            // Acumuladores para las filas de totales de cada sección
+            let sumaBaseVencidas = 0, sumaIVAVencidas = 0;
+            let sumaBasePorVencer = 0, sumaIVAPorVencer = 0;
+            let sumaBasePendientesCero = 0, sumaIVAPendientesCero = 0;
+
+            const hoy = new Date();
+            hoy.setHours(0,0,0,0);
+
+            // Guardamos las filas junto con su fecha de vencimiento para poder ordenarlas luego (ascendente: más antigua primero)
+            const filasFacturasVencidas = [];
+            const filasFacturasPorVencer = [];
+            const filasNC = [];
+            const filasPendientesCero = [];
+
+            listaDatos.forEach(fila => {
+                const cliente = fila['Denominación social'];
+                const nroFactura = String(fila['Numero de Factura'] || '').trim();
+                const tipoDocumento = String(fila['Tipo de documento'] || '').trim().toUpperCase();
+                const estatusVal = String(fila['ESTATUS'] || '').trim().toUpperCase();
+                const observacion = String(fila['Observacion'] || '').trim();
+                
+                const montoRaw = String(fila['Total Fac X Pagar']).replace(/[^0-9.-]/g, '');
+                const montoOriginal = parseFloat(montoRaw) || 0;
+
+                const baseRaw = String(fila['Base'] || '').replace(/[^0-9.-]/g, '');
+                const montoBase = parseFloat(baseRaw) || 0;
+                const montoBaseFormateado = `$ ${montoBase.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                const ivaRaw = String(fila['IVA'] || '').replace(/[^0-9.-]/g, '');
+                const montoIVA = parseFloat(ivaRaw) || 0;
+                const montoIVAFormateado = `$ ${montoIVA.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                if (cliente && nroFactura) {
+                    let fechaVenString = 'N/A';
+                    let fechaVenObjeto = parsearFechaSegura(fila['Fecha de Ven']);
+
+                    if (fechaVenObjeto) {
+                        let m = String(fechaVenObjeto.getMonth() + 1).padStart(2, '0');
+                        let d = String(fechaVenObjeto.getDate()).padStart(2, '0');
+                        fechaVenString = `${d}-${m}-${fechaVenObjeto.getFullYear()}`;
+                    }
+
+                    let badgeClass = estatusVal === 'PAGADO' ? "badge badge-green" : "badge badge-red";
+                    const montoFormateado = `$ ${montoOriginal.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                    if (tipoDocumento.includes('CRÉDITO') || tipoDocumento === 'NC') {
+                        countNC++;
+                        sumaNC += montoOriginal;
+                        
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${cliente}</td>
+                            <td class="text-center font-mono">${nroFactura}</td>
+                            <td class="text-center">${fechaVenString}</td>
+                            <td class="text-center"><span class="${badgeClass}">${estatusVal || 'PENDIENTE'}</span></td>
+                            <td class="text-right" style="font-weight:bold;">${montoFormateado}</td>
+                        `;
+                        filasNC.push({ fecha: fechaVenObjeto, tr });
+                    } else {
+                        if (estatusVal === 'PENDIENTE' && (Math.abs(montoOriginal) < 0.01)) {
+                            countPendientesCero++;
+                            sumaBasePendientesCero += montoBase;
+                            sumaIVAPendientesCero += montoIVA;
+                            const tr = document.createElement('tr');
+                            tr.className = "bg-amber-row";
+                            tr.innerHTML = `
+                                <td>${cliente}</td>
+                                <td class="text-center font-mono">${nroFactura}</td>
+                                <td class="text-center">${fechaVenString}</td>
+                                <td class="text-center"><span class="badge badge-amber">PENDIENTE</span></td>
+                                <td style="color:#475569; font-style:italic;">${observacion || 'Sin comentarios'}</td>
+                                <td class="text-right" style="font-weight:bold; color:#94a3b8;">${montoBaseFormateado}</td>
+                                <td class="text-right" style="font-weight:bold; color:#94a3b8;">${montoIVAFormateado}</td>
+                            `;
+                            filasPendientesCero.push({ fecha: fechaVenObjeto, tr });
+                        } else {
+                            countFacturas++;
+                            
+                            let abonoAsignado = pagosAbonadosEnSesion[nroFactura] || 0;
+                            let montoPorPagar = montoOriginal - abonoAsignado;
+                            if(montoPorPagar < 0) montoPorPagar = 0; 
+
+                            sumaFacturas += montoPorPagar; 
+                            
+                            let esVencida = false;
+                            if (fechaVenObjeto && estatusVal === 'PENDIENTE') {
+                                let testClon = new Date(fechaVenObjeto.getTime());
+                                testClon.setHours(0,0,0,0);
+                                if (testClon < hoy) {
+                                    esVencida = true;
+                                    sumaFacturasVencidas += montoPorPagar;
+                                }
+                            }
+
+                            const montoPorPagarFormateado = `$ ${montoPorPagar.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${cliente}</td>
+                                <td class="text-center font-mono">${nroFactura}</td>
+                                <td class="text-center">${fechaVenString}</td>
+                                <td class="text-center"><span class="${badgeClass}">${estatusVal || 'PENDIENTE'}</span></td>
+                                <td class="text-right">${montoBaseFormateado}</td>
+                                <td class="text-right">${montoIVAFormateado}</td>
+                                <td class="text-right" style="font-weight:900; color: #1e3a8a; background-color: rgba(30, 58, 138, 0.03);">${montoPorPagarFormateado}</td>
+                            `;
+
+                            if (esVencida) {
+                                countFacturasVencidas++;
+                                sumaBaseVencidas += montoBase;
+                                sumaIVAVencidas += montoIVA;
+                                filasFacturasVencidas.push({ fecha: fechaVenObjeto, tr });
+                            } else {
+                                countFacturasPorVencer++;
+                                sumaFacturasPorVencer += montoPorPagar;
+                                sumaBasePorVencer += montoBase;
+                                sumaIVAPorVencer += montoIVA;
+                                filasFacturasPorVencer.push({ fecha: fechaVenObjeto, tr });
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Orden ascendente por fecha de vencimiento (más antigua primero, más nueva al final).
+            // Los registros sin fecha válida se envían al final del listado.
+            function ordenarPorFechaAscendente(arr) {
+                arr.sort((a, b) => {
+                    if (!a.fecha && !b.fecha) return 0;
+                    if (!a.fecha) return 1;
+                    if (!b.fecha) return -1;
+                    return a.fecha.getTime() - b.fecha.getTime();
+                });
+                return arr;
+            }
+
+            ordenarPorFechaAscendente(filasFacturasVencidas).forEach(f => tbodyFacturasVencidas.appendChild(f.tr));
+            ordenarPorFechaAscendente(filasFacturasPorVencer).forEach(f => tbodyFacturasPorVencer.appendChild(f.tr));
+            ordenarPorFechaAscendente(filasNC).forEach(f => tbodyNC.appendChild(f.tr));
+            ordenarPorFechaAscendente(filasPendientesCero).forEach(f => tbodyPendientesCero.appendChild(f.tr));
+
+            // Crea una fila de totales al final de una tabla. 'valores' es un array de montos ya formateados (uno por cada columna numérica a totalizar).
+            function crearFilaTotal(colspanEtiqueta, valoresFormateados) {
+                const trTotal = document.createElement('tr');
+                trTotal.className = 'fila-total';
+                const celdaEtiqueta = `<td colspan="${colspanEtiqueta}" class="text-right">TOTAL</td>`;
+                const celdasValores = valoresFormateados.map(v => `<td class="text-right">${v}</td>`).join('');
+                trTotal.innerHTML = celdaEtiqueta + celdasValores;
+                return trTotal;
+            }
+
+            const fmtMoneda = (n) => `$ ${n.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            if (countFacturasVencidas > 0) {
+                tbodyFacturasVencidas.appendChild(crearFilaTotal(4, [fmtMoneda(sumaBaseVencidas), fmtMoneda(sumaIVAVencidas), fmtMoneda(sumaFacturasVencidas)]));
+            }
+            if (countFacturasPorVencer > 0) {
+                tbodyFacturasPorVencer.appendChild(crearFilaTotal(4, [fmtMoneda(sumaBasePorVencer), fmtMoneda(sumaIVAPorVencer), fmtMoneda(sumaFacturasPorVencer)]));
+            }
+            if (countNC > 0) {
+                tbodyNC.appendChild(crearFilaTotal(4, [fmtMoneda(sumaNC)]));
+            }
+            if (countPendientesCero > 0) {
+                tbodyPendientesCero.appendChild(crearFilaTotal(5, [fmtMoneda(sumaBasePendientesCero), fmtMoneda(sumaIVAPendientesCero)]));
+            }
+
+            const contenedorBloqueNC = tbodyNC.closest('div').parentNode;
+            if (countNC === 0) {
+                contenedorBloqueNC.classList.add('hidden');
+            } else {
+                contenedorBloqueNC.classList.remove('hidden');
+            }
+
+            const contenedorBloquePendientesCero = tbodyPendientesCero.closest('div').parentNode;
+            if (countPendientesCero === 0) {
+                contenedorBloquePendientesCero.classList.add('hidden');
+            } else {
+                contenedorBloquePendientesCero.classList.remove('hidden');
+            }
+
+            let transaccionesFiltradas = historialTransacciones.filter(t => {
+                let filaAsociada = registrosOriginales.find(f => f['Numero de Factura'] && String(f['Numero de Factura']).trim() === t.factura);
+                if (!filaAsociada) return false;
+
+                if (secretarioSeleccionado !== 'TODO') {
+                    if (String(filaAsociada['Secretario de ventas'] || '').trim() !== secretarioSeleccionado) return false;
+                }
+
+                if (terminoBusqueda !== '') {
+                    let nombreCliente = String(filaAsociada['Denominación social'] || '').toLowerCase();
+                    if (!nombreCliente.includes(terminoBusqueda)) return false;
+                }
+
+                return true;
+            });
+
+            transaccionesFiltradas.sort((a, b) => a.idCobranza - b.idCobranza);
+
+            let sumaMontoDolaresHistorial = 0, sumaSaldoAnteriorHistorial = 0, sumaSaldoNuevoHistorial = 0;
+
+            transaccionesFiltradas.forEach(t => {
+                const abonoDolaresCalculado = (typeof t.montoDolaresAplicado === 'number') ? t.montoDolaresAplicado : (t.tasa > 0 ? (t.montoBs / t.tasa) : 0);
+                sumaMontoDolaresHistorial += abonoDolaresCalculado;
+                sumaSaldoAnteriorHistorial += t.saldoAnterior;
+                sumaSaldoNuevoHistorial += t.saldoNuevo;
+                const numeroCobranzaAMostrar = t.idCobranza ? t.idCobranza : "-";
+     // AQUI AGREGUE LA VARIABLE FECHA AL REPORTE DE COBROS
+           
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center font-mono" style="font-weight: bold; color: #475569;">${numeroCobranzaAMostrar}</td>
+                    <td class="text-center font-mono" style="color: #6b21a8; font-weight: bold;">${t.factura}</td>
+                    <td style="font-weight: 600;">Bs. ${t.montoBs.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+
+<td class="text-center font-mono">${formatearFechaDMY(t.fechaCobroLog) || ''}</td>                    
+
+<td class="text-center font-mono">${t.tasa.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 4})}</td>
+                    <td class="text-center font-mono" style="font-weight: bold; color: #16a34a; background-color: rgba(22, 163, 74, 0.03);">$ ${abonoDolaresCalculado.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-right" style="color: #475569;">$ ${t.saldoAnterior.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-right" style="font-weight: 800; color: #5b21b6; background-color: rgba(124, 58, 237, 0.03);">$ ${t.saldoNuevo.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                `;
+                tbodyHistorial.appendChild(tr);
+            });
+
+            if (transaccionesFiltradas.length > 0) {
+                tbodyHistorial.appendChild(crearFilaTotal(5, [fmtMoneda(sumaMontoDolaresHistorial), fmtMoneda(sumaSaldoAnteriorHistorial), fmtMoneda(sumaSaldoNuevoHistorial)]));
+            }
+
+            const contenedorBloqueHistorial = tbodyHistorial.closest('div').parentNode;
+            if (transaccionesFiltradas.length === 0) {
+                contenedorBloqueHistorial.classList.add('hidden');
+            } else {
+                contenedorBloqueHistorial.classList.remove('hidden');
+            }
+
+            let totalPendienteNeto = sumaFacturasVencidas + sumaNC;
+
+            document.getElementById('sumaSuperiorFacturas').innerText = `$ ${sumaFacturas.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumaSuperiorFacturasVencidas').innerText = `$ ${sumaFacturasVencidas.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumaSuperiorFacturasPorVencer').innerText = `$ ${sumaFacturasPorVencer.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumaSuperiorNC').innerText = `$ ${sumaNC.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('sumaTotalPendiente').innerText = `$ ${totalPendienteNeto.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+            document.getElementById('badgeCountFacturasVencidas').innerText = countFacturasVencidas;
+            document.getElementById('badgeCountFacturasPorVencer').innerText = countFacturasPorVencer;
+            document.getElementById('badgeCountNC').innerText = countNC;
+            document.getElementById('badgeCountPendientes').innerText = countPendientesCero;
+            document.getElementById('badgeCountHistorial').innerText = transaccionesFiltradas.length;
+
+            if(countFacturasVencidas === 0) tbodyFacturasVencidas.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:1.5rem; color:#94a3b8;">No hay facturas vencidas.</td></tr>`;
+            if(countFacturasPorVencer === 0) tbodyFacturasPorVencer.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:1.5rem; color:#94a3b8;">No hay facturas por vencer.</td></tr>`;
+        }
+
+        function guardarUnicoVendedorActual() {
+            const secretarioSeleccionado = document.getElementById('selectSecretario').value;
+            if (secretarioSeleccionado === "TODO") {
+                alert("Para guardar por vendedor, primero debes seleccionar un vendedor específico en el filtro de la barra de herramientas.");
+                return;
+            }
+            
+            const contenidoHtml = generarTextoHtmlVendedorAislado(secretarioSeleccionado);
+            if(!contenidoHtml) return;
+
+            const blob = new Blob([contenidoHtml], { type: 'text/html;charset=utf-8' });
+            const enlaceDescarga = document.createElement('a');
+            const marcaTiempo = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 10);
+            const nombreLimpioVendedor = secretarioSeleccionado.replace(/\s+/g, '_');
+            
+            enlaceDescarga.href = URL.createObjectURL(blob);
+            enlaceDescarga.download = `Cobranza_${marcaTiempo}_${nombreLimpioVendedor}.html`;
+            document.body.appendChild(enlaceDescarga);
+            enlaceDescarga.click();
+            setTimeout(() => { document.body.removeChild(enlaceDescarga); }, 100);
+        }
+
+        function guardarTodosLosVendedoresMasivo() {
+            if (registrosOriginales.length === 0) {
+                alert("No hay datos cargados para exportar.");
+                return;
+            }
+
+            const listaVendedores = obtenerListaSecretariosUnicos();
+            if (listaVendedores.length === 0) {
+                alert("No se encontraron secretarios de ventas válidos en este archivo.");
+                return;
+            }
+
+            if (!confirm(`Se compilarán ${listaVendedores.length} reportes individuales dentro de un único paquete comprimido (.ZIP) para evitar bloqueos del navegador. ¿Continuar?`)) {
+                return;
+            }
+
+            try {
+                const zip = new JSZip();
+                const marcaTiempo = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 10);
+
+                listaVendedores.forEach(vendedor => {
+                    const contenidoHtmlFila = generarTextoHtmlVendedorAislado(vendedor);
+                    if (contenidoHtmlFila) {
+                        const nombreArchivoHTML = `Cobranza_${marcaTiempo}_${vendedor.replace(/\s+/g, '_')}.html`;
+                        zip.file(nombreArchivoHTML, contenidoHtmlFila);
+                    }
+                });
+
+                zip.generateAsync({ type: "blob" }).then(function(content) {
+                    const enlaceDescarga = document.createElement('a');
+                    enlaceDescarga.href = URL.createObjectURL(content);
+                    enlaceDescarga.download = `Reportes_Cobranza_Todos_Vendedores_${marcaTiempo}.zip`;
+                    document.body.appendChild(enlaceDescarga);
+                    enlaceDescarga.click();
+                    setTimeout(() => { document.body.removeChild(enlaceDescarga); }, 100);
+                });
+
+            } catch (err) {
+                alert("Error al empaquetar el reporte masivo: " + err.message);
+            }
+        }
+
+        function generarTextoHtmlVendedorAislado(secretarioNombre) {
+            const estatusActual = document.getElementById('selectEstatus').value;
+            
+            let datosAExportar = registrosOriginales.filter(fila => {
+                return String(fila['Secretario de ventas'] || '').trim() === secretarioNombre;
+            });
+
+            try {
+                const clonDoc = document.documentElement.cloneNode(true);
+                const viejosScripts = clonDoc.querySelectorAll('.script-snapshot-data');
+                viejosScripts.forEach(s => s.remove());
+
+                const xlsxScript = clonDoc.querySelector('#xlsx-library-script');
+                if (xlsxScript) xlsxScript.remove();
+
+                const selectEstatusClonado = clonDoc.querySelector('#selectEstatus');
+                if (selectEstatusClonado) {
+                    selectEstatusClonado.removeAttribute('disabled');
+                    selectEstatusClonado.style.cursor = "pointer";
+                    selectEstatusClonado.className = "select-active";
+                    selectEstatusClonado.querySelectorAll('option').forEach(opt => opt.removeAttribute('selected'));
+                    const optSel = selectEstatusClonado.querySelector(`option[value="${estatusActual}"]`);
+                    if (optSel) optSel.setAttribute('selected', 'selected');
+                }
+
+                const selectClonado = clonDoc.querySelector('#selectSecretario');
+                if (selectClonado) {
+                    selectClonado.innerHTML = `<option value="${secretarioNombre}">${secretarioNombre}</option>`;
+                    selectClonado.setAttribute('disabled', 'disabled');
+                    selectClonado.style.cursor = "not-allowed";
+                    selectClonado.className = ""; 
+                }
+
+                const buscadorClonado = clonDoc.querySelector('#inputBusqueda');
+                if (buscadorClonado) {
+                    buscadorClonado.removeAttribute('disabled');
+                    buscadorClonado.style.cursor = "text";
+                    buscadorClonado.placeholder = "🔍 Escriba para buscar cliente...";
+                    buscadorClonado.setAttribute('value', '');
+                }
+
+                const btnCobranzaClonado = clonDoc.querySelector('#btnCobranza');
+                if (btnCobranzaClonado) {
+                    btnCobranzaClonado.removeAttribute('disabled');
+                    btnCobranzaClonado.style.cursor = "pointer";
+                }
+
+                const btnEditarCobroClonado = clonDoc.querySelector('#btnEditarCobro');
+                if (btnEditarCobroClonado) {
+                    btnEditarCobroClonado.removeAttribute('disabled');
+                    btnEditarCobroClonado.style.cursor = "pointer";
+                }
+
+                const btnCambiarIdCobroClonado = clonDoc.querySelector('#btnCambiarIdCobro');
+                if (btnCambiarIdCobroClonado) {
+                    btnCambiarIdCobroClonado.removeAttribute('disabled');
+                    btnCambiarIdCobroClonado.style.cursor = "pointer";
+                }
+
+                const btnLimpiarFechasClonado = clonDoc.querySelector('#btnLimpiarFechas');
+                if (btnLimpiarFechasClonado) {
+                    btnLimpiarFechasClonado.removeAttribute('disabled');
+                    btnLimpiarFechasClonado.className = "btn-clear-date";
+                }
+
+                const botonesMesesClonados = clonDoc.querySelectorAll('#contenedorMesesBotones .btn-filtro-fecha');
+                botonesMesesClonados.forEach(btn => { btn.removeAttribute('disabled'); });
+
+                const zonaBotonesClon = clonDoc.querySelector('#zonaBotonesExportacion');
+                if (zonaBotonesClon) zonaBotonesClon.remove();
+
+                const campoArchivoClonado = clonDoc.querySelector('#contenedorCampoArchivo');
+                if (campoArchivoClonado) campoArchivoClonado.remove();
+
+                const labelEstatus = clonDoc.querySelector('#contenedorCampoEstatus label');
+                if (labelEstatus) labelEstatus.innerText = "Filtrar por Estatus";
+
+                const labelSecretario = clonDoc.querySelector('#contenedorCampoSecretario label');
+                if (labelSecretario) labelSecretario.innerText = "Secretario de Ventas";
+
+                const labelBusqueda = clonDoc.querySelector('#lblBuscarCliente');
+                if (labelBusqueda) labelBusqueda.innerText = "4. Buscar Cliente";
+
+                const sepMesesClonado = clonDoc.querySelector('#separadorMesesMobil');
+                if (sepMesesClonado) {
+                    sepMesesClonado.style.borderLeft = "none";
+                    sepMesesClonado.style.paddingLeft = "0";
+                }
+
+                const scriptDedicado = document.createElement('script');
+                scriptDedicado.className = 'script-snapshot-data';
+                scriptDedicado.text = `
+        const snapshotDatosInyectados = ${JSON.stringify(datosAExportar)};
+        const snapshotSecretarioSeleccionado = ${JSON.stringify(secretarioNombre)};
+        const snapshotPagosCobranza = ${JSON.stringify(pagosAbonadosEnSesion)};
+        const snapshotHistorialTransacciones = ${JSON.stringify(historialTransacciones)};
+        const snapshotTasasPorFecha = ${JSON.stringify(tasasPorFecha)};
+        
+        if (typeof snapshotDatosInyectados !== 'undefined' && snapshotDatosInyectados.length > 0) {
+            registrosOriginales = snapshotDatosInyectados;
+            secretarioCongeladoPrevio = snapshotSecretarioSeleccionado;
+            pagosAbonadosEnSesion = snapshotPagosCobranza || {};
+            historialTransacciones = snapshotHistorialTransacciones || [];
+            tasasPorFecha = snapshotTasasPorFecha || {};
+            
+            setTimeout(function(){
+                inicializarInterfazConDatos();
+            }, 1);
+        }
+`;
+                const headClonado = clonDoc.querySelector('head');
+                if (headClonado) headClonado.appendChild(scriptDedicado);
+
+                return "<!DOCTYPE html>\n" + clonDoc.outerHTML;
+            } catch (err) {
+                console.error("Error generando HTML aislado para " + secretarioNombre, err);
+                return null;
+            }
+        }
+    </script>
+    
+    <script class="script-snapshot-data">
+        if (typeof snapshotDatosInyectados !== 'undefined' && snapshotDatosInyectados !== null && snapshotDatosInyectados.length > 0) {
+            registrosOriginales = snapshotDatosInyectados;
+            secretarioCongeladoPrevio = snapshotSecretarioSeleccionado;
+            pagosAbonadosEnSesion = snapshotPagosCobranza || {};
+            historialTransacciones = snapshotHistorialTransacciones || [];
+            tasasPorFecha = snapshotTasasPorFecha || {};
+            inicializarInterfazConDatos();
+        }
+    
+ function exportarHistorial() {
+    const tablaCuerpo = document.getElementById('cuerpoHistorialAbonos');
+    if (!tablaCuerpo || tablaCuerpo.rows.length === 0) {
+        alert("No hay información en el Historial para exportar.");
+        return;
+    }
+    
+    // Obtenemos la tabla padre que contiene el cuerpo del historial
+    const tablaCompleta = tablaCuerpo.closest('table');
+    
+    // Creamos una ventana nueva para imprimir
+    const ventana = window.open('', '', 'width=800,height=600');
+    ventana.document.write('<html><head><title>Historial de Cobranzas</title>');
+    // Ajuste de estilos para impresión
+    ventana.document.write('<style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ccc; padding: 8px; text-align: left; } body { font-family: sans-serif; } .text-right { text-align: right; } .text-center { text-align: center; }</style>');
+    ventana.document.write('</head><body>');
+    ventana.document.write('<h1>Historial de Cobranzas y Abonos Reportados</h1>');
+    
+    // Inyectamos el HTML de la tabla encontrada
+    ventana.document.write('<table>' + tablaCompleta.innerHTML + '</table>');
+    
+    ventana.document.write('</body></html>');
+    ventana.document.close();
+    ventana.print();
+}
+
+    </script>
+</body>
+</html>
