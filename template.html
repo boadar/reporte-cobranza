@@ -171,6 +171,7 @@ table.ftbl .nc{color:var(--danger)}
 
   <!-- PANTALLA 4: RESULTADO -->
   <div class="screen" id="scResult">
+    <div id="repartoBanner" style="display:none;background:#faeeda;border:1px solid #f0d9a8;color:#854f0b;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:500"></div>
     <img id="thumb" class="thumb" alt="Comprobante">
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <span class="badge badge-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg> Datos extraídos</span>
@@ -247,6 +248,7 @@ table.ftbl .nc{color:var(--danger)}
         <option>RETENCION</option>
       </select></div>
     </div>
+    <button class="btn btn-acc" id="btnRepartir" onclick="iniciarReparto()" style="margin-bottom:10px">&#8618; Cobrar solo el IVA y repartir el resto en otra factura</button>
     <button class="btn btn-ok" id="btnSave" onclick="saveCobranza()" style="margin-bottom:10px">Guardar cobranza</button>
     <button class="btn btn-ghost" onclick="resetAndHome()">Descartar</button>
   </div>
@@ -322,7 +324,7 @@ const REPORT_EMAIL = "cobranzas@ofica.com";
 function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 function setTab(id){document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('on'));document.getElementById(id).classList.add('on');}
 function showChoice(){go('scChoice');setTab('tabHome');}
-function resetAndHome(){current=null;editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;go('scInicio');setTab('tabHome');}
+function resetAndHome(){current=null;editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;limpiarReparto();go('scInicio');setTab('tabHome');}
 
 /* ---------- plantillas por banco ---------- */
 function parseMonto(s){
@@ -596,6 +598,7 @@ async function ocr(img,base,span){
   return res.data.text||'';
 }
 function finishExtract(text,bank,img){
+  limpiarReparto();
   const data=bank?bank.extract(text):genericExtract(text);
   const bm=bestMonto(text);
   if(bm!=null)data.monto=bm;
@@ -1113,6 +1116,40 @@ function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 
 /* ---------- guardar ---------- */
 let editingId=null, editingCreado=null, editingEstatus=null, editingFechaReporte=null;
+/* Reparto de un pago entre varias facturas: todas las aplicaciones del mismo comprobante
+   comparten un "grupo" (para no bloquearse como duplicado). repartoLeftover es el sobrante
+   en Bs que se está llevando a la siguiente factura. */
+let repartoGrupo=null, repartoLeftover=0;
+function bannerReparto(txt){const b=document.getElementById('repartoBanner');if(!b)return;if(txt){b.innerHTML=txt;b.style.display='';}else{b.style.display='none';b.innerHTML='';}}
+function limpiarReparto(){repartoGrupo=null;repartoLeftover=0;bannerReparto('');}
+/* Cobra SOLO el IVA de la factura elegida (25% si es agente, 100% si no) y lleva el sobrante
+   a la siguiente factura, guardando esta parte como un renglón ligado al mismo comprobante. */
+function iniciarReparto(){
+  if(!chosenCli){alert('Primero selecciona el cliente.');return;}
+  if(!selFactura){alert('Selecciona la factura a la que le cobras el IVA.');return;}
+  const a=aplicacionPago();
+  if(!a){alert('No hay datos del pago.');return;}
+  let ivaBs, leftover, obsSug;
+  if(a.soloIva){
+    ivaBs=r2(a.aplicadoBs); leftover=r2(a.sobranteBs);
+    obsSug=(a.cobroTipo==='retencion')?'RETENCION':'25% IVA';
+  }else{
+    if(a.tasa==null){alert('No hay tasa de cambio para la fecha del pago.');return;}
+    if(!(a.iva25>0.01)){alert('Para repartir por IVA, marca "Cobrar el IVA primero".\nSi el sobrante va a la BASE, usa el botón "Guardar cobranza".');return;}
+    ivaBs=r2(a.iva25); leftover=r2(a.restanteBs);
+    obsSug=a.agente?'25% IVA':'100% IVA';
+  }
+  if(leftover<=0.01){alert('Este pago no deja sobrante después del IVA de la factura '+selFactura.f+'.\nUsa "Guardar cobranza".');return;}
+  const ref=document.getElementById('fRef').value.trim();
+  repartoGrupo=repartoGrupo||(ref||('G'+Date.now()));
+  repartoLeftover=leftover;
+  // guarda solo la parte de IVA de esta factura (ponemos el monto = IVA en Bs)
+  document.getElementById('fMonto').value=fmtBs(ivaBs);
+  if(!obsManual)document.getElementById('fObs').value=obsSug;
+  calcUsd();
+  saveCobranza(true);   // enReparto: guarda esta parte y reabre con el sobrante
+}
+
 const selected=new Set();
 function loadDb(){try{return JSON.parse(localStorage.getItem('cobranzas')||'[]');}catch(e){return[];}}
 function saveDb(a){localStorage.setItem('cobranzas',JSON.stringify(a));}
@@ -1134,8 +1171,10 @@ function compressImg(dataUrl,maxDim,q){
 function findDup(){
   const ref=document.getElementById('fRef').value.trim();
   const db=loadDb();
-  if(ref){const d=db.find(x=>x.ref===ref && x.id!==editingId);if(d)return d;}
-  if(!editingId && currentFileHash){const d=db.find(x=>x.fileHash===currentFileHash);if(d)return d;}
+  // Al repartir un pago en varias facturas, las partes comparten ref/comprobante: no son duplicados.
+  const mismoGrupo=(x)=>repartoGrupo && x.grupo===repartoGrupo;
+  if(ref){const d=db.find(x=>x.ref===ref && x.id!==editingId && !mismoGrupo(x));if(d)return d;}
+  if(!editingId && currentFileHash){const d=db.find(x=>x.fileHash===currentFileHash && !mismoGrupo(x));if(d)return d;}
   return null;
 }
 function toggleOcr(){
@@ -1153,7 +1192,7 @@ function updateDupWarn(){
   const d=findDup();
   el.innerHTML=d?'<div style="background:#fcebeb;border:1px solid #f0c0c0;color:#a32d2d;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:500">&#9888; Esta cobranza ya fue registrada (ref '+esc(d.ref||'—')+', cliente '+esc(d.cliNom||'—')+'). No se puede duplicar.</div>':'';
 }
-async function saveCobranza(){
+async function saveCobranza(enReparto){
   const dest=document.getElementById('fDest').value.trim();
   const cliCod=chosenCli?chosenCli.cod:'';
   if(!cliCod){alert('Selecciona el cliente al que se aplica el pago.');return;}
@@ -1200,6 +1239,7 @@ async function saveCobranza(){
     cliCod:cliCod, cliNom:chosenCli?chosenCli.nom:'',
     img:img,
     fileHash:(current&&current.fileHash)||currentFileHash||'',
+    grupo:repartoGrupo||'',
     estatus:editingId?(editingEstatus||'Pendiente'):'Pendiente',
     fechaReporte:editingId?(editingFechaReporte||''):'',
     creado:editingId?editingCreado:new Date().toISOString(),
@@ -1215,7 +1255,24 @@ async function saveCobranza(){
     return;
   }
   btn.textContent=lbl;btn.disabled=false;
-  editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;current=null;
+  editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;
+  if(enReparto){
+    // se guardó la parte de IVA de esta factura; ahora se reabre para aplicar el sobrante a otra.
+    const left=repartoLeftover||0; repartoLeftover=0;
+    selFactura=null;
+    document.getElementById('fFactura').value='';
+    document.getElementById('fMonto').value=fmtBs(left);
+    obsManual=false; document.getElementById('fObs').value='';
+    document.getElementById('fAgenteRet').checked=chosenCli?esAgentePref(chosenCli.cod):true;
+    document.getElementById('fCobrarIva').checked=true;
+    refreshAgenteState();
+    renderFacturas(); calcUsd();
+    bannerReparto('&#8618; Repartiendo el pago (Ref <b>'+esc(document.getElementById('fRef').value.trim()||'&mdash;')+'</b>). Sobrante por aplicar: <b>Bs '+fmtUsd(left)+'</b>.<br>Elige la siguiente factura y usa <b>"Repartir"</b> para cobrar su IVA, o <b>"Guardar"</b> para aplicar el resto a su base.');
+    go('scResult');setTab('tabList');window.scrollTo(0,0);
+    return;
+  }
+  current=null;
+  limpiarReparto();
   openList();setTab('tabList');
 }
 
@@ -1261,6 +1318,7 @@ function delSel(){
 }
 function openEdit(id){
   const rec=loadDb().find(x=>x.id===id);if(!rec)return;
+  limpiarReparto();
   editingId=id;editingCreado=rec.creado;currentFileHash='';
   editingEstatus=rec.estatus||'Pendiente';editingFechaReporte=rec.fechaReporte||'';
   current={img:rec.img,bank:{nombre:rec.banco},empresa:'',fileHash:rec.fileHash||''};
