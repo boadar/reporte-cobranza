@@ -473,16 +473,28 @@
         // Trae cartera.json (facturas) y tasas.json (tasas BCV) del repositorio y arranca la app.
         // Cada archivo se valida por separado: si uno falla, no daña al otro. No pisa datos que ya
         // hayas cargado a mano en esta sesión.
-        // Muestra, junto al campo de archivo, cuándo se actualizaron por última vez los datos.
-        function mostrarUltimaActualizacion(texto) {
+        // Fecha (ISO AAAA-MM-DD) de la última carga del archivo de cuentas por cobrar.
+        // Se graba dentro de cartera.json y se muestra junto al campo de archivo.
+        let fechaCargaArchivo = '';
+        function mostrarInfoCarga(texto) {
             const el = document.getElementById('infoUltimaActualizacion');
             if (el) el.innerHTML = texto || '';
         }
-        function fmtFechaCorta(d) {
+        function fmtFechaISO(iso) {           // 'AAAA-MM-DD' -> 'DD/MM/AAAA'
+            if (!iso || typeof iso !== 'string') return '';
+            const p = iso.split('-');
+            if (p.length !== 3) return iso;
+            return p[2].slice(0, 2) + '/' + p[1] + '/' + p[0];
+        }
+        function isoDeFecha(d) {               // Date -> 'AAAA-MM-DD'
             if (!(d instanceof Date) || isNaN(d.getTime())) return '';
-            const dd = String(d.getDate()).padStart(2, '0');
             const mm = String(d.getMonth() + 1).padStart(2, '0');
-            return `${dd}/${mm}/${d.getFullYear()}`;
+            const dd = String(d.getDate()).padStart(2, '0');
+            return d.getFullYear() + '-' + mm + '-' + dd;
+        }
+        function mostrarFechaCarga(iso, n, fuente) {
+            const f = fmtFechaISO(iso);
+            mostrarInfoCarga('🗓️ Cuentas por cobrar cargadas al: <span style="color:#0f766e">' + (f || 'fecha no disponible') + '</span> · ' + n + ' documentos' + (fuente ? ' (' + fuente + ')' : ''));
         }
 
         async function cargarDatosDesdeGitHub() {
@@ -505,19 +517,20 @@
             try {
                 const rc = await fetch(CARTERA_URL + '?t=' + Date.now(), { cache: 'no-store' });
                 if (!rc.ok) return; // aún no se ha publicado la cartera: queda la carga manual
-                const lastMod = rc.headers.get('Last-Modified'); // fecha en que se publicó cartera.json
                 const data = await rc.json();
-                if (Array.isArray(data) && data.length > 0 && registrosOriginales.length === 0) {
-                    registrosOriginales = data;
+                // cartera.json puede ser un arreglo (formato viejo) o { cargado: 'AAAA-MM-DD', registros: [...] }
+                const registros = Array.isArray(data) ? data : (data && Array.isArray(data.registros) ? data.registros : null);
+                const cargado = (data && !Array.isArray(data) && data.cargado) ? String(data.cargado).slice(0, 10) : '';
+                if (registros && registros.length > 0 && registrosOriginales.length === 0) {
+                    registrosOriginales = registros;
+                    fechaCargaArchivo = cargado || fechaCargaArchivo;
                     secretarioCongeladoPrevio = "TODO";
                     pagosAbonadosEnSesion = {};
                     historialTransacciones = [];
                     inicializarInterfazConDatos();
                     const sub = document.querySelector('header div p');
-                    if (sub) sub.textContent = '✔ Cartera al día desde GitHub · ' + data.length + ' documentos.';
-                    const fLM = lastMod ? new Date(lastMod) : null;
-                    const fTxt = fLM ? fmtFechaCorta(fLM) : '';
-                    mostrarUltimaActualizacion('🗓️ Última actualización: <span style="color:#0f766e">' + (fTxt || 'hoy') + '</span> · ' + data.length + ' documentos (desde GitHub)');
+                    if (sub) sub.textContent = '✔ Cartera al día desde GitHub · ' + registros.length + ' documentos.';
+                    mostrarFechaCarga(cargado, registros.length, 'desde GitHub');
                 }
             } catch (e) { /* sin señal / archivo dañado: queda la carga manual */ }
         }
@@ -529,7 +542,9 @@
                 alert('Primero carga el Excel de cuentas por cobrar; luego genero el cartera.json para publicar.');
                 return;
             }
-            const blob = new Blob([JSON.stringify(registrosOriginales)], { type: 'application/json' });
+            // se graba la fecha de la carga (la del archivo de CxC), para mostrarla luego en la app
+            const cargado = fechaCargaArchivo || isoDeFecha(new Date());
+            const blob = new Blob([JSON.stringify({ cargado: cargado, registros: registrosOriginales })], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'cartera.json';
@@ -810,10 +825,10 @@
                         historialTransacciones = [];
                         tasasPorFecha = {};
                         inicializarInterfazConDatos();
-                        // fecha del archivo cargado (última modificación del Excel/CSV en el equipo)
+                        // fecha del archivo de cuentas por cobrar cargado (última modificación del Excel/CSV)
                         const fArch = archivo.lastModified ? new Date(archivo.lastModified) : null;
-                        const fTxt = fArch ? fmtFechaCorta(fArch) : '';
-                        mostrarUltimaActualizacion('🗓️ Archivo cargado: <span style="color:#0f766e">' + (archivo.name || 'archivo') + '</span>' + (fTxt ? ' · última modificación: <b>' + fTxt + '</b>' : '') + ' · ' + registrosOriginales.length + ' documentos');
+                        fechaCargaArchivo = isoDeFecha(fArch) || fechaCargaArchivo;
+                        mostrarFechaCarga(fechaCargaArchivo, registrosOriginales.length, 'archivo: ' + (archivo.name || ''));
                     }
                 };
 
