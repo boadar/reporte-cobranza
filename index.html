@@ -465,8 +465,20 @@
             if (registrosOriginales.length > 0) {
                 inicializarInterfazConDatos();
             } else if (typeof snapshotDatosInyectados === 'undefined') {
-                // No es un reporte exportado con datos incrustados: intentamos traer la cartera de GitHub.
-                cargarDatosDesdeGitHub();
+                const local = leerCarteraManual();
+                if (local) {
+                    // se cargó un archivo en este equipo: se conserva hasta que se cargue otro o se quite.
+                    registrosOriginales = local.registros;
+                    fechaCargaArchivo = local.cargado || '';
+                    secretarioCongeladoPrevio = "TODO";
+                    pagosAbonadosEnSesion = {};
+                    historialTransacciones = [];
+                    inicializarInterfazConDatos();
+                    mostrarFechaCarga(fechaCargaArchivo, local.registros.length, 'archivo cargado en este equipo', true);
+                } else {
+                    // si no hay archivo local guardado, se trae la cartera publicada en GitHub.
+                    cargarDatosDesdeGitHub();
+                }
             }
         });
 
@@ -492,9 +504,27 @@
             const dd = String(d.getDate()).padStart(2, '0');
             return d.getFullYear() + '-' + mm + '-' + dd;
         }
-        function mostrarFechaCarga(iso, n, fuente) {
+        function mostrarFechaCarga(iso, n, fuente, manual) {
             const f = fmtFechaISO(iso);
-            mostrarInfoCarga('🗓️ Cuentas por cobrar cargadas al: <span style="color:#0f766e">' + (f || 'fecha no disponible') + '</span> · ' + n + ' documentos' + (fuente ? ' (' + fuente + ')' : ''));
+            let html = '🗓️ Cuentas por cobrar cargadas al: <span style="color:#0f766e">' + (f || 'fecha no disponible') + '</span> · ' + n + ' documentos' + (fuente ? ' (' + fuente + ')' : '');
+            if (manual) html += ' · <a href="#" onclick="quitarCarteraManual();return false;" style="color:#2563eb;font-weight:600">usar la de GitHub</a>';
+            mostrarInfoCarga(html);
+        }
+
+        // La cartera cargada a mano se guarda en el equipo (localStorage) y se conserva al reabrir,
+        // hasta que se cargue otro archivo o se quite para volver a la publicada en GitHub.
+        function guardarCarteraManual(cargado, registros, nombre) {
+            try { localStorage.setItem('carteraManual', JSON.stringify({ cargado: cargado || '', registros: registros, nombre: nombre || '', ts: new Date().toISOString() })); }
+            catch (e) { alert('No se pudo guardar la cartera en este equipo (memoria llena). Se usará solo en esta sesión.'); }
+        }
+        function leerCarteraManual() {
+            try { const o = JSON.parse(localStorage.getItem('carteraManual') || 'null'); if (o && Array.isArray(o.registros) && o.registros.length) return o; } catch (e) {}
+            return null;
+        }
+        function quitarCarteraManual() {
+            if (!confirm('¿Quitar el archivo cargado en este equipo y volver a la cartera publicada en GitHub?')) return;
+            try { localStorage.removeItem('carteraManual'); } catch (e) {}
+            location.reload();
         }
 
         async function cargarDatosDesdeGitHub() {
@@ -828,7 +858,9 @@
                         // fecha del archivo de cuentas por cobrar cargado (última modificación del Excel/CSV)
                         const fArch = archivo.lastModified ? new Date(archivo.lastModified) : null;
                         fechaCargaArchivo = isoDeFecha(fArch) || fechaCargaArchivo;
-                        mostrarFechaCarga(fechaCargaArchivo, registrosOriginales.length, 'archivo: ' + (archivo.name || ''));
+                        // se guarda en el equipo para conservar la cartera al reabrir, hasta cargar otro archivo
+                        guardarCarteraManual(fechaCargaArchivo, registrosOriginales, archivo.name);
+                        mostrarFechaCarga(fechaCargaArchivo, registrosOriginales.length, 'archivo cargado en este equipo', true);
                     }
                 };
 
