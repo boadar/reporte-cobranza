@@ -171,7 +171,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v73</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v74</span></h1>
                 <p>AnÃ¡lisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -823,6 +823,19 @@
                             return (idx === undefined) ? "" : (fila[idx] !== undefined ? fila[idx] : "");
                         };
 
+                        // Columnas extra para que cartera.json traiga TODO lo que el lector necesita:
+                        // Codigo (A "Cuenta de facturacion"), FechaFactura (C "Fecha"),
+                        // 25% de IVA en $ (X "Columna1") y Retencion en $ (Y "Ret").
+                        (function(){
+                            const q = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+                            const idxN = {}; for (const k in mapaColumnas) idxN[q(k)] = mapaColumnas[k];
+                            const buscar = (...nn) => { for (const n of nn) { const v = idxN[q(n)]; if (v !== undefined) return v; } return undefined; };
+                            if (mapaColumnas['Codigo'] === undefined) mapaColumnas['Codigo'] = buscar('Cuenta de facturacion', 'Codigo', 'Codigo Cliente');
+                            if (mapaColumnas['FechaFactura'] === undefined) mapaColumnas['FechaFactura'] = buscar('Fecha', 'Fecha Factura', 'FechaFactura');
+                            if (mapaColumnas['25% IVA'] === undefined) mapaColumnas['25% IVA'] = buscar('Columna1', '25% IVA', '25 IVA');
+                            if (mapaColumnas['Retencion'] === undefined) mapaColumnas['Retencion'] = buscar('Ret', 'Retencion');
+                        })();
+
                         registrosMapeados = [];
                         for (let f = indiceFilaEncabezados + 1; f < filasCrudasMatriz.length; f++) {
                             const filaCruda = filasCrudasMatriz[f];
@@ -842,7 +855,11 @@
                                 'Base': obtenerCelda(filaCruda, 'Base'),
                                 'IVA': obtenerCelda(filaCruda, 'IVA'),
                                 'Observacion': obtenerCelda(filaCruda, 'Observacion'),
-                                'Secretario de ventas': String(obtenerCelda(filaCruda, 'Secretario de ventas')).trim()
+                                'Secretario de ventas': String(obtenerCelda(filaCruda, 'Secretario de ventas')).trim(),
+                                'Codigo': String(obtenerCelda(filaCruda, 'Codigo')).trim(),
+                                'FechaFactura': obtenerCelda(filaCruda, 'FechaFactura'),
+                                '25% IVA': obtenerCelda(filaCruda, '25% IVA'),
+                                'Retencion': obtenerCelda(filaCruda, 'Retencion')
                             });
                         }
                     }

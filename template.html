@@ -1759,8 +1759,8 @@ async function bajarJson(nombre){
   }catch(e){return null;}
 }
 /* Convierte el cartera.json que publica el Control de Cobranza ({registros:[...]})
-   a la estructura FACTURAS. El codigo se resuelve por el nombre. OJO: este formato
-   no trae fecha de factura, tasa, IVA en Bs. ni 25%/retencion (esos van en 0). */
+   a la estructura FACTURAS. Si el cartera.json trae FechaFactura + 25% IVA/Retencion
+   (en $), se calcula la tasa del dia, el IVA en Bs y el 25%/retencion en Bs. */
 function carteraToFacturas(data){
   const regs=Array.isArray(data)?data:((data&&(data.registros||data.cartera||data.facturas))||[]);
   if(!Array.isArray(regs)||!regs.length)return null;
@@ -1771,7 +1771,7 @@ function carteraToFacturas(data){
     const nombre=String(gv(o,['Denominación social','Denominacion social','Cliente','Nombre','Nombre Cliente'])||'').trim();
     const factura=String(gv(o,['Numero de Factura','Número de Factura','Factura','N Factura'])||'').trim();
     if(!nombre&&!factura)continue;
-    let cod=String(gv(o,['Codigo','Código','codigo'])||'').trim();
+    let cod=String(gv(o,['Codigo','Código','Cuenta de facturación','codigo'])||'').trim();
     if(/^\d+$/.test(cod)&&cod.length<6)cod=('000000'+cod).slice(-6);
     if(cod&&!cods.has(cod))cod='';
     if(!cod)cod=idx[normCliName(nombre)]||'';
@@ -1780,8 +1780,16 @@ function carteraToFacturas(data){
     const venc=admDMY(gv(o,['Fecha de Ven','Vencimiento','Fecha de Vencimiento']));
     const base=admNum(gv(o,['Base'])),iva=admNum(gv(o,['IVA'])),total=admNum(gv(o,['Total Fac X Pagar','TotalPorPagar','Total por Pagar','Saldo']));
     const obs=String(gv(o,['Observacion','Observación','Obs'])||'').trim();
-    const x25=admNum(gv(o,['25% de IVA PENDIENTE'])),retp=admNum(gv(o,['RETENCION PENDIENTE','Retencion Pendiente']));
-    (fac[cod]=fac[cod]||[]).push({f:factura,t:tipo,v:venc,fd:'',tf:0,b:base||0,i:iva||0,ib:0,i25:0,p:total||0,o:obs,i25p:x25||0,rtp:retp||0});
+    // fecha de la factura -> tasa del dia -> IVA en Bs y 25% IVA Bs
+    const fiso=admISO(gv(o,['FechaFactura','Fecha']));
+    const tf=(fiso&&TASAS[fiso])?TASAS[fiso][0]:0;
+    const fd=fiso?fiso.split('-').reverse().join('/'):'';
+    const ib=(iva!=null&&tf)?Math.round(iva*tf*100)/100:0, i25=ib?Math.round(ib*25)/100:0;
+    // 25% de IVA y retencion PENDIENTES vienen en $ -> a Bs con la tasa de la factura
+    const x25=admNum(gv(o,['25% IVA','25% de IVA','25% de IVA PENDIENTE']));
+    const ret=admNum(gv(o,['Retencion','Retención','RETENCION PENDIENTE']));
+    const i25p=(x25!=null&&tf)?Math.round(x25*tf*100)/100:0, rtp=(ret!=null&&tf)?Math.round(ret*tf*100)/100:0;
+    (fac[cod]=fac[cod]||[]).push({f:factura,t:tipo,v:venc,fd:fd,tf:tf||0,b:base||0,i:iva||0,ib:ib,i25:i25,p:total||0,o:obs,i25p:i25p,rtp:rtp});
   }
   return Object.keys(fac).length?fac:null;
 }
