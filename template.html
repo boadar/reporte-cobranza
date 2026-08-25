@@ -274,8 +274,8 @@ table.ftbl .nc{color:var(--danger)}
       <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:8px;font-weight:500">Cuentas por cobrar</label>
       <div id="admFacturasEstado" class="usd" style="margin:0 0 12px"></div>
       <button class="btn btn-primary" onclick="document.getElementById('admFile').click()">ACTUALIZAR CUENTAS POR COBRAR</button>
-      <input type="file" id="admFile" accept=".xlsx" style="display:none" onchange="onAdminFile(event)">
-      <div class="hint" style="text-align:left;margin:10px 2px 0">Carga la plantilla <b>Plantilla-CxC.xlsx</b> con las facturas pendientes. Reemplaza toda la cartera: incluye <b>todas</b> las facturas por cobrar (una ya cobrada simplemente no se incluye).</div>
+      <input type="file" id="admFile" accept=".xlsx,.json" style="display:none" onchange="onAdminFile(event)">
+      <div class="hint" style="text-align:left;margin:10px 2px 0">Carga la <b>Plantilla-CxC.xlsx</b> o el archivo <b>cartera.json</b> (el mismo del historial de la otra app). Reemplaza toda la cartera. El <b>.xlsx</b> trae además la fecha de la factura, la tasa y el 25%/retención; el <b>.json</b> no trae esos datos.</div>
     </div>
     <div id="admResultado"></div>
     <div class="card">
@@ -1373,6 +1373,38 @@ async function leerFilasXlsx(file,hoja){
   if(!ws)return [];
   return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
 }
+/* Lee la cartera desde un .xlsx (Plantilla-CxC) o desde un .json de cartera
+   ({registros:[...]} de la otra app). Devuelve SIEMPRE filas en las posiciones fijas
+   que ya procesa onAdminFile, asi la logica de carga no cambia.
+   OJO: el JSON no trae Codigo ni FechaFactura (por eso no hay tasa/IVA Bs/25%/retencion). */
+let admFuenteJson=false;
+async function leerFilasAdmin(f){
+  const nombre=(f.name||'').toLowerCase();
+  admFuenteJson=nombre.endsWith('.json')||/json/.test(f.type||'');
+  if(!admFuenteJson)return leerFilasXlsx(f,'Facturas');
+  let data;try{data=JSON.parse(await f.text());}catch(e){throw new Error('El archivo JSON no es válido.');}
+  const regs=Array.isArray(data)?data:(data.registros||data.cartera||data.facturas||[]);
+  if(!Array.isArray(regs)||!regs.length)throw new Error('El JSON no tiene registros de cartera.');
+  const gv=function(o,keys){for(let i=0;i<keys.length;i++){const k=keys[i];if(o[k]!=null&&o[k]!=='')return o[k];}return '';};
+  const H=new Array(35).fill('');H[0]='Codigo';H[2]='FechaFactura';H[3]='Factura';H[4]='Tipo';H[13]='Cliente';H[19]='Vencimiento';H[21]='Base';H[22]='IVA';H[23]='25% de IVA PENDIENTE';H[24]='RETENCION PENDIENTE';H[25]='TotalPorPagar';H[34]='Observacion';
+  const filas=[H];
+  regs.forEach(function(o){
+    const row=new Array(35).fill('');
+    row[0]=gv(o,['Codigo','Código','codigo']);
+    row[3]=gv(o,['Numero de Factura','Número de Factura','Factura','N Factura']);
+    row[4]=gv(o,['Tipo de documento','Tipo']);
+    row[13]=gv(o,['Denominación social','Denominacion social','Cliente','Nombre','Nombre Cliente']);
+    row[19]=gv(o,['Fecha de Ven','Vencimiento','Fecha de Vencimiento']);
+    row[21]=gv(o,['Base']);
+    row[22]=gv(o,['IVA']);
+    row[23]=gv(o,['25% de IVA PENDIENTE']);
+    row[24]=gv(o,['RETENCION PENDIENTE','Retencion Pendiente']);
+    row[25]=gv(o,['Total Fac X Pagar','TotalPorPagar','Total por Pagar','Saldo']);
+    row[34]=gv(o,['Observacion','Observación','Obs']);
+    filas.push(row);
+  });
+  return filas;
+}
 const REP_HEAD=['Fecha','N Factura','Nombre Cliente','Tasa Fact','Base $','IVA $','TOTAL $','Base Original','IVA Fact','Total Bs. Fact','25% IVA','RET IVA','Forma de Pago','Moneda','Monto Bs','Fecha del pago','Tasa del pago','Moneda','Pago $','Diferencial','Observaciones'];
 function r2(n){return Math.round(n*100)/100;}
 /* Cada cobro genera 2 filas: la porcion aplicada a la Base y la aplicada al 25% del IVA.
@@ -1809,8 +1841,8 @@ async function onAdminFile(ev){
   const res=document.getElementById('admResultado');
   res.innerHTML='<div class="card"><div class="usd" style="margin:0">Procesando la plantilla…</div></div>';
   try{
-    const filas=await leerFilasXlsx(f,'Facturas');
-    if(!filas.length)throw new Error('La plantilla está vacía o no tiene la hoja «Facturas».');
+    const filas=await leerFilasAdmin(f);
+    if(!filas.length)throw new Error('El archivo está vacío o no tiene datos de cartera.');
     // columnas FIJAS por posición (A=0). Solo se leen estas; el resto de la plantilla se ignora.
     // A=Codigo C=FechaFactura D=Factura E=Tipo N=Cliente T=Vencimiento V=Base W=IVA Z=TotalPorPagar AI=Observacion
     const POS={codigo:0,fecha:2,factura:3,tipo:4,cliente:13,venc:19,base:21,iva:22,x25p:23,retp:24,total:25,obs:34};
@@ -1863,7 +1895,8 @@ async function onAdminFile(ev){
     let h='<div class="card"><div style="font-weight:600;margin-bottom:6px">Plantilla procesada</div>'+
       '<div class="usd" style="margin:0">'+nFac+' facturas · '+Object.keys(nuevo).length+' clientes'+(sinTasa?' · '+sinTasa+' sin tasa':'')+'</div>'+
       (nuevosCli.length?'<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; <b>'+nuevosCli.length+' cliente(s) nuevo(s)</b> agregado(s) al maestro (código de la columna A):<br>'+nuevosCli.slice(0,10).map(function(d){return esc(d[0]+' — '+d[1]);}).join('<br>')+(nuevosCli.length>10?'<br>…y '+(nuevosCli.length-10)+' más':'')+'</div>':'')+
-      '<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; Cuentas por cobrar actualizadas en este equipo.</div>';
+      '<div style="color:var(--ok);font-size:13px;margin-top:8px">&#10003; Cuentas por cobrar actualizadas en este equipo.</div>'+
+      (admFuenteJson?'<div style="color:var(--mut);font-size:12px;margin-top:8px">Cargado desde JSON: sin fecha de factura, tasa, IVA en Bs. ni 25%/retención (esos datos solo vienen en la Plantilla-CxC.xlsx). El código se resolvió por el nombre.</div>':'');
     if(sinList.length){
       h+='<div style="color:var(--danger);font-size:12px;margin-top:8px"><b>'+sinList.length+' cliente(s) sin código</b> (no entraron: no traen código en la columna A y el nombre no coincide con el maestro):<br>'+sinList.slice(0,15).map(esc).join('<br>')+(sinList.length>15?'<br>…y '+(sinList.length-15)+' más':'')+'</div>';
       h+='<button class="btn btn-ghost" style="margin-top:10px" onclick="descargarPlantillaClientes(admSinCod)">Descargar estos para la Plantilla-Clientes</button>';
