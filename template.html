@@ -1758,8 +1758,35 @@ async function bajarJson(nombre){
     return (j&&typeof j==='object')?j:null;
   }catch(e){return null;}
 }
+/* Convierte el cartera.json que publica el Control de Cobranza ({registros:[...]})
+   a la estructura FACTURAS. El codigo se resuelve por el nombre. OJO: este formato
+   no trae fecha de factura, tasa, IVA en Bs. ni 25%/retencion (esos van en 0). */
+function carteraToFacturas(data){
+  const regs=Array.isArray(data)?data:((data&&(data.registros||data.cartera||data.facturas))||[]);
+  if(!Array.isArray(regs)||!regs.length)return null;
+  const idx=getCliIdx(),cods=getCliCods();
+  const gv=function(o,keys){for(let i=0;i<keys.length;i++){const k=keys[i];if(o[k]!=null&&o[k]!=='')return o[k];}return '';};
+  const fac={};
+  for(let n=0;n<regs.length;n++){const o=regs[n];
+    const nombre=String(gv(o,['Denominación social','Denominacion social','Cliente','Nombre','Nombre Cliente'])||'').trim();
+    const factura=String(gv(o,['Numero de Factura','Número de Factura','Factura','N Factura'])||'').trim();
+    if(!nombre&&!factura)continue;
+    let cod=String(gv(o,['Codigo','Código','codigo'])||'').trim();
+    if(/^\d+$/.test(cod)&&cod.length<6)cod=('000000'+cod).slice(-6);
+    if(cod&&!cods.has(cod))cod='';
+    if(!cod)cod=idx[normCliName(nombre)]||'';
+    if(!cod)continue;
+    const tipo=String(gv(o,['Tipo de documento','Tipo'])||'').trim()||'Factura';
+    const venc=admDMY(gv(o,['Fecha de Ven','Vencimiento','Fecha de Vencimiento']));
+    const base=admNum(gv(o,['Base'])),iva=admNum(gv(o,['IVA'])),total=admNum(gv(o,['Total Fac X Pagar','TotalPorPagar','Total por Pagar','Saldo']));
+    const obs=String(gv(o,['Observacion','Observación','Obs'])||'').trim();
+    const x25=admNum(gv(o,['25% de IVA PENDIENTE'])),retp=admNum(gv(o,['RETENCION PENDIENTE','Retencion Pendiente']));
+    (fac[cod]=fac[cod]||[]).push({f:factura,t:tipo,v:venc,fd:'',tf:0,b:base||0,i:iva||0,ib:0,i25:0,p:total||0,o:obs,i25p:x25||0,rtp:retp||0});
+  }
+  return Object.keys(fac).length?fac:null;
+}
 async function refrescarDatos(){
-  const [tas,cli,fac]=await Promise.all([bajarJson('tasas.json'),bajarJson('clientes.json'),bajarJson('facturas.json')]);
+  const [tas,cli,fac,cart]=await Promise.all([bajarJson('tasas.json'),bajarJson('clientes.json'),bajarJson('facturas.json'),bajarJson('cartera.json')]);
   let cambio=false;
   // tasas: se mezclan los dias nuevos con los que ya trae la app
   if(tas){
@@ -1775,11 +1802,13 @@ async function refrescarDatos(){
     if(cli.length!==CLIENTES.length){cambio=true;}
     CLIENTES=cli;cliIdx=null;cliCods=null;   // se recalcula el indice de nombres
   }
-  // facturas: se reemplaza la cartera completa (una factura cobrada desaparece del archivo)
+  // facturas.json (derivado del xlsx) es la base
   if(fac && !Array.isArray(fac) && Object.keys(fac).length>0){
     FACTURAS=fac;cambio=true;
   }
-  // si en este equipo un administrador cargo cartera o clientes manuales, mandan sobre el servidor
+  // cartera.json (la que publica el Control de Cobranza) es la cartera VIGENTE: manda sobre facturas.json
+  if(cart){const cf=carteraToFacturas(cart);if(cf){FACTURAS=cf;cambio=true;}}
+  // si en este equipo un administrador cargo cartera o clientes manuales, mandan sobre todo
   if(aplicarFacturasAdmin())cambio=true;
   if(aplicarClientesAdmin())cambio=true;
   if(cambio){
