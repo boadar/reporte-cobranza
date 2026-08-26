@@ -179,14 +179,14 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v77</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v78</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
             <input type="file" id="inputTasasOculto" accept=".xlsx, .xls, .csv" style="display: none;" onchange="procesarArchivoTasas(event)">
             
             <div id="zonaBotonesExportacion" class="contenedor-botones-header">
-                <button id="btnCargarTasas" onclick="document.getElementById('inputTasasOculto').click()" class="btn-snapshot btn-snapshot-amber">🪙 CARGAR TASAS DE CAMBIO</button>
+                <button id="btnCargarTasas" onclick="iniciarCargaTasas()" class="btn-snapshot btn-snapshot-amber" title="Obtiene la tasa BCV de hoy automáticamente (USD y EUR) y la sube a GitHub, o carga las tasas desde un archivo.">🪙 CARGAR TASAS DE CAMBIO</button>
                 <div class="fila-botones-exportacion">
                     <button id="btnGuardarVendedor" onclick="guardarUnicoVendedorActual()" class="btn-snapshot">📥 GUARDAR VENDEDOR</button>
 <button id="btnGuardarTodos" onclick="guardarTodosLosVendedoresMasivo()" class="btn-snapshot btn-snapshot-blue">📦 COMPRIMIR (.ZIP)</button>
@@ -642,6 +642,127 @@
             } catch (e) {
                 console.error(e);
                 if (confirm('No se pudo cargar en GitHub:\n' + (e.message || e) + '\n\n¿Descargar el cartera.json para subirlo a mano?')) generarCarteraJson();
+            } finally {
+                if (btn) { btn.textContent = etiqueta; btn.disabled = false; }
+            }
+        }
+
+        // ===== CARGA DE TASAS BCV (automática o desde archivo) =====
+        // Al pulsar "CARGAR TASAS DE CAMBIO" se pregunta primero si se quiere de forma automática.
+        // Automático = consulta la tasa BCV de HOY (USD y EUR) en una fuente pública y la sube a
+        // tasas.json en GitHub, igual que la rutina diaria pero SIN necesidad de Claude. Cancelar
+        // = cargar las tasas desde un archivo Excel/CSV (comportamiento de siempre).
+        function iniciarCargaTasas() {
+            if (confirm('¿Obtener la tasa BCV de HOY automáticamente desde internet?\n\n• Aceptar = automático (consulta el BCV y la sube a GitHub para todas las apps)\n• Cancelar = cargar las tasas desde un archivo Excel/CSV')) {
+                cargarTasaBcvAutomatica();
+            } else {
+                document.getElementById('inputTasasOculto').click();
+            }
+        }
+
+        // Reutiliza el token de GitHub guardado en este equipo (el mismo de la cartera). Si no hay,
+        // lo pide una vez. Devuelve null si el usuario no lo da.
+        function obtenerTokenGitHub() {
+            let token = (localStorage.getItem('ghToken') || '').trim();
+            if (!token) {
+                token = (prompt('Pega tu TOKEN de GitHub (fine-grained) con permiso "Contents: Read and write" en el repo ' + GH_REPO + '.\n\nCrealo en GitHub > Settings > Developer settings > Fine-grained tokens.\nSe guarda SOLO en este equipo; no uses computadoras compartidas.') || '').trim();
+                if (!token) return null;
+                localStorage.setItem('ghToken', token);
+            }
+            return token;
+        }
+
+        // Consulta la tasa BCV oficial (USD y EUR) en una fuente pública con CORS. Principal:
+        // dolarapi (endpoints separados de USD y EUR, y trae la fecha-valor del BCV). Respaldo:
+        // pydolarve. Devuelve { usd, eur, fuente, fechaApi }. Lanza error si ninguna responde.
+        async function obtenerBcvHoy() {
+            try {
+                const [ru, re] = await Promise.all([
+                    fetch('https://ve.dolarapi.com/v1/dolares/oficial?_=' + Date.now(), { cache: 'no-store' }),
+                    fetch('https://ve.dolarapi.com/v1/euros/oficial?_=' + Date.now(), { cache: 'no-store' })
+                ]);
+                if (ru.ok) {
+                    const ju = await ru.json();
+                    const usd = Number(ju && (ju.promedio || ju.venta || ju.compra));
+                    let eur = null;
+                    if (re.ok) { const je = await re.json(); const e = Number(je && (je.promedio || je.venta || je.compra)); if (e && !isNaN(e)) eur = e; }
+                    const fechaApi = ju && ju.fechaActualizacion ? String(ju.fechaActualizacion).slice(0, 10) : '';
+                    if (usd && !isNaN(usd)) return { usd: usd, eur: eur, fuente: 'dolarapi (BCV oficial)', fechaApi: fechaApi };
+                }
+            } catch (_) { /* se intenta la fuente alterna */ }
+            const r = await fetch('https://pydolarve.org/api/v1/dollar?page=bcv&_=' + Date.now(), { cache: 'no-store' });
+            if (!r.ok) throw new Error('No hay respuesta de las fuentes de tasas BCV (revisa tu conexión a internet).');
+            const j = await r.json();
+            const m = (j && j.monitors) || {};
+            const usd = m.usd && Number(m.usd.price);
+            const eur = m.eur && Number(m.eur.price);
+            if (!usd || isNaN(usd)) throw new Error('No se pudo leer la tasa USD del BCV.');
+            return { usd: usd, eur: (eur && !isNaN(eur)) ? eur : null, fuente: 'pydolarve (BCV)', fechaApi: '' };
+        }
+
+        // Mezcla las fechas nuevas en tasas.json de GitHub (sin borrar el histórico) y lo sube.
+        // Formato del archivo: { "AAAA-MM-DD": [usd, eur], ... }. 'nuevas' tiene ese mismo formato.
+        async function subirTasasAGitHub(nuevas) {
+            const token = obtenerTokenGitHub();
+            if (!token) throw new Error('Se necesita un token de GitHub para subir la tasa.');
+            const apiUrl = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/tasas.json';
+            const cab = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+            // 1) Traer tasas.json actual (contenido + sha) para no perder el histórico.
+            let sha = undefined, base = {};
+            const resGet = await fetch(apiUrl + '?ref=' + GH_BRANCH + '&_=' + Date.now(), { headers: cab, cache: 'no-store' });
+            if (resGet.status === 401) { localStorage.removeItem('ghToken'); throw new Error('Token inválido. Vuelve a intentar y pega un token válido.'); }
+            if (resGet.ok) {
+                const j = await resGet.json();
+                sha = j.sha;
+                try { base = JSON.parse(decodeURIComponent(escape(atob((j.content || '').replace(/\n/g, ''))))) || {}; } catch (_) { base = {}; }
+            }
+            // 2) Mezclar (las nuevas pisan) y subir.
+            const merged = Object.assign({}, base, nuevas);
+            const contenidoB64 = btoa(unescape(encodeURIComponent(JSON.stringify(merged))));
+            const fechas = Object.keys(nuevas).join(', ');
+            const resPut = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
+                body: JSON.stringify({ message: 'tasas BCV: ' + fechas, content: contenidoB64, sha: sha, branch: GH_BRANCH })
+            });
+            if (resPut.status === 401 || resPut.status === 403) { localStorage.removeItem('ghToken'); throw new Error('El token no tiene permiso de escritura (Contents: write) en el repo. Detalle: ' + (await resPut.text()).slice(0, 140)); }
+            if (!resPut.ok) throw new Error('GitHub respondió ' + resPut.status + ': ' + (await resPut.text()).slice(0, 180));
+        }
+
+        // Flujo automático: consulta el BCV de hoy, confirma con el usuario, lo sube a GitHub y lo
+        // aplica en la sesión actual. Si hoy es lunes, rellena sábado y domingo previos con la misma
+        // tasa (igual que add_tasa.py --fin-de-semana). Si algo falla, ofrece cargar desde archivo.
+        async function cargarTasaBcvAutomatica() {
+            const btn = document.getElementById('btnCargarTasas');
+            const etiqueta = btn ? btn.textContent : '';
+            if (btn) { btn.textContent = '🪙 Consultando BCV…'; btn.disabled = true; }
+            try {
+                const t = await obtenerBcvHoy();
+                // Fecha: la fecha-valor que reporta el BCV; si no viene, la de hoy (local).
+                const iso = (t.fechaApi && /^\d{4}-\d{2}-\d{2}$/.test(t.fechaApi)) ? t.fechaApi : isoDeFecha(new Date());
+                const [Y, M, D] = iso.split('-').map(Number);
+                const fecha = new Date(Y, M - 1, D); // medianoche local de esa fecha
+                const txtEUR = t.eur != null ? ('Bs ' + t.eur.toFixed(4)) : '(no disponible en esta fuente)';
+                if (!confirm('Tasa BCV para ' + fmtFechaISO(iso) + '  —  fuente: ' + t.fuente + '\n\nUSD:  Bs ' + t.usd.toFixed(4) + '\nEUR:  ' + txtEUR + '\n\n¿Guardar esta tasa y subirla a GitHub para todas las apps?')) {
+                    return;
+                }
+                const nuevas = {};
+                nuevas[iso] = [t.usd, t.eur];
+                if (fecha.getDay() === 1) { // lunes: sábado y domingo previos con la misma tasa
+                    const sab = new Date(fecha); sab.setDate(fecha.getDate() - 2);
+                    const dom = new Date(fecha); dom.setDate(fecha.getDate() - 1);
+                    nuevas[isoDeFecha(sab)] = [t.usd, t.eur];
+                    nuevas[isoDeFecha(dom)] = [t.usd, t.eur];
+                }
+                await subirTasasAGitHub(nuevas);
+                for (const k in nuevas) tasasPorFecha[k] = Number(nuevas[k][0]); // la app usa el USD
+                if (typeof filtrarDatos === 'function') filtrarDatos();
+                alert('✅ Tasa BCV guardada y subida a GitHub:\n' + fmtFechaISO(iso) + '  ·  USD Bs ' + t.usd.toFixed(4) + (t.eur != null ? ('  ·  EUR Bs ' + t.eur.toFixed(4)) : '') + (fecha.getDay() === 1 ? '\n(sábado y domingo previos con la misma tasa)' : '') + '\n\nTodas las apps la tomarán al abrirse (puede tardar 1-2 min en publicarse).');
+            } catch (e) {
+                console.error(e);
+                if (confirm('No se pudo obtener/subir la tasa automáticamente:\n' + (e.message || e) + '\n\n¿Cargar las tasas desde un archivo (Excel/CSV) en su lugar?')) {
+                    document.getElementById('inputTasasOculto').click();
+                }
             } finally {
                 if (btn) { btn.textContent = etiqueta; btn.disabled = false; }
             }
