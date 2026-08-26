@@ -168,10 +168,18 @@
 </head>
 <body>
 
+    <div id="overlayProcesando" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;padding:22px 28px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font-family:sans-serif;font-size:15px;color:#1e293b;display:flex;align-items:center;gap:14px;">
+        <span style="width:22px;height:22px;border:3px solid #cbd5e1;border-top-color:#2563eb;border-radius:50%;display:inline-block;animation:spinProc .8s linear infinite;"></span>
+        <span id="overlayProcesandoTxt">Procesando el archivo…</span>
+      </div>
+    </div>
+    <style>@keyframes spinProc{to{transform:rotate(360deg)}}</style>
+
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v76</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v77</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -513,6 +521,12 @@
 
         // La cartera cargada a mano se guarda en el equipo (localStorage) y se conserva al reabrir,
         // hasta que se cargue otro archivo o se quite para volver a la publicada en GitHub.
+        function mostrarProcesando(mostrar, texto) {
+            const el = document.getElementById('overlayProcesando');
+            if (!el) return;
+            if (texto) { const t = document.getElementById('overlayProcesandoTxt'); if (t) t.textContent = texto; }
+            el.style.display = mostrar ? 'flex' : 'none';
+        }
         function guardarCarteraManual(cargado, registros, nombre) {
             try { localStorage.setItem('carteraManual', JSON.stringify({ cargado: cargado || '', registros: registros, nombre: nombre || '', ts: new Date().toISOString() })); }
             catch (e) { alert('No se pudo guardar la cartera en este equipo (memoria llena). Se usará solo en esta sesión.'); }
@@ -800,6 +814,7 @@
                             libro = XLSX.read(datosBinarios, { type: 'array', cellDates: true });
                         }
                     } catch(err) {
+                        mostrarProcesando(false);
                         alert("Error local al procesar la estructura del archivo.");
                         return;
                     }
@@ -928,13 +943,15 @@
                         guardarCarteraManual(fechaCargaArchivo, registrosOriginales, archivo.name);
                         mostrarFechaCarga(fechaCargaArchivo, registrosOriginales.length, 'archivo cargado en este equipo', true);
                     }
+                    mostrarProcesando(false);
                 };
 
-                if (esCSV) {
-                    lector.readAsText(archivo, 'UTF-8');
-                } else {
-                    lector.readAsArrayBuffer(archivo);
-                }
+                // Muestra "Procesando…" y da un respiro para que se pinte antes de la carga pesada.
+                mostrarProcesando(true, 'Procesando el archivo… (puede tardar unos segundos)');
+                setTimeout(function () {
+                    if (esCSV) { lector.readAsText(archivo, 'UTF-8'); }
+                    else { lector.readAsArrayBuffer(archivo); }
+                }, 30);
             });
         }
 
