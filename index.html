@@ -179,7 +179,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v78</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v79</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -194,6 +194,8 @@
                 <button id="btnGenerarCartera" onclick="cargarCarteraEnGitHub()" class="btn-snapshot" style="background-color:#475569;border-color:#334155;" title="Sube la cartera actual (cartera.json) directo a GitHub, para que todas las apps la reciban automáticamente. Pide tu token de GitHub la primera vez.">☁️ CARGAR CARTERA EN GITHUB</button>
             </div>
         </header>
+
+        <div id="avisoTasasFaltantes" class="no-print" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:8px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-size:0.8rem;font-weight:600;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap"></div>
 
         <div class="barra-herramientas no-print">
             <div id="contenedorCampoArchivo" class="campo-control">
@@ -472,6 +474,7 @@
             conectarEventoInput();
             if (registrosOriginales.length > 0) {
                 inicializarInterfazConDatos();
+                traerTasasDeGitHub().then(revisarTasasFaltantes); // tasas frescas + aviso de faltantes
             } else if (typeof snapshotDatosInyectados === 'undefined') {
                 const local = leerCarteraManual();
                 if (local) {
@@ -483,6 +486,7 @@
                     historialTransacciones = [];
                     inicializarInterfazConDatos();
                     mostrarFechaCarga(fechaCargaArchivo, local.registros.length, 'archivo cargado en este equipo', true);
+                    traerTasasDeGitHub().then(revisarTasasFaltantes); // tasas frescas + aviso de faltantes
                 } else {
                     // si no hay archivo local guardado, se trae la cartera publicada en GitHub.
                     cargarDatosDesdeGitHub();
@@ -541,8 +545,8 @@
             location.reload();
         }
 
-        async function cargarDatosDesdeGitHub() {
-            // Tasas: se mezclan con las que ya haya (formato del repo: { "2026-07-16": [usd, eur] }).
+        // Trae tasas.json del repo y las mezcla en tasasPorFecha (formato del repo: { "2026-07-16": [usd, eur] }).
+        async function traerTasasDeGitHub() {
             try {
                 const rt = await fetch(TASAS_URL + '?t=' + Date.now(), { cache: 'no-store' });
                 if (rt.ok) {
@@ -556,6 +560,11 @@
                     }
                 }
             } catch (e) { /* sin señal: se podrán cargar tasas a mano */ }
+        }
+
+        async function cargarDatosDesdeGitHub() {
+            await traerTasasDeGitHub();
+            revisarTasasFaltantes();
 
             // Cartera: array de facturas en el formato de esta app (lo que produce cargar el Excel).
             try {
@@ -660,6 +669,58 @@
             }
         }
 
+        // Revisa qué días HÁBILES (lun-vie) no tienen tasa, desde la última tasa cargada hasta hoy,
+        // y muestra un aviso. La fuente automática solo da la tasa del día; los días anteriores se
+        // completan con archivo o add_tasa.py (se avisa en el mensaje).
+        function revisarTasasFaltantes() {
+            try {
+                const claves = Object.keys(tasasPorFecha || {}).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+                if (!claves.length) return; // sin tasas cargadas: no molestar
+                const maxIso = claves.sort().slice(-1)[0];
+                const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+                const [Y, M, D] = maxIso.split('-').map(Number);
+                const cur = new Date(Y, M - 1, D);
+                cur.setDate(cur.getDate() + 1); // desde el día siguiente a la última tasa
+                const faltan = [];
+                let guardia = 0;
+                while (cur <= hoy && guardia < 400) {
+                    const dow = cur.getDay();
+                    if (dow >= 1 && dow <= 5) { // solo días hábiles
+                        const iso = isoDeFecha(cur);
+                        if (!tasasPorFecha[iso]) faltan.push(iso);
+                    }
+                    cur.setDate(cur.getDate() + 1);
+                    guardia++;
+                }
+                if (faltan.length) mostrarAvisoTasasFaltantes(faltan);
+                else ocultarAvisoTasas();
+            } catch (e) { /* no crítico */ }
+        }
+
+        function mostrarAvisoTasasFaltantes(faltan) {
+            const el = document.getElementById('avisoTasasFaltantes');
+            if (!el) return;
+            const hoyIso = isoDeFecha(new Date());
+            const hoyFalta = faltan.indexOf(hoyIso) !== -1;
+            const previos = faltan.filter(f => f !== hoyIso);
+            const n = faltan.length;
+            let lista = (n <= 6) ? faltan.map(fmtFechaISO).join(', ') : (fmtFechaISO(faltan[0]) + ' … ' + fmtFechaISO(faltan[n - 1]));
+            let msg = '⚠️ Tasas BCV: falta' + (n > 1 ? 'n ' + n + ' días hábiles' : ' 1 día hábil') + ' por cargar (' + lista + ').';
+            if (previos.length) msg += ' Los días anteriores a hoy se completan con archivo (Excel/CSV) o con add_tasa.py.';
+            const estiloBtn = 'padding:4px 10px;border-radius:6px;border:1px solid #b45309;background:#f59e0b;color:#3f2d00;font-weight:700;font-size:0.75rem;cursor:pointer';
+            const estiloX = 'padding:4px 9px;border-radius:6px;border:1px solid #d1a04a;background:transparent;color:#92400e;font-weight:700;font-size:0.8rem;cursor:pointer';
+            let acciones = '';
+            if (hoyFalta) acciones += '<button onclick="cargarTasaBcvAutomatica()" style="' + estiloBtn + '">Cargar tasa de hoy</button>';
+            acciones += '<button onclick="ocultarAvisoTasas()" title="Ocultar aviso" style="' + estiloX + '">✕</button>';
+            el.innerHTML = '<span style="flex:1;min-width:220px">' + msg + '</span><span style="display:flex;gap:8px;flex-shrink:0">' + acciones + '</span>';
+            el.style.display = 'flex';
+        }
+
+        function ocultarAvisoTasas() {
+            const el = document.getElementById('avisoTasasFaltantes');
+            if (el) el.style.display = 'none';
+        }
+
         // Reutiliza el token de GitHub guardado en este equipo (el mismo de la cartera). Si no hay,
         // lo pide una vez. Devuelve null si el usuario no lo da.
         function obtenerTokenGitHub() {
@@ -757,6 +818,7 @@
                 await subirTasasAGitHub(nuevas);
                 for (const k in nuevas) tasasPorFecha[k] = Number(nuevas[k][0]); // la app usa el USD
                 if (typeof filtrarDatos === 'function') filtrarDatos();
+                revisarTasasFaltantes(); // refresca/oculta el aviso de días faltantes
                 alert('✅ Tasa BCV guardada y subida a GitHub:\n' + fmtFechaISO(iso) + '  ·  USD Bs ' + t.usd.toFixed(4) + (t.eur != null ? ('  ·  EUR Bs ' + t.eur.toFixed(4)) : '') + (fecha.getDay() === 1 ? '\n(sábado y domingo previos con la misma tasa)' : '') + '\n\nTodas las apps la tomarán al abrirse (puede tardar 1-2 min en publicarse).');
             } catch (e) {
                 console.error(e);
