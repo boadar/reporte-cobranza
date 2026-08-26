@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -171,19 +171,19 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v74</span></h1>
-                <p>AnÃ¡lisis interno en tiempo real sin transferencia de datos.</p>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v75</span></h1>
+                <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
             <input type="file" id="inputTasasOculto" accept=".xlsx, .xls, .csv" style="display: none;" onchange="procesarArchivoTasas(event)">
             
             <div id="zonaBotonesExportacion" class="contenedor-botones-header">
-                <button id="btnCargarTasas" onclick="document.getElementById('inputTasasOculto').click()" class="btn-snapshot btn-snapshot-amber">ðŸª™ CARGAR TASAS DE CAMBIO</button>
+                <button id="btnCargarTasas" onclick="document.getElementById('inputTasasOculto').click()" class="btn-snapshot btn-snapshot-amber">🪙 CARGAR TASAS DE CAMBIO</button>
                 <div class="fila-botones-exportacion">
-                    <button id="btnGuardarVendedor" onclick="guardarUnicoVendedorActual()" class="btn-snapshot">ðŸ“¥ GUARDAR VENDEDOR</button>
-<button id="btnGuardarTodos" onclick="guardarTodosLosVendedoresMasivo()" class="btn-snapshot btn-snapshot-blue">ðŸ“¦ COMPRIMIR (.ZIP)</button>
+                    <button id="btnGuardarVendedor" onclick="guardarUnicoVendedorActual()" class="btn-snapshot">📥 GUARDAR VENDEDOR</button>
+<button id="btnGuardarTodos" onclick="guardarTodosLosVendedoresMasivo()" class="btn-snapshot btn-snapshot-blue">📦 COMPRIMIR (.ZIP)</button>
                 </div>
-                <button id="btnGenerarCartera" onclick="generarCarteraJson()" class="btn-snapshot" style="background-color:#475569;border-color:#334155;" title="Descarga la cartera actual como cartera.json para publicarla en GitHub y que todos la reciban automÃ¡ticamente">ðŸ’¾ GENERAR cartera.json (publicar)</button>
+                <button id="btnGenerarCartera" onclick="generarCarteraJson()" class="btn-snapshot" style="background-color:#475569;border-color:#334155;" title="Descarga la cartera actual como cartera.json para publicarla en GitHub y que todos la reciban automáticamente">💾 GENERAR cartera.json (publicar)</button>
             </div>
         </header>
 
@@ -197,16 +197,16 @@
             <div id="contenedorCampoEstatus" class="campo-control-ajustado">
                 <label>2. Filtrar por Estatus</label>
                 <select id="selectEstatus" onchange="filtrarDatos()" disabled style="cursor: not-allowed;">
-                    <option value="TODO">ðŸ“‚ VER: Todo</option>
-                    <option value="PENDIENTE" selected>â³ Solo PENDIENTE</option>
-                    <option value="PAGADO">âœ… Solo PAGADO</option>
+                    <option value="TODO">📂 VER: Todo</option>
+                    <option value="PENDIENTE" selected>⏳ Solo PENDIENTE</option>
+                    <option value="PAGADO">✅ Solo PAGADO</option>
                 </select>
             </div>
 
             <div id="contenedorCampoSecretario" class="campo-control-ajustado">
                 <label>3. Secretario de Ventas</label>
                 <select id="selectSecretario" onchange="filtrarDatos()" disabled style="cursor: not-allowed;">
-                    <option value="TODO">ðŸ‘¤ [ TODOS ]</option>
+                    <option value="TODO">👤 [ TODOS ]</option>
                 </select>
             </div>
 
@@ -214,15 +214,15 @@
                 <label id="lblBuscarCliente">4. Buscar Cliente</label>
                 <div class="grupo-busqueda-boton">
                     <input type="text" id="inputBusqueda" oninput="filtrarDatos()" disabled placeholder="Cargue archivo..." style="cursor: not-allowed;"/>
-                    <button id="btnCobranza" onclick="ejecutarReportarCobranza()" class="btn-reportar-cobranza">ðŸ’° Reportar Cobranza</button>
-                    <a href="comprobante.html" class="btn-ocr-comprobante" onclick="return reportarConComprobante(event)" title="Abre el lector de comprobantes (foto/PDF con OCR)">ðŸ“¸ Reportar con Comprobante</a>
+                    <button id="btnCobranza" onclick="ejecutarReportarCobranza()" class="btn-reportar-cobranza">💰 Reportar Cobranza</button>
+                    <a href="comprobante.html" class="btn-ocr-comprobante" onclick="return reportarConComprobante(event)" title="Abre el lector de comprobantes (foto/PDF con OCR)">📸 Reportar con Comprobante</a>
                 </div>
             </div>
         </div>
 
         <div class="contenedor-filtros-fecha no-print">
             <div class="bloque-botones-fecha">
-                <label>AÃ±os:</label>
+                <label>Años:</label>
                 <div id="contenedorAniosBotones" class="grupo-botones">
                     <span style="color:#94a3b8; font-size:0.75rem; font-style:italic;">Cargue un archivo...</span>
                 </div>
@@ -247,14 +247,14 @@
             </div>
 
             <div style="margin-left: auto;">
-                <button id="btnLimpiarFechas" onclick="limpiarFiltrosFecha()" class="btn-clear-date btn-clear-disabled" disabled>âŒ Limpiar Fechas</button>
+                <button id="btnLimpiarFechas" onclick="limpiarFiltrosFecha()" class="btn-clear-date btn-clear-disabled" disabled>❌ Limpiar Fechas</button>
             </div>
         </div>
 
         <div id="areaCapturaReporte">
             
             <div id="resumenSuperior" class="hidden">
-                <h2 style="font-size: 0.95rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.5rem 0;">ðŸ“Š Resumen de Cobranza</h2>
+                <h2 style="font-size: 0.95rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.5rem 0;">📊 Resumen de Cobranza</h2>
                 <div class="bloque-resumen-unico">
                     <div class="caja-resumen bg-blue-box">
                         <span class="caja-resumen-titulo" style="color: #93c5fd;">Total Facturas</span>
@@ -272,7 +272,7 @@
                     </div>
 
                     <div class="caja-resumen bg-emerald-box">
-                        <span class="caja-resumen-titulo" style="color: #6ee7b7;">Notas de CrÃ©dito</span>
+                        <span class="caja-resumen-titulo" style="color: #6ee7b7;">Notas de Crédito</span>
                         <h3 id="sumaSuperiorNC" class="caja-resumen-monto">$ 0,00</h3>
                     </div>
 
@@ -284,7 +284,7 @@
                 </div>
 
                 <div class="no-print" style="margin-bottom: 0.5rem;">
-                    <button onclick="window.print()" class="btn-print">ðŸ’¾ Guardar Reporte como PDF / Imprimir</button>
+                    <button onclick="window.print()" class="btn-print">💾 Guardar Reporte como PDF / Imprimir</button>
                 </div>
             </div>
 
@@ -292,7 +292,7 @@
                 
                 <div>
                     <div class="tabla-header-flex th-rose">
-                        <span>â›” Facturas Vencidas</span>
+                        <span>⛔ Facturas Vencidas</span>
                         <span id="badgeCountFacturasVencidas" class="count-badge" style="background-color:#e11d48;">0</span>
                     </div>
                     <div class="tabla-contenedor">
@@ -300,12 +300,12 @@
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
-                                    <th class="text-center">NÂ° Factura</th>
+                                    <th class="text-center">N° Factura</th>
                                     <th class="text-center">Vencimiento</th>
                                     <th class="text-center">Estatus</th>
                                     <th class="text-right">Monto Base</th>
                                     <th class="text-right">IVA</th>
-                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">ðŸ’° Por Pagar</th>
+                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">💰 Por Pagar</th>
                                 </tr>
                             </thead>
                             <tbody id="cuerpoFacturasVencidas"></tbody>
@@ -315,7 +315,7 @@
 
                 <div>
                     <div class="tabla-header-flex th-sky">
-                        <span>ðŸ—“ï¸ Facturas Por Vencer</span>
+                        <span>🗓️ Facturas Por Vencer</span>
                         <span id="badgeCountFacturasPorVencer" class="count-badge" style="background-color:#0284c7;">0</span>
                     </div>
                     <div class="tabla-contenedor">
@@ -323,12 +323,12 @@
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
-                                    <th class="text-center">NÂ° Factura</th>
+                                    <th class="text-center">N° Factura</th>
                                     <th class="text-center">Vencimiento</th>
                                     <th class="text-center">Estatus</th>
                                     <th class="text-right">Monto Base</th>
                                     <th class="text-right">IVA</th>
-                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">ðŸ’° Por Pagar</th>
+                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">💰 Por Pagar</th>
                                 </tr>
                             </thead>
                             <tbody id="cuerpoFacturasPorVencer"></tbody>
@@ -338,7 +338,7 @@
 
                 <div>
                     <div class="tabla-header-flex th-emerald">
-                        <span>ðŸ’³ Listado de Notas de CrÃ©dito</span>
+                        <span>💳 Listado de Notas de Crédito</span>
                         <span id="badgeCountNC" class="count-badge-emerald">0</span>
                     </div>
                     <div class="tabla-contenedor">
@@ -346,7 +346,7 @@
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
-                                    <th class="text-center">NÂ° Documento</th>
+                                    <th class="text-center">N° Documento</th>
                                     <th class="text-center">Vencimiento</th>
                                     <th class="text-center">Estatus</th>
                                     <th class="text-right">Monto</th>
@@ -359,7 +359,7 @@
 
                 <div>
                     <div class="tabla-header-flex th-amber">
-                        <span>ðŸ“‚ Documentos Pendientes (Saldo Cero / Ajustes)</span>
+                        <span>📂 Documentos Pendientes (Saldo Cero / Ajustes)</span>
                         <span id="badgeCountPendientes" class="count-badge-amber">0</span>
                     </div>
                     <div class="tabla-contenedor">
@@ -367,10 +367,10 @@
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
-                                    <th class="text-center">NÂ° Factura</th>
+                                    <th class="text-center">N° Factura</th>
                                     <th class="text-center">Vencimiento</th>
                                     <th class="text-center">Estatus</th>
-                                    <th>ObservaciÃ³n</th>
+                                    <th>Observación</th>
                                     <th class="text-right">Monto Base</th>
                                     <th class="text-right">IVA</th>
                                 </tr>
@@ -382,15 +382,15 @@
 
                 <div>
                     <div class="tabla-header-flex th-purple">
-                        <span>ðŸ’œ Historial de Cobranzas y Abonos Reportados</span>
+                        <span>💜 Historial de Cobranzas y Abonos Reportados</span>
                         <div class="flex-items-center no-print">
                             <span id="badgeCountHistorial" class="count-badge-purple">0</span>
-	<button id="btnEditarCobro" onclick="ejecutarEditarCobro()" class="btn-editar-cobro" disabled style="cursor: not-allowed;">âœï¸ Editar Cobro</button>
-        <button id="btnCambiarIdCobro" onclick="ejecutarCambiarIdCobro()" class="btn-editar-cobro" disabled style="cursor: not-allowed; background-color: #2563eb; border-color: #1d4ed8;">ðŸ”¢ Cambiar NÃºmero de Cobro</button>
+	<button id="btnEditarCobro" onclick="ejecutarEditarCobro()" class="btn-editar-cobro" disabled style="cursor: not-allowed;">✏️ Editar Cobro</button>
+        <button id="btnCambiarIdCobro" onclick="ejecutarCambiarIdCobro()" class="btn-editar-cobro" disabled style="cursor: not-allowed; background-color: #2563eb; border-color: #1d4ed8;">🔢 Cambiar Número de Cobro</button>
 	<button id="btnExportarHistorial" 
 	onclick="exportarHistorial()" 
 	class="btn-editar-cobro" 
-	style="cursor: pointer; background-color: #059669; border-color: #047857;">ðŸ–¨ï¸ EXPORTAR COBRANZA
+	style="cursor: pointer; background-color: #059669; border-color: #047857;">🖨️ EXPORTAR COBRANZA
 	</button>
                         </div>
                     </div>
@@ -398,7 +398,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th class="text-center">NÂ° de Cobro</th>
+                                    <th class="text-center">N° de Cobro</th>
                                     <th class="text-center">Factura</th>
                                     <th>Monto en Bs.</th>
 				    <th class="text-center">Fecha</th>
@@ -418,9 +418,9 @@
     </div>
 
     <script>
-        // El botÃ³n "Reportar con Comprobante" abre el lector OCR (comprobante.html), que vive
+        // El botón "Reportar con Comprobante" abre el lector OCR (comprobante.html), que vive
         // junto a esta app. Si este archivo se abre suelto (por ejemplo, un reporte exportado por
-        // vendedor en una computadora sin el sitio), abre el lector en vivo en una pestaÃ±a nueva.
+        // vendedor en una computadora sin el sitio), abre el lector en vivo en una pestaña nueva.
         function reportarConComprobante(ev) {
             if (location.protocol === 'file:') {
                 ev.currentTarget.href = 'https://boadar.github.io/reporte-cobranza/comprobante.html';
@@ -453,9 +453,9 @@
         }
 
         // Archivos de datos publicados en el repositorio (GitHub Pages). La cartera y las tasas
-        // se leen de aquÃ­ al abrir la app, asÃ­ el vendedor NO tiene que cargar el Excel a mano.
-        // Para actualizar: se reemplaza cartera.json / tasas.json en GitHub (ver botÃ³n "GENERAR
-        // cartera.json" y el README). Si no hay seÃ±al o los archivos no existen todavÃ­a, la app
+        // se leen de aquí al abrir la app, así el vendedor NO tiene que cargar el Excel a mano.
+        // Para actualizar: se reemplaza cartera.json / tasas.json en GitHub (ver botón "GENERAR
+        // cartera.json" y el README). Si no hay señal o los archivos no existen todavía, la app
         // sigue permitiendo cargar el Excel manualmente, como antes.
         const CARTERA_URL = 'cartera.json';
         const TASAS_URL = 'tasas.json';
@@ -467,7 +467,7 @@
             } else if (typeof snapshotDatosInyectados === 'undefined') {
                 const local = leerCarteraManual();
                 if (local) {
-                    // se cargÃ³ un archivo en este equipo: se conserva hasta que se cargue otro o se quite.
+                    // se cargó un archivo en este equipo: se conserva hasta que se cargue otro o se quite.
                     registrosOriginales = local.registros;
                     fechaCargaArchivo = local.cargado || '';
                     secretarioCongeladoPrevio = "TODO";
@@ -483,9 +483,9 @@
         });
 
         // Trae cartera.json (facturas) y tasas.json (tasas BCV) del repositorio y arranca la app.
-        // Cada archivo se valida por separado: si uno falla, no daÃ±a al otro. No pisa datos que ya
-        // hayas cargado a mano en esta sesiÃ³n.
-        // Fecha (ISO AAAA-MM-DD) de la Ãºltima carga del archivo de cuentas por cobrar.
+        // Cada archivo se valida por separado: si uno falla, no daña al otro. No pisa datos que ya
+        // hayas cargado a mano en esta sesión.
+        // Fecha (ISO AAAA-MM-DD) de la última carga del archivo de cuentas por cobrar.
         // Se graba dentro de cartera.json y se muestra junto al campo de archivo.
         let fechaCargaArchivo = '';
         function mostrarInfoCarga(texto) {
@@ -506,8 +506,8 @@
         }
         function mostrarFechaCarga(iso, n, fuente, manual) {
             const f = fmtFechaISO(iso);
-            let html = 'ðŸ—“ï¸ Cuentas por cobrar cargadas al: <span style="color:#0f766e">' + (f || 'fecha no disponible') + '</span> Â· ' + n + ' documentos' + (fuente ? ' (' + fuente + ')' : '');
-            if (manual) html += ' Â· <a href="#" onclick="quitarCarteraManual();return false;" style="color:#2563eb;font-weight:600">usar la de GitHub</a>';
+            let html = '🗓️ Cuentas por cobrar cargadas al: <span style="color:#0f766e">' + (f || 'fecha no disponible') + '</span> · ' + n + ' documentos' + (fuente ? ' (' + fuente + ')' : '');
+            if (manual) html += ' · <a href="#" onclick="quitarCarteraManual();return false;" style="color:#2563eb;font-weight:600">usar la de GitHub</a>';
             mostrarInfoCarga(html);
         }
 
@@ -515,14 +515,14 @@
         // hasta que se cargue otro archivo o se quite para volver a la publicada en GitHub.
         function guardarCarteraManual(cargado, registros, nombre) {
             try { localStorage.setItem('carteraManual', JSON.stringify({ cargado: cargado || '', registros: registros, nombre: nombre || '', ts: new Date().toISOString() })); }
-            catch (e) { alert('No se pudo guardar la cartera en este equipo (memoria llena). Se usarÃ¡ solo en esta sesiÃ³n.'); }
+            catch (e) { alert('No se pudo guardar la cartera en este equipo (memoria llena). Se usará solo en esta sesión.'); }
         }
         function leerCarteraManual() {
             try { const o = JSON.parse(localStorage.getItem('carteraManual') || 'null'); if (o && Array.isArray(o.registros) && o.registros.length) return o; } catch (e) {}
             return null;
         }
         function quitarCarteraManual() {
-            if (!confirm('Â¿Quitar el archivo cargado en este equipo y volver a la cartera publicada en GitHub?')) return;
+            if (!confirm('¿Quitar el archivo cargado en este equipo y volver a la cartera publicada en GitHub?')) return;
             try { localStorage.removeItem('carteraManual'); } catch (e) {}
             location.reload();
         }
@@ -541,12 +541,12 @@
                         }
                     }
                 }
-            } catch (e) { /* sin seÃ±al: se podrÃ¡n cargar tasas a mano */ }
+            } catch (e) { /* sin señal: se podrán cargar tasas a mano */ }
 
             // Cartera: array de facturas en el formato de esta app (lo que produce cargar el Excel).
             try {
                 const rc = await fetch(CARTERA_URL + '?t=' + Date.now(), { cache: 'no-store' });
-                if (!rc.ok) return; // aÃºn no se ha publicado la cartera: queda la carga manual
+                if (!rc.ok) return; // aún no se ha publicado la cartera: queda la carga manual
                 const data = await rc.json();
                 // cartera.json puede ser un arreglo (formato viejo) o { cargado: 'AAAA-MM-DD', registros: [...] }
                 const registros = Array.isArray(data) ? data : (data && Array.isArray(data.registros) ? data.registros : null);
@@ -559,14 +559,14 @@
                     historialTransacciones = [];
                     inicializarInterfazConDatos();
                     const sub = document.querySelector('header div p');
-                    if (sub) sub.textContent = 'âœ” Cartera al dÃ­a desde GitHub Â· ' + registros.length + ' documentos.';
+                    if (sub) sub.textContent = '✔ Cartera al día desde GitHub · ' + registros.length + ' documentos.';
                     mostrarFechaCarga(cargado, registros.length, 'desde GitHub');
                 }
-            } catch (e) { /* sin seÃ±al / archivo daÃ±ado: queda la carga manual */ }
+            } catch (e) { /* sin señal / archivo dañado: queda la carga manual */ }
         }
 
         // Descarga cartera.json con la cartera actual, para publicarla en GitHub y que todos la
-        // reciban automÃ¡ticamente. (El navegador no puede subir a GitHub; este archivo se sube al repo.)
+        // reciban automáticamente. (El navegador no puede subir a GitHub; este archivo se sube al repo.)
         function generarCarteraJson() {
             if (!registrosOriginales || registrosOriginales.length === 0) {
                 alert('Primero carga el Excel de cuentas por cobrar; luego genero el cartera.json para publicar.');
@@ -581,13 +581,13 @@
             document.body.appendChild(a);
             a.click();
             setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
-            alert('Listo: se descargÃ³ "cartera.json".\n\nSÃºbelo al repositorio (o envÃ­amelo) y la app cargarÃ¡ esa cartera automÃ¡ticamente para todos.');
+            alert('Listo: se descargó "cartera.json".\n\nSúbelo al repositorio (o envíamelo) y la app cargará esa cartera automáticamente para todos.');
         }
 
         function parsearFechaSegura(fVen) {
             if (fVen instanceof Date) return fVen;
             if (typeof fVen === 'number') {
-                // Manejar nÃºmeros de serie de fecha nativos de Excel
+                // Manejar números de serie de fecha nativos de Excel
                 return XLSX.SSF.parse_date_code(fVen);
             }
             if (typeof fVen === 'string' && fVen.trim() !== '') {
@@ -604,13 +604,13 @@
             return null;
         }
 
-        // Formatea un nÃºmero a texto con formato venezolano: miles con punto, decimales con coma. Ej: 1234.5 -> "1.234,50"
+        // Formatea un número a texto con formato venezolano: miles con punto, decimales con coma. Ej: 1234.5 -> "1.234,50"
         function formatearMontoVE(numero) {
             if (isNaN(numero)) return '';
             return numero.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
-        // Convierte un texto con formato venezolano ("1.234,56") a nÃºmero float (1234.56).
+        // Convierte un texto con formato venezolano ("1.234,56") a número float (1234.56).
         function parsearMontoVE(texto) {
             if (!texto) return NaN;
             const limpio = String(texto).trim().replace(/\./g, '').replace(/,/g, '.');
@@ -621,7 +621,7 @@
         function activarFormatoMilesEnInput(inputEl) {
             inputEl.addEventListener('input', function(e) {
                 let valor = e.target.value;
-                valor = valor.replace(/[^\d,]/g, ''); // Solo dÃ­gitos y coma
+                valor = valor.replace(/[^\d,]/g, ''); // Solo dígitos y coma
 
                 const partes = valor.split(',');
                 let parteEntera = partes[0] || '';
@@ -649,7 +649,7 @@
             return `${dia}-${mes}-${anio}`;
         }
 
-        // FUNCIÃ“N ACTUALIZADA: BÃºsqueda flexible de columnas e interpretaciÃ³n de fechas nativas de Excel
+        // FUNCIÓN ACTUALIZADA: Búsqueda flexible de columnas e interpretación de fechas nativas de Excel
         function procesarArchivoTasas(e) {
             const archivo = e.target.files[0];
             if (!archivo) return;
@@ -677,12 +677,12 @@
                 let contadorCargadas = 0;
                 filasJsonCrudas.forEach(fila => {
                     let filaLimpia = {};
-                    // Normalizar claves quitando espacios e ignorando mayÃºsculas/minÃºsculas
+                    // Normalizar claves quitando espacios e ignorando mayúsculas/minúsculas
                     for (let clave in fila) {
                         filaLimpia[clave.trim().toLowerCase()] = fila[clave];
                     }
 
-                    // Buscar la columna correcta de fecha dinÃ¡micamente
+                    // Buscar la columna correcta de fecha dinámicamente
                     let campoFechaRaw = undefined;
                     for (let k in filaLimpia) {
                         if (k.includes('fecha') || k.includes('ven')) {
@@ -691,7 +691,7 @@
                         }
                     }
 
-                    // Buscar la columna correcta de tasa dinÃ¡micamente
+                    // Buscar la columna correcta de tasa dinámicamente
                     let campoTasaRaw = undefined;
                     for (let k in filaLimpia) {
                         if (k.includes('tasa') || k.includes('cambio')) {
@@ -717,7 +717,7 @@
                     }
                 });
 
-                alert(`ðŸŽ¯ Carga de tasas finalizada.\nSe han importado exitosamente ${contadorCargadas} tasas de cambio referenciadas por fecha.`);
+                alert(`🎯 Carga de tasas finalizada.\nSe han importado exitosamente ${contadorCargadas} tasas de cambio referenciadas por fecha.`);
                 e.target.value = ''; // Limpiar input
                 filtrarDatos(); // Refrescar las vistas por si hay cambios aplicables en caliente
             };
@@ -757,8 +757,8 @@
 
                     const primeraHoja = libro.Sheets[libro.SheetNames[0]];
 
-                    // La plantilla puede tener varias hojas (por ejemplo una hoja vacÃ­a antes de "Facturas"),
-                    // asÃ­ que buscamos la hoja y la fila de encabezados reales, en vez de asumir que son
+                    // La plantilla puede tener varias hojas (por ejemplo una hoja vacía antes de "Facturas"),
+                    // así que buscamos la hoja y la fila de encabezados reales, en vez de asumir que son
                     // siempre la primera hoja / primera fila. Preferimos una hoja llamada "Facturas" si existe.
                     const nombreHojaPreferida = libro.SheetNames.find(n => n.trim().toLowerCase() === 'facturas');
                     const ordenHojas = nombreHojaPreferida
@@ -776,7 +776,7 @@
 
                         for (let i = 0; i < Math.min(matriz.length, 15); i++) {
                             const filaTest = matriz[i];
-                            const idxDenominacion = filaTest.findIndex(c => String(c).trim() === 'DenominaciÃ³n social');
+                            const idxDenominacion = filaTest.findIndex(c => String(c).trim() === 'Denominación social');
                             const idxCliente = filaTest.findIndex(c => String(c).trim() === 'Cliente'); // compatibilidad con plantillas anteriores
 
                             if (idxDenominacion !== -1 || idxCliente !== -1) {
@@ -788,9 +788,9 @@
                                 });
 
                                 if (idxDenominacion === -1) {
-                                    // Layout anterior: "Cliente" en vez de "DenominaciÃ³n social", y el vendedor
+                                    // Layout anterior: "Cliente" en vez de "Denominación social", y el vendedor
                                     // va en la columna inmediatamente a la derecha de "Cliente".
-                                    mapaColumnas['DenominaciÃ³n social'] = idxCliente;
+                                    mapaColumnas['Denominación social'] = idxCliente;
                                     if (mapaColumnas['Secretario de ventas'] === undefined) {
                                         mapaColumnas['Secretario de ventas'] = idxCliente + 1;
                                     }
@@ -807,7 +807,7 @@
 
                     let registrosMapeados;
                     if (indiceFilaEncabezados === -1) {
-                        // No se detectÃ³ el layout de plantilla en ninguna hoja; se procesa como Excel plano
+                        // No se detectó el layout de plantilla en ninguna hoja; se procesa como Excel plano
                         // con encabezados en la fila 1 de la primera hoja, tal como antes.
                         const filasJsonCrudas = XLSX.utils.sheet_to_json(primeraHoja, { defval: "" });
                         registrosMapeados = filasJsonCrudas.map(fila => {
@@ -841,12 +841,12 @@
                             const filaCruda = filasCrudasMatriz[f];
                             if (!filaCruda) continue;
 
-                            const cliente = String(obtenerCelda(filaCruda, 'DenominaciÃ³n social')).trim();
+                            const cliente = String(obtenerCelda(filaCruda, 'Denominación social')).trim();
                             const nroFactura = String(obtenerCelda(filaCruda, 'Numero de Factura')).trim();
-                            if (!cliente && !nroFactura) continue; // fila vacÃ­a / separador
+                            if (!cliente && !nroFactura) continue; // fila vacía / separador
 
                             registrosMapeados.push({
-                                'DenominaciÃ³n social': cliente,
+                                'Denominación social': cliente,
                                 'Numero de Factura': nroFactura,
                                 'Tipo de documento': String(obtenerCelda(filaCruda, 'Tipo de documento')).trim(),
                                 'ESTATUS': String(obtenerCelda(filaCruda, 'ESTATUS')).trim() || 'PENDIENTE',
@@ -872,7 +872,7 @@
                         historialTransacciones = [];
                         tasasPorFecha = {};
                         inicializarInterfazConDatos();
-                        // fecha del archivo de cuentas por cobrar cargado (Ãºltima modificaciÃ³n del Excel/CSV)
+                        // fecha del archivo de cuentas por cobrar cargado (última modificación del Excel/CSV)
                         const fArch = archivo.lastModified ? new Date(archivo.lastModified) : null;
                         fechaCargaArchivo = isoDeFecha(fArch) || fechaCargaArchivo;
                         // se guarda en el equipo para conservar la cartera al reabrir, hasta cargar otro archivo
@@ -954,7 +954,7 @@
             if(buscador) {
                 buscador.disabled = false;
                 buscador.style.cursor = "text";
-                buscador.placeholder = "ðŸ” Escriba para buscar cliente...";
+                buscador.placeholder = "🔍 Escriba para buscar cliente...";
             }
 
             document.getElementById('resumenSuperior').classList.remove('hidden');
@@ -978,7 +978,7 @@
         function configurarSelectorSecretarios() {
             const selectSecretario = document.getElementById('selectSecretario');
             if(!selectSecretario) return;
-            selectSecretario.innerHTML = '<option value="TODO">ðŸ‘¤ [ TODOS ]</option>';
+            selectSecretario.innerHTML = '<option value="TODO">👤 [ TODOS ]</option>';
 
             const listaVendedores = obtenerListaSecretariosUnicos();
             listaVendedores.forEach(sec => {
@@ -1073,7 +1073,7 @@
             let opcionesFacturasCliente = [];
             if (clienteBuscado !== "") {
                 opcionesFacturasCliente = registrosOriginales.filter(fila => {
-                    const clienteFila = String(fila['DenominaciÃ³n social'] || '').toLowerCase();
+                    const clienteFila = String(fila['Denominación social'] || '').toLowerCase();
                     const estatusFila = String(fila['ESTATUS'] || '').trim().toUpperCase();
                     const tipoDoc = String(fila['Tipo de documento'] || '').trim().toUpperCase();
                     const montoRaw = String(fila['Total Fac X Pagar']).replace(/[^0-9.-]/g, '');
@@ -1081,7 +1081,7 @@
 
                     return clienteFila.includes(clienteBuscado.toLowerCase()) && 
                            estatusFila === 'PENDIENTE' && 
-                           !tipoDoc.includes('CRÃ‰DITO') && 
+                           !tipoDoc.includes('CRÉDITO') && 
                            tipoDoc !== 'NC' && 
                            montoOriginal > 0;
                 });
@@ -1096,21 +1096,21 @@
                             <input type="date" id="modFechaCobro" required>
                         </div>
                         <div class="campo-control">
-                            <label>2. Tasa de Cambio del DÃ­a:</label>
+                            <label>2. Tasa de Cambio del Día:</label>
                             <input type="text" id="modTasaCobro" placeholder="Ingrese tasa o elija fecha...">
-                            <span id="modAvisoTasa" style="font-size:0.65rem; color:#059669; font-weight:bold; display:none;">âœ“ Tasa cargada automÃ¡ticamente de esta fecha</span>
+                            <span id="modAvisoTasa" style="font-size:0.65rem; color:#059669; font-weight:bold; display:none;">✓ Tasa cargada automáticamente de esta fecha</span>
                         </div>
                         <div class="campo-control" id="modGrupoPreguntaCliente" style="display:none; flex-direction:row; align-items:center; gap:0.5rem; padding: 0.25rem 0;">
                             <input type="checkbox" id="modCheckMismoCliente" checked style="width:auto; height:auto; cursor:pointer;">
-                            <label for="modCheckMismoCliente" style="cursor:pointer; color:#1e293b;">Â¿La factura pertenece al cliente "${clienteBuscado}"?</label>
+                            <label for="modCheckMismoCliente" style="cursor:pointer; color:#1e293b;">¿La factura pertenece al cliente "${clienteBuscado}"?</label>
                         </div>
                         <div class="campo-control" id="modGrupoSelectorFacturas" style="display:none;">
                             <label>3. Seleccione Factura Pendiente:</label>
                             <select id="modSelectFacturaCliente"></select>
                         </div>
                         <div class="campo-control" id="modGrupoManualFactura">
-                            <label>3. NÃºmero de Factura (Ingreso Manual):</label>
-                            <input type="text" id="modInputFacturaManual" placeholder="Escriba NÂ° de factura...">
+                            <label>3. Número de Factura (Ingreso Manual):</label>
+                            <input type="text" id="modInputFacturaManual" placeholder="Escriba N° de factura...">
                         </div>
                         <div class="campo-control">
                             <label>4. Monto en Bs.:</label>
@@ -1179,7 +1179,7 @@
                     let abonoPrevio = pagosAbonadosEnSesion[opt.value] || 0;
 
                     // Si estamos EDITANDO un cobro que ya afectaba a esta misma factura, se le "devuelve" su efecto
-                    // para mostrar el pendiente como si ese cobro no existiera todavÃ­a.
+                    // para mostrar el pendiente como si ese cobro no existiera todavía.
                     if (prellenado && prellenado.registroEditado && String(prellenado.registroEditado.factura || '').trim() === opt.value) {
                         const regEd = prellenado.registroEditado;
                         const montoAplicadoOriginal = (typeof regEd.montoDolaresAplicado === 'number')
@@ -1200,7 +1200,7 @@
                     const tasaActual = parseFloat(tasaActualRaw) || 0;
                     Array.from(selectFacturaCliente.options).forEach(opt => {
                         const pendienteDolares = parseFloat(opt.dataset.pendienteDolares) || 0;
-                        let etiqueta = `NÂ° ${opt.value} (Pendiente: $ ${pendienteDolares.toLocaleString('es-VE', {minimumFractionDigits:2})}`;
+                        let etiqueta = `N° ${opt.value} (Pendiente: $ ${pendienteDolares.toLocaleString('es-VE', {minimumFractionDigits:2})}`;
                         if (tasaActual > 0) {
                             const pendienteBs = pendienteDolares * tasaActual;
                             etiqueta += ` / Pendiente en Bs. ${pendienteBs.toLocaleString('es-VE', {minimumFractionDigits:2})}`;
@@ -1246,14 +1246,14 @@
             document.getElementById('modBtnGuardar').onclick = function() {
                 const fechaElegida = inputFecha.value;
                 if (!fechaElegida) {
-                    alert("Por favor, seleccione una fecha vÃ¡lida.");
+                    alert("Por favor, seleccione una fecha válida.");
                     return;
                 }
 
                 const tasaRaw = inputTasa.value.trim().replace(/,/g, '.');
                 const tasaCambio = parseFloat(tasaRaw);
                 if (isNaN(tasaCambio) || tasaCambio <= 0) {
-                    alert("Por favor, ingrese una tasa de cambio vÃ¡lida.");
+                    alert("Por favor, ingrese una tasa de cambio válida.");
                     return;
                 }
 
@@ -1269,19 +1269,19 @@
                 }
 
                 if (facturaDestino === "") {
-                    alert("El nÃºmero de factura no puede estar vacÃ­o.");
+                    alert("El número de factura no puede estar vacío.");
                     return;
                 }
 
                 let filaFactura = registrosOriginales.find(fila => String(fila['Numero de Factura'] || '').trim() === facturaDestino);
                 if (!filaFactura) {
-                    alert(`La factura NÂ° ${facturaDestino} no fue encontrada en la base de datos.`);
+                    alert(`La factura N° ${facturaDestino} no fue encontrada en la base de datos.`);
                     return;
                 }
 
                 const montoBs = parsearMontoVE(inputMontoBs.value);
                 if (isNaN(montoBs) || montoBs <= 0) {
-                    alert("Por favor, ingrese un monto en Bs. vÃ¡lido.");
+                    alert("Por favor, ingrese un monto en Bs. válido.");
                     return;
                 }
 
@@ -1317,22 +1317,22 @@
 
                 modalOverlay.remove();
 
-                let mensajeExito = `Cobranza NÂ° ${nuevoNumeroCobranza} procesada con Ã©xito.\n` +
-                                   `Equivalente: $ ${abonoEnDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} aplicados a la factura NÂ° ${facturaDestino}.`;
+                let mensajeExito = `Cobranza N° ${nuevoNumeroCobranza} procesada con éxito.\n` +
+                                   `Equivalente: $ ${abonoEnDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} aplicados a la factura N° ${facturaDestino}.`;
                 
                 alert(mensajeExito);
 
                 if (saldoNuevoDolares < 0) {
                     const excedenteDolares = Math.abs(saldoNuevoDolares);
-                    const clienteAsociado = String(filaFactura['DenominaciÃ³n social'] || '').trim();
+                    const clienteAsociado = String(filaFactura['Denominación social'] || '').trim();
                     const aplicarExcedente = confirm(
-                        `El pago ingresado superÃ³ el saldo pendiente de la factura NÂ° ${facturaDestino} por $ ${excedenteDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.\n\n` +
-                        `Â¿Desea aplicar este excedente a otra factura del cliente "${clienteAsociado}"?`
+                        `El pago ingresado superó el saldo pendiente de la factura N° ${facturaDestino} por $ ${excedenteDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.\n\n` +
+                        `¿Desea aplicar este excedente a otra factura del cliente "${clienteAsociado}"?`
                     );
 
                     if (aplicarExcedente) {
-                        // El "Monto en $" de este cobro debe reflejar solo lo que efectivamente se aplicÃ³ a ESTA factura.
-                        // El excedente se registrarÃ¡ como un cobro aparte, sobre otra factura.
+                        // El "Monto en $" de este cobro debe reflejar solo lo que efectivamente se aplicó a ESTA factura.
+                        // El excedente se registrará como un cobro aparte, sobre otra factura.
                         nuevoRegistro.montoDolaresAplicado = saldoAnteriorDolares;
                         nuevoRegistro.saldoNuevo = 0;
                         pagosAbonadosEnSesion[facturaDestino] -= excedenteDolares;
@@ -1344,9 +1344,9 @@
                         }
                         const montoBsExcedente = excedenteDolares * tasaCambio;
 
-                        // Si el usuario cancela el modal donde aplicarÃ­a el excedente a otra factura,
+                        // Si el usuario cancela el modal donde aplicaría el excedente a otra factura,
                         // se revierte todo: el cobro original vuelve a mostrar el monto total pagado
-                        // y el saldo nuevo negativo, ya que el excedente no quedÃ³ aplicado a ninguna factura.
+                        // y el saldo nuevo negativo, ya que el excedente no quedó aplicado a ninguna factura.
                         const revertirExcedente = function() {
                             nuevoRegistro.montoDolaresAplicado = abonoEnDolares;
                             nuevoRegistro.saldoNuevo = saldoNuevoDolares;
@@ -1363,9 +1363,9 @@
 
                 filtrarDatos();
 
-                let reportarOtro = confirm("Â¿Desea reportar un nuevo cobro?");
+                let reportarOtro = confirm("¿Desea reportar un nuevo cobro?");
                 if (reportarOtro) {
-                    let mismaFactura = confirm(`Â¿El nuevo cobro pertenece a la misma factura anterior (NÂ° ${facturaDestino})?`);
+                    let mismaFactura = confirm(`¿El nuevo cobro pertenece a la misma factura anterior (N° ${facturaDestino})?`);
                     if (mismaFactura) {
                         setTimeout(() => { ejecutarReportarCobranza(facturaDestino); }, 50);
                     } else {
@@ -1376,26 +1376,26 @@
         }
 
 function ejecutarEditarCobro() {
-    const numCobro = prompt("Ingrese el NÂ° de cobro a editar:");
+    const numCobro = prompt("Ingrese el N° de cobro a editar:");
     if (!numCobro) return;
 
     // Buscamos el registro usando idCobranza
     const registro = historialTransacciones.find(t => String(t.idCobranza) === String(numCobro));
     if (!registro) {
-        alert("No se encontrÃ³ ese cobro.");
+        alert("No se encontró ese cobro.");
         return;
     }
 
     // Identificamos el cliente de la factura asociada, para que el buscador muestre sus facturas pendientes
     const filaFacturaAsociada = registrosOriginales.find(f => String(f['Numero de Factura'] || '').trim() === String(registro.factura || '').trim());
-    const clienteDelCobro = filaFacturaAsociada ? String(filaFacturaAsociada['DenominaciÃ³n social'] || '').trim() : '';
+    const clienteDelCobro = filaFacturaAsociada ? String(filaFacturaAsociada['Denominación social'] || '').trim() : '';
     const elBusquedaGlobal = document.getElementById('inputBusqueda');
     if (elBusquedaGlobal && clienteDelCobro) {
         elBusquedaGlobal.value = clienteDelCobro;
     }
 
-    // 1. Abrimos el modal original, indicando que se trata de la ediciÃ³n de este registro
-    // (para que el pendiente de su factura se calcule como si este cobro no existiera todavÃ­a)
+    // 1. Abrimos el modal original, indicando que se trata de la edición de este registro
+    // (para que el pendiente de su factura se calcule como si este cobro no existiera todavía)
     ejecutarReportarCobranza(null, { registroEditado: registro }); 
     
     // 2. Rellenamos los datos
@@ -1403,11 +1403,11 @@ function ejecutarEditarCobro() {
         const modal = document.getElementById('dinamicModalCobranza');
         if (!modal) return;
         
-        // Cambiamos el tÃ­tulo
+        // Cambiamos el título
         const header = modal.querySelector('h2') || modal.querySelector('.modal-cobranza-header');
-        if (header) header.innerText = "EDITAR COBRO NÂ° " + numCobro;
+        if (header) header.innerText = "EDITAR COBRO N° " + numCobro;
         
-        // ASIGNACIÃ“N DE VALORES (usando los IDs correctos y la variable fechaCobroLog)
+        // ASIGNACIÓN DE VALORES (usando los IDs correctos y la variable fechaCobroLog)
         const f = document.getElementById('modFechaCobro');
         if (f) f.value = registro.fechaCobroLog || ""; // Usamos la variable exacta que me diste
         
@@ -1423,7 +1423,7 @@ function ejecutarEditarCobro() {
         const grupoSelector = document.getElementById('modGrupoSelectorFacturas');
         const grupoManual = document.getElementById('modGrupoManualFactura');
 
-        // Si la factura de este cobro aparece en el combo de facturas pendientes del cliente, la preseleccionamos allÃ­.
+        // Si la factura de este cobro aparece en el combo de facturas pendientes del cliente, la preseleccionamos allí.
         // Si no aparece (por ejemplo, ya no tiene saldo pendiente o pertenece a otro cliente), usamos el campo manual.
         let facturaEncontradaEnSelect = false;
         if (selectFact) {
@@ -1447,7 +1447,7 @@ function ejecutarEditarCobro() {
             if (fact) fact.value = registro.factura || "";
         }
 
-        // 3. Modificamos el botÃ³n de procesamiento
+        // 3. Modificamos el botón de procesamiento
         const btnProcesar = modal.querySelector('button[onclick*="guardar"]') || modal.querySelector('.btn-modal-save');
         
         if (btnProcesar) {
@@ -1468,11 +1468,11 @@ function ejecutarEditarCobro() {
                 }
 
                 if (!nuevaFecha) { alert("Por favor, seleccione una fecha."); return; }
-                if (isNaN(nuevaTasa) || nuevaTasa <= 0) { alert("Por favor, ingrese una tasa de cambio vÃ¡lida."); return; }
-                if (isNaN(nuevoMontoBs) || nuevoMontoBs <= 0) { alert("Por favor, ingrese un monto en Bs. vÃ¡lido."); return; }
-                if (!nuevaFactura) { alert("Por favor, indique el nÃºmero de factura."); return; }
+                if (isNaN(nuevaTasa) || nuevaTasa <= 0) { alert("Por favor, ingrese una tasa de cambio válida."); return; }
+                if (isNaN(nuevoMontoBs) || nuevoMontoBs <= 0) { alert("Por favor, ingrese un monto en Bs. válido."); return; }
+                if (!nuevaFactura) { alert("Por favor, indique el número de factura."); return; }
 
-                // Deshacemos el efecto que este cobro tenÃ­a sobre su factura anterior, antes de recalcular con los datos nuevos
+                // Deshacemos el efecto que este cobro tenía sobre su factura anterior, antes de recalcular con los datos nuevos
                 const facturaAnterior = registro.factura;
                 const montoAplicadoAnterior = (typeof registro.montoDolaresAplicado === 'number')
                     ? registro.montoDolaresAplicado
@@ -1514,10 +1514,10 @@ function ejecutarEditarCobro() {
 
                 if (nuevoSaldoDolares < 0 && filaFacturaDestino) {
                     const excedenteDolares = Math.abs(nuevoSaldoDolares);
-                    const clienteAsociado = String(filaFacturaDestino['DenominaciÃ³n social'] || '').trim();
+                    const clienteAsociado = String(filaFacturaDestino['Denominación social'] || '').trim();
                     const aplicarExcedente = confirm(
-                        `El pago actualizado superÃ³ el saldo pendiente de la factura NÂ° ${nuevaFactura} por $ ${excedenteDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.\n\n` +
-                        `Â¿Desea aplicar este excedente a otra factura del cliente "${clienteAsociado}"?`
+                        `El pago actualizado superó el saldo pendiente de la factura N° ${nuevaFactura} por $ ${excedenteDolares.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}.\n\n` +
+                        `¿Desea aplicar este excedente a otra factura del cliente "${clienteAsociado}"?`
                     );
 
                     if (aplicarExcedente) {
@@ -1553,43 +1553,43 @@ function ejecutarEditarCobro() {
 
         function ejecutarCambiarIdCobro() {
             if (historialTransacciones.length === 0) {
-                alert("No hay ningÃºn cobro registrado en el historial para modificar.");
+                alert("No hay ningún cobro registrado en el historial para modificar.");
                 return;
             }
 
-            let idOrigenRaw = prompt("Ingrese el NÂ° de Cobro que desea cambiar:");
+            let idOrigenRaw = prompt("Ingrese el N° de Cobro que desea cambiar:");
             if (idOrigenRaw === null) return;
             let idOrigen = parseInt(idOrigenRaw.trim());
 
             if (isNaN(idOrigen)) {
-                alert("Por favor, ingrese un nÃºmero vÃ¡lido.");
+                alert("Por favor, ingrese un número válido.");
                 return;
             }
 
             let transaccionIndex = historialTransacciones.findIndex(t => t.idCobranza === idOrigen);
             if (transaccionIndex === -1) {
-                alert(`El NÂ° de Cobro ${idOrigen} no existe en el historial.`);
+                alert(`El N° de Cobro ${idOrigen} no existe en el historial.`);
                 return;
             }
 
-            let idDestinoRaw = prompt(`Ingrese el NUEVO nÃºmero para el cobro NÂ° ${idOrigen}:`);
+            let idDestinoRaw = prompt(`Ingrese el NUEVO número para el cobro N° ${idOrigen}:`);
             if (idDestinoRaw === null) return;
             let idDestino = parseInt(idDestinoRaw.trim());
 
             if (isNaN(idDestino) || idDestino <= 0) {
-                alert("El nuevo nÃºmero de cobro debe ser un entero positivo vÃ¡lido.");
+                alert("El nuevo número de cobro debe ser un entero positivo válido.");
                 return;
             }
 
             let existeDestino = historialTransacciones.some(t => t.idCobranza === idDestino);
             if (existeDestino) {
-                alert(`Error: El nÃºmero de cobro ${idDestino} ya se encuentra asignado a otra transacciÃ³n.`);
+                alert(`Error: El número de cobro ${idDestino} ya se encuentra asignado a otra transacción.`);
                 return;
             }
 
             historialTransacciones[transaccionIndex].idCobranza = idDestino;
 
-            alert(`Ã‰xito: El cobro NÂ° ${idOrigen} ha sido renombrado correctamente al NÂ° ${idDestino}.`);
+            alert(`Éxito: El cobro N° ${idOrigen} ha sido renombrado correctamente al N° ${idDestino}.`);
             filtrarDatos();
         }
 
@@ -1602,7 +1602,7 @@ function ejecutarEditarCobro() {
             const secretarioSeleccionado = elSecretario ? elSecretario.value : 'TODO';
 
             const datosFiltrados = registrosOriginales.filter(fila => {
-                const cliente = String(fila['DenominaciÃ³n social'] || '').toLowerCase();
+                const cliente = String(fila['Denominación social'] || '').toLowerCase();
                 const estatusFila = String(fila['ESTATUS'] || '').trim().toUpperCase();
                 const secretarioFila = String(fila['Secretario de ventas'] || '').trim();
                 
@@ -1649,7 +1649,7 @@ function ejecutarEditarCobro() {
             let sumaNC = 0, countNC = 0;
             let countPendientesCero = 0;
 
-            // Acumuladores para las filas de totales de cada secciÃ³n
+            // Acumuladores para las filas de totales de cada sección
             let sumaBaseVencidas = 0, sumaIVAVencidas = 0;
             let sumaBasePorVencer = 0, sumaIVAPorVencer = 0;
             let sumaBasePendientesCero = 0, sumaIVAPendientesCero = 0;
@@ -1657,14 +1657,14 @@ function ejecutarEditarCobro() {
             const hoy = new Date();
             hoy.setHours(0,0,0,0);
 
-            // Guardamos las filas junto con su fecha de vencimiento para poder ordenarlas luego (ascendente: mÃ¡s antigua primero)
+            // Guardamos las filas junto con su fecha de vencimiento para poder ordenarlas luego (ascendente: más antigua primero)
             const filasFacturasVencidas = [];
             const filasFacturasPorVencer = [];
             const filasNC = [];
             const filasPendientesCero = [];
 
             listaDatos.forEach(fila => {
-                const cliente = fila['DenominaciÃ³n social'];
+                const cliente = fila['Denominación social'];
                 const nroFactura = String(fila['Numero de Factura'] || '').trim();
                 const tipoDocumento = String(fila['Tipo de documento'] || '').trim().toUpperCase();
                 const estatusVal = String(fila['ESTATUS'] || '').trim().toUpperCase();
@@ -1694,7 +1694,7 @@ function ejecutarEditarCobro() {
                     let badgeClass = estatusVal === 'PAGADO' ? "badge badge-green" : "badge badge-red";
                     const montoFormateado = `$ ${montoOriginal.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-                    if (tipoDocumento.includes('CRÃ‰DITO') || tipoDocumento === 'NC') {
+                    if (tipoDocumento.includes('CRÉDITO') || tipoDocumento === 'NC') {
                         countNC++;
                         sumaNC += montoOriginal;
                         
@@ -1773,8 +1773,8 @@ function ejecutarEditarCobro() {
                 }
             });
 
-            // Orden ascendente por fecha de vencimiento (mÃ¡s antigua primero, mÃ¡s nueva al final).
-            // Los registros sin fecha vÃ¡lida se envÃ­an al final del listado.
+            // Orden ascendente por fecha de vencimiento (más antigua primero, más nueva al final).
+            // Los registros sin fecha válida se envían al final del listado.
             function ordenarPorFechaAscendente(arr) {
                 arr.sort((a, b) => {
                     if (!a.fecha && !b.fecha) return 0;
@@ -1790,7 +1790,7 @@ function ejecutarEditarCobro() {
             ordenarPorFechaAscendente(filasNC).forEach(f => tbodyNC.appendChild(f.tr));
             ordenarPorFechaAscendente(filasPendientesCero).forEach(f => tbodyPendientesCero.appendChild(f.tr));
 
-            // Crea una fila de totales al final de una tabla. 'valores' es un array de montos ya formateados (uno por cada columna numÃ©rica a totalizar).
+            // Crea una fila de totales al final de una tabla. 'valores' es un array de montos ya formateados (uno por cada columna numérica a totalizar).
             function crearFilaTotal(colspanEtiqueta, valoresFormateados) {
                 const trTotal = document.createElement('tr');
                 trTotal.className = 'fila-total';
@@ -1838,7 +1838,7 @@ function ejecutarEditarCobro() {
                 }
 
                 if (terminoBusqueda !== '') {
-                    let nombreCliente = String(filaAsociada['DenominaciÃ³n social'] || '').toLowerCase();
+                    let nombreCliente = String(filaAsociada['Denominación social'] || '').toLowerCase();
                     if (!nombreCliente.includes(terminoBusqueda)) return false;
                 }
 
@@ -1905,7 +1905,7 @@ function ejecutarEditarCobro() {
         function guardarUnicoVendedorActual() {
             const secretarioSeleccionado = document.getElementById('selectSecretario').value;
             if (secretarioSeleccionado === "TODO") {
-                alert("Para guardar por vendedor, primero debes seleccionar un vendedor especÃ­fico en el filtro de la barra de herramientas.");
+                alert("Para guardar por vendedor, primero debes seleccionar un vendedor específico en el filtro de la barra de herramientas.");
                 return;
             }
             
@@ -1932,11 +1932,11 @@ function ejecutarEditarCobro() {
 
             const listaVendedores = obtenerListaSecretariosUnicos();
             if (listaVendedores.length === 0) {
-                alert("No se encontraron secretarios de ventas vÃ¡lidos en este archivo.");
+                alert("No se encontraron secretarios de ventas válidos en este archivo.");
                 return;
             }
 
-            if (!confirm(`Se compilarÃ¡n ${listaVendedores.length} reportes individuales dentro de un Ãºnico paquete comprimido (.ZIP) para evitar bloqueos del navegador. Â¿Continuar?`)) {
+            if (!confirm(`Se compilarán ${listaVendedores.length} reportes individuales dentro de un único paquete comprimido (.ZIP) para evitar bloqueos del navegador. ¿Continuar?`)) {
                 return;
             }
 
@@ -2003,7 +2003,7 @@ function ejecutarEditarCobro() {
                 if (buscadorClonado) {
                     buscadorClonado.removeAttribute('disabled');
                     buscadorClonado.style.cursor = "text";
-                    buscadorClonado.placeholder = "ðŸ” Escriba para buscar cliente...";
+                    buscadorClonado.placeholder = "🔍 Escriba para buscar cliente...";
                     buscadorClonado.setAttribute('value', '');
                 }
 
@@ -2100,7 +2100,7 @@ function ejecutarEditarCobro() {
  function exportarHistorial() {
     const tablaCuerpo = document.getElementById('cuerpoHistorialAbonos');
     if (!tablaCuerpo || tablaCuerpo.rows.length === 0) {
-        alert("No hay informaciÃ³n en el Historial para exportar.");
+        alert("No hay información en el Historial para exportar.");
         return;
     }
     
@@ -2110,7 +2110,7 @@ function ejecutarEditarCobro() {
     // Creamos una ventana nueva para imprimir
     const ventana = window.open('', '', 'width=800,height=600');
     ventana.document.write('<html><head><title>Historial de Cobranzas</title>');
-    // Ajuste de estilos para impresiÃ³n
+    // Ajuste de estilos para impresión
     ventana.document.write('<style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ccc; padding: 8px; text-align: left; } body { font-family: sans-serif; } .text-right { text-align: right; } .text-center { text-align: center; }</style>');
     ventana.document.write('</head><body>');
     ventana.document.write('<h1>Historial de Cobranzas y Abonos Reportados</h1>');
