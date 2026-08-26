@@ -171,7 +171,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v75</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v76</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -183,7 +183,7 @@
                     <button id="btnGuardarVendedor" onclick="guardarUnicoVendedorActual()" class="btn-snapshot">📥 GUARDAR VENDEDOR</button>
 <button id="btnGuardarTodos" onclick="guardarTodosLosVendedoresMasivo()" class="btn-snapshot btn-snapshot-blue">📦 COMPRIMIR (.ZIP)</button>
                 </div>
-                <button id="btnGenerarCartera" onclick="generarCarteraJson()" class="btn-snapshot" style="background-color:#475569;border-color:#334155;" title="Descarga la cartera actual como cartera.json para publicarla en GitHub y que todos la reciban automáticamente">💾 GENERAR cartera.json (publicar)</button>
+                <button id="btnGenerarCartera" onclick="cargarCarteraEnGitHub()" class="btn-snapshot" style="background-color:#475569;border-color:#334155;" title="Sube la cartera actual (cartera.json) directo a GitHub, para que todas las apps la reciban automáticamente. Pide tu token de GitHub la primera vez.">☁️ CARGAR CARTERA EN GITHUB</button>
             </div>
         </header>
 
@@ -582,6 +582,55 @@
             a.click();
             setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
             alert('Listo: se descargó "cartera.json".\n\nSúbelo al repositorio (o envíamelo) y la app cargará esa cartera automáticamente para todos.');
+        }
+
+        // Sube la cartera actual directo al repositorio de GitHub (cartera.json), usando un
+        // token del usuario (fine-grained, Contents: write). El token se guarda SOLO en este
+        // equipo (localStorage), nunca en el codigo. Si falla, ofrece descargar el archivo.
+        const GH_OWNER = 'boadar', GH_REPO = 'reporte-cobranza', GH_PATH = 'cartera.json', GH_BRANCH = 'main';
+        async function cargarCarteraEnGitHub() {
+            if (!registrosOriginales || registrosOriginales.length === 0) {
+                alert('Primero carga el Excel de cuentas por cobrar; luego subo el cartera.json a GitHub.');
+                return;
+            }
+            let token = (localStorage.getItem('ghToken') || '').trim();
+            if (!token) {
+                token = (prompt('Pega tu TOKEN de GitHub (fine-grained) con permiso "Contents: Read and write" en el repo ' + GH_REPO + '.\n\nCrealo en GitHub > Settings > Developer settings > Fine-grained tokens.\nSe guarda SOLO en este equipo; no uses computadoras compartidas.') || '').trim();
+                if (!token) return;
+                localStorage.setItem('ghToken', token);
+            }
+            const btn = document.getElementById('btnGenerarCartera');
+            const etiqueta = btn ? btn.textContent : '';
+            if (btn) { btn.textContent = '☁️ Subiendo…'; btn.disabled = true; }
+            try {
+                const cargado = fechaCargaArchivo || isoDeFecha(new Date());
+                const contenido = JSON.stringify({ cargado: cargado, registros: registrosOriginales });
+                const contenidoB64 = btoa(unescape(encodeURIComponent(contenido)));
+                const apiUrl = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + GH_PATH;
+                const cab = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+                // 1) SHA del archivo actual (para reemplazarlo)
+                let sha = undefined;
+                const resGet = await fetch(apiUrl + '?ref=' + GH_BRANCH, { headers: cab });
+                if (resGet.status === 401) { localStorage.removeItem('ghToken'); throw new Error('Token invalido. Vuelve a pulsar el boton y pega un token valido.'); }
+                if (resGet.ok) { const j = await resGet.json(); sha = j.sha; }
+                // 2) Subir (crear o reemplazar)
+                const resPut = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
+                    body: JSON.stringify({
+                        message: 'Actualizar cartera.json (' + registrosOriginales.length + ' documentos, al ' + cargado + ')',
+                        content: contenidoB64, sha: sha, branch: GH_BRANCH
+                    })
+                });
+                if (resPut.status === 401 || resPut.status === 403) { localStorage.removeItem('ghToken'); throw new Error('El token no tiene permiso de escritura (Contents: write) en el repo. Detalle: ' + (await resPut.text()).slice(0, 140)); }
+                if (!resPut.ok) { throw new Error('GitHub respondio ' + resPut.status + ': ' + (await resPut.text()).slice(0, 180)); }
+                alert('✅ Cartera cargada en GitHub (' + registrosOriginales.length + ' documentos).\n\nTodas las apps la tomaran automaticamente al abrirse (puede tardar 1-2 min en publicarse).');
+            } catch (e) {
+                console.error(e);
+                if (confirm('No se pudo cargar en GitHub:\n' + (e.message || e) + '\n\n¿Descargar el cartera.json para subirlo a mano?')) generarCarteraJson();
+            } finally {
+                if (btn) { btn.textContent = etiqueta; btn.disabled = false; }
+            }
         }
 
         function parsearFechaSegura(fVen) {
