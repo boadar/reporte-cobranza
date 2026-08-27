@@ -179,7 +179,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v79</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v80</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -309,13 +309,13 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Cliente</th>
+                                    <th style="cursor:pointer;user-select:none" onclick="ordenarFacturas('cuerpoFacturasVencidas','cliente')" title="Ordenar por cliente">Cliente<span class="ind" data-k="cuerpoFacturasVencidas-cliente"></span></th>
                                     <th class="text-center">N° Factura</th>
-                                    <th class="text-center">Vencimiento</th>
+                                    <th class="text-center" style="cursor:pointer;user-select:none" onclick="ordenarFacturas('cuerpoFacturasVencidas','fecha')" title="Ordenar por fecha de vencimiento">Vencimiento<span class="ind" data-k="cuerpoFacturasVencidas-fecha"></span></th>
                                     <th class="text-center">Estatus</th>
                                     <th class="text-right">Monto Base</th>
                                     <th class="text-right">IVA</th>
-                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">💰 Por Pagar</th>
+                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe; cursor:pointer; user-select:none;" onclick="ordenarFacturas('cuerpoFacturasVencidas','monto')" title="Ordenar por monto por pagar">💰 Por Pagar<span class="ind" data-k="cuerpoFacturasVencidas-monto"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="cuerpoFacturasVencidas"></tbody>
@@ -332,13 +332,13 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Cliente</th>
+                                    <th style="cursor:pointer;user-select:none" onclick="ordenarFacturas('cuerpoFacturasPorVencer','cliente')" title="Ordenar por cliente">Cliente<span class="ind" data-k="cuerpoFacturasPorVencer-cliente"></span></th>
                                     <th class="text-center">N° Factura</th>
-                                    <th class="text-center">Vencimiento</th>
+                                    <th class="text-center" style="cursor:pointer;user-select:none" onclick="ordenarFacturas('cuerpoFacturasPorVencer','fecha')" title="Ordenar por fecha de vencimiento">Vencimiento<span class="ind" data-k="cuerpoFacturasPorVencer-fecha"></span></th>
                                     <th class="text-center">Estatus</th>
                                     <th class="text-right">Monto Base</th>
                                     <th class="text-right">IVA</th>
-                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe;">💰 Por Pagar</th>
+                                    <th class="text-right" style="color: #1e3a8a; background-color: #dbeafe; cursor:pointer; user-select:none;" onclick="ordenarFacturas('cuerpoFacturasPorVencer','monto')" title="Ordenar por monto por pagar">💰 Por Pagar<span class="ind" data-k="cuerpoFacturasPorVencer-monto"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="cuerpoFacturasPorVencer"></tbody>
@@ -1842,6 +1842,52 @@ function ejecutarEditarCobro() {
             filtrarDatos();
         }
 
+        // ===== Orden de las tablas de Facturas (Vencidas y Por Vencer) =====
+        // Cada tabla recuerda su propio criterio (fecha/cliente/monto) y dirección (asc/desc).
+        // Se cambia pulsando la cabecera de la columna; volver a pulsar la misma invierte el orden.
+        const ordenFacturas = {
+            cuerpoFacturasVencidas: { campo: 'fecha', dir: 'asc' },
+            cuerpoFacturasPorVencer: { campo: 'fecha', dir: 'asc' }
+        };
+        function ordenarFacturas(tbodyId, campo) {
+            const st = ordenFacturas[tbodyId];
+            if (!st) return;
+            if (st.campo === campo) { st.dir = (st.dir === 'asc') ? 'desc' : 'asc'; }
+            else { st.campo = campo; st.dir = (campo === 'fecha') ? 'asc' : 'asc'; }
+            filtrarDatos(); // re-dibuja aplicando el nuevo orden
+        }
+        // Ordena un arreglo de filas [{fecha, cliente, monto, tr}] según el criterio 'st'.
+        // Las filas sin fecha válida siempre quedan al final (en ambas direcciones).
+        function ordenarFacturasArr(arr, st) {
+            const campo = st ? st.campo : 'fecha';
+            const dir = (st && st.dir === 'desc') ? -1 : 1;
+            arr.sort((a, b) => {
+                if (campo === 'cliente') {
+                    return String(a.cliente || '').localeCompare(String(b.cliente || ''), 'es', { sensitivity: 'base' }) * dir;
+                }
+                if (campo === 'monto') {
+                    return ((a.monto || 0) - (b.monto || 0)) * dir;
+                }
+                // fecha (por defecto)
+                if (!a.fecha && !b.fecha) return 0;
+                if (!a.fecha) return 1;   // sin fecha al final, sin importar la dirección
+                if (!b.fecha) return -1;
+                return (a.fecha.getTime() - b.fecha.getTime()) * dir;
+            });
+            return arr;
+        }
+        // Dibuja la flechita ▲/▼ en la columna activa de cada tabla y la limpia en las demás.
+        function actualizarIndicadoresOrden() {
+            document.querySelectorAll('span.ind').forEach(sp => {
+                const k = sp.getAttribute('data-k') || '';
+                const i = k.lastIndexOf('-');
+                if (i < 0) return;
+                const tbodyId = k.slice(0, i), campo = k.slice(i + 1);
+                const st = ordenFacturas[tbodyId];
+                sp.textContent = (st && st.campo === campo) ? (st.dir === 'asc' ? ' ▲' : ' ▼') : '';
+            });
+        }
+
         function filtrarDatos() {
             const elBusqueda = document.getElementById('inputBusqueda');
             const terminoBusqueda = elBusqueda ? elBusqueda.value.toLowerCase() : '';
@@ -2009,13 +2055,13 @@ function ejecutarEditarCobro() {
                                 countFacturasVencidas++;
                                 sumaBaseVencidas += montoBase;
                                 sumaIVAVencidas += montoIVA;
-                                filasFacturasVencidas.push({ fecha: fechaVenObjeto, tr });
+                                filasFacturasVencidas.push({ fecha: fechaVenObjeto, cliente: String(cliente || ''), monto: montoPorPagar, tr });
                             } else {
                                 countFacturasPorVencer++;
                                 sumaFacturasPorVencer += montoPorPagar;
                                 sumaBasePorVencer += montoBase;
                                 sumaIVAPorVencer += montoIVA;
-                                filasFacturasPorVencer.push({ fecha: fechaVenObjeto, tr });
+                                filasFacturasPorVencer.push({ fecha: fechaVenObjeto, cliente: String(cliente || ''), monto: montoPorPagar, tr });
                             }
                         }
                     }
@@ -2034,10 +2080,11 @@ function ejecutarEditarCobro() {
                 return arr;
             }
 
-            ordenarPorFechaAscendente(filasFacturasVencidas).forEach(f => tbodyFacturasVencidas.appendChild(f.tr));
-            ordenarPorFechaAscendente(filasFacturasPorVencer).forEach(f => tbodyFacturasPorVencer.appendChild(f.tr));
+            ordenarFacturasArr(filasFacturasVencidas, ordenFacturas.cuerpoFacturasVencidas).forEach(f => tbodyFacturasVencidas.appendChild(f.tr));
+            ordenarFacturasArr(filasFacturasPorVencer, ordenFacturas.cuerpoFacturasPorVencer).forEach(f => tbodyFacturasPorVencer.appendChild(f.tr));
             ordenarPorFechaAscendente(filasNC).forEach(f => tbodyNC.appendChild(f.tr));
             ordenarPorFechaAscendente(filasPendientesCero).forEach(f => tbodyPendientesCero.appendChild(f.tr));
+            actualizarIndicadoresOrden(); // flechita ▲/▼ en la columna activa
 
             // Crea una fila de totales al final de una tabla. 'valores' es un array de montos ya formateados (uno por cada columna numérica a totalizar).
             function crearFilaTotal(colspanEtiqueta, valoresFormateados) {
