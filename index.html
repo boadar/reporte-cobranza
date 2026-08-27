@@ -179,7 +179,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v80</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v81</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -662,7 +662,7 @@
         // tasas.json en GitHub, igual que la rutina diaria pero SIN necesidad de Claude. Cancelar
         // = cargar las tasas desde un archivo Excel/CSV (comportamiento de siempre).
         function iniciarCargaTasas() {
-            if (confirm('¿Obtener la tasa BCV de HOY automáticamente desde internet?\n\n• Aceptar = automático (consulta el BCV y la sube a GitHub para todas las apps)\n• Cancelar = cargar las tasas desde un archivo Excel/CSV')) {
+            if (confirm('¿Obtener la tasa BCV de HOY automáticamente desde internet?\n\n• Aceptar = automático, valor REFERENCIAL (no sobrescribe fechas ya cargadas; la oficial la fija la rutina diaria del BCV)\n• Cancelar = cargar las tasas desde un archivo Excel/CSV')) {
                 cargarTasaBcvAutomatica();
             } else {
                 document.getElementById('inputTasasOculto').click();
@@ -761,7 +761,8 @@
             return { usd: usd, eur: (eur && !isNaN(eur)) ? eur : null, fuente: 'pydolarve (BCV)', fechaApi: '' };
         }
 
-        // Mezcla las fechas nuevas en tasas.json de GitHub (sin borrar el histórico) y lo sube.
+        // Agrega en tasas.json de GitHub SOLO las fechas que aún no existan; NO pisa las que ya están
+        // (manda la rutina diaria del BCV, que es la oficial). Devuelve { agregadas, yaExistian }.
         // Formato del archivo: { "AAAA-MM-DD": [usd, eur], ... }. 'nuevas' tiene ese mismo formato.
         async function subirTasasAGitHub(nuevas) {
             const token = obtenerTokenGitHub();
@@ -777,17 +778,20 @@
                 sha = j.sha;
                 try { base = JSON.parse(decodeURIComponent(escape(atob((j.content || '').replace(/\n/g, ''))))) || {}; } catch (_) { base = {}; }
             }
-            // 2) Mezclar (las nuevas pisan) y subir.
-            const merged = Object.assign({}, base, nuevas);
+            // 2) Agregar solo las fechas que NO existan (las existentes no se tocan: manda la rutina diaria).
+            const merged = Object.assign({}, base);
+            const agregadas = [], yaExistian = [];
+            for (const k in nuevas) { if (k in base) yaExistian.push(k); else { merged[k] = nuevas[k]; agregadas.push(k); } }
+            if (!agregadas.length) return { agregadas: [], yaExistian: yaExistian };
             const contenidoB64 = btoa(unescape(encodeURIComponent(JSON.stringify(merged))));
-            const fechas = Object.keys(nuevas).join(', ');
             const resPut = await fetch(apiUrl, {
                 method: 'PUT',
                 headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
-                body: JSON.stringify({ message: 'tasas BCV: ' + fechas, content: contenidoB64, sha: sha, branch: GH_BRANCH })
+                body: JSON.stringify({ message: 'tasas BCV (referencial): ' + agregadas.join(', '), content: contenidoB64, sha: sha, branch: GH_BRANCH })
             });
             if (resPut.status === 401 || resPut.status === 403) { localStorage.removeItem('ghToken'); throw new Error('El token no tiene permiso de escritura (Contents: write) en el repo. Detalle: ' + (await resPut.text()).slice(0, 140)); }
             if (!resPut.ok) throw new Error('GitHub respondió ' + resPut.status + ': ' + (await resPut.text()).slice(0, 180));
+            return { agregadas: agregadas, yaExistian: yaExistian };
         }
 
         // Flujo automático: consulta el BCV de hoy, confirma con el usuario, lo sube a GitHub y lo
@@ -804,7 +808,7 @@
                 const [Y, M, D] = iso.split('-').map(Number);
                 const fecha = new Date(Y, M - 1, D); // medianoche local de esa fecha
                 const txtEUR = t.eur != null ? ('Bs ' + t.eur.toFixed(4)) : '(no disponible en esta fuente)';
-                if (!confirm('Tasa BCV para ' + fmtFechaISO(iso) + '  —  fuente: ' + t.fuente + '\n\nUSD:  Bs ' + t.usd.toFixed(4) + '\nEUR:  ' + txtEUR + '\n\n¿Guardar esta tasa y subirla a GitHub para todas las apps?')) {
+                if (!confirm('Tasa BCV para ' + fmtFechaISO(iso) + '  —  fuente: ' + t.fuente + ' (REFERENCIAL)\n\nUSD:  Bs ' + t.usd.toFixed(4) + '\nEUR:  ' + txtEUR + '\n\nNota: la tasa OFICIAL la fija la rutina diaria del BCV. Esto es un respaldo y NO sobrescribe una fecha que ya tenga tasa.\n\n¿Guardar en GitHub solo si falta esa fecha?')) {
                     return;
                 }
                 const nuevas = {};
@@ -815,11 +819,15 @@
                     nuevas[isoDeFecha(sab)] = [t.usd, t.eur];
                     nuevas[isoDeFecha(dom)] = [t.usd, t.eur];
                 }
-                await subirTasasAGitHub(nuevas);
-                for (const k in nuevas) tasasPorFecha[k] = Number(nuevas[k][0]); // la app usa el USD
+                const res = await subirTasasAGitHub(nuevas);
+                for (const k in nuevas) { if (tasasPorFecha[k] == null) tasasPorFecha[k] = Number(nuevas[k][0]); } // no pisa lo ya cargado
                 if (typeof filtrarDatos === 'function') filtrarDatos();
                 revisarTasasFaltantes(); // refresca/oculta el aviso de días faltantes
-                alert('✅ Tasa BCV guardada y subida a GitHub:\n' + fmtFechaISO(iso) + '  ·  USD Bs ' + t.usd.toFixed(4) + (t.eur != null ? ('  ·  EUR Bs ' + t.eur.toFixed(4)) : '') + (fecha.getDay() === 1 ? '\n(sábado y domingo previos con la misma tasa)' : '') + '\n\nTodas las apps la tomarán al abrirse (puede tardar 1-2 min en publicarse).');
+                if (res.agregadas.length) {
+                    alert('✅ Tasa BCV (referencial) agregada en GitHub:\n' + res.agregadas.map(fmtFechaISO).join(', ') + '  ·  USD Bs ' + t.usd.toFixed(4) + (t.eur != null ? ('  ·  EUR Bs ' + t.eur.toFixed(4)) : '') + '\n\nRecuerda: la tasa oficial la fija la rutina diaria del BCV. Puede tardar 1-2 min en publicarse.');
+                } else {
+                    alert('ℹ️ Esa(s) fecha(s) ya tenían tasa cargada; NO se sobrescriben (manda la rutina diaria del BCV):\n' + res.yaExistian.map(fmtFechaISO).join(', '));
+                }
             } catch (e) {
                 console.error(e);
                 if (confirm('No se pudo obtener/subir la tasa automáticamente:\n' + (e.message || e) + '\n\n¿Cargar las tasas desde un archivo (Excel/CSV) en su lugar?')) {
