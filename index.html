@@ -174,12 +174,20 @@
         <span id="overlayProcesandoTxt">Procesando el archivo…</span>
       </div>
     </div>
-    <style>@keyframes spinProc{to{transform:rotate(360deg)}}</style>
+    <style>
+      @keyframes spinProc{to{transform:rotate(360deg)}}
+      /* Selección de filas para sumar subtotales */
+      .sel-row{cursor:pointer}
+      .sel-row:hover{background-color:rgba(37,99,235,0.06)}
+      tr.fila-sel{background-color:rgba(37,99,235,0.16)!important;box-shadow:inset 4px 0 0 #2563eb}
+      .subtotal-sel{margin:6px 2px 2px;padding:8px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-weight:700;font-size:0.82rem;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+      @media print{tr.fila-sel{background:none!important;box-shadow:none!important} .subtotal-sel{display:none!important}}
+    </style>
 
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v81</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v82</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -321,6 +329,7 @@
                             <tbody id="cuerpoFacturasVencidas"></tbody>
                         </table>
                     </div>
+                    <div id="subtotalSel-cuerpoFacturasVencidas" class="subtotal-sel no-print" style="display:none"></div>
                 </div>
 
                 <div>
@@ -344,6 +353,7 @@
                             <tbody id="cuerpoFacturasPorVencer"></tbody>
                         </table>
                     </div>
+                    <div id="subtotalSel-cuerpoFacturasPorVencer" class="subtotal-sel no-print" style="display:none"></div>
                 </div>
 
                 <div>
@@ -365,6 +375,7 @@
                             <tbody id="cuerpoNC"></tbody>
                         </table>
                     </div>
+                    <div id="subtotalSel-cuerpoNC" class="subtotal-sel no-print" style="display:none"></div>
                 </div>
 
                 <div>
@@ -388,6 +399,7 @@
                             <tbody id="cuerpoPendientesCero"></tbody>
                         </table>
                     </div>
+                    <div id="subtotalSel-cuerpoPendientesCero" class="subtotal-sel no-print" style="display:none"></div>
                 </div>
 
                 <div>
@@ -472,6 +484,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             conectarEventoInput();
+            conectarSeleccionSubtotales(); // clic en filas para sumar subtotales
             if (registrosOriginales.length > 0) {
                 inicializarInterfazConDatos();
                 traerTasasDeGitHub().then(revisarTasasFaltantes); // tasas frescas + aviso de faltantes
@@ -1896,6 +1909,60 @@ function ejecutarEditarCobro() {
             });
         }
 
+        // ===== Sumador de líneas seleccionadas (subtotal del monto por pagar) =====
+        // Al hacer clic en una fila de estos cuadros se marca/desmarca y se va sumando su monto
+        // (Por Pagar / Monto / Base) en un subtotal que aparece debajo del cuadro.
+        const TABLAS_SUMABLES = {
+            cuerpoFacturasVencidas: 'Por Pagar',
+            cuerpoFacturasPorVencer: 'Por Pagar',
+            cuerpoNC: 'Monto',
+            cuerpoPendientesCero: 'Monto Base'
+        };
+        function fmtMonedaSel(n) { return '$ ' + n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function recomputarSubtotalSel(tbodyId) {
+            const tb = document.getElementById(tbodyId);
+            const cont = document.getElementById('subtotalSel-' + tbodyId);
+            if (!tb || !cont) return;
+            const sel = tb.querySelectorAll('tr.fila-sel');
+            let suma = 0;
+            sel.forEach(tr => { suma += parseFloat(tr.dataset.monto || '0') || 0; });
+            if (sel.length === 0) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+            const etiqueta = TABLAS_SUMABLES[tbodyId] || 'Monto';
+            const plural = sel.length > 1;
+            cont.innerHTML = '<span>🧮 ' + sel.length + ' línea' + (plural ? 's' : '') + ' seleccionada' + (plural ? 's' : '') + '</span>'
+                + '<span>Subtotal ' + etiqueta + ': ' + fmtMonedaSel(suma)
+                + '  <button type="button" onclick="limpiarSeleccionSel(\'' + tbodyId + '\')" style="margin-left:8px;padding:2px 9px;border-radius:6px;border:1px solid #93c5fd;background:#fff;color:#1e3a8a;font-weight:700;cursor:pointer">Limpiar</button></span>';
+            cont.style.display = 'flex';
+        }
+        function limpiarSeleccionSel(tbodyId) {
+            const tb = document.getElementById(tbodyId);
+            if (!tb) return;
+            tb.querySelectorAll('tr.fila-sel').forEach(tr => tr.classList.remove('fila-sel'));
+            recomputarSubtotalSel(tbodyId);
+        }
+        function onClickFilaSel(ev, tbodyId) {
+            if (ev.target.closest('button')) return;          // no togglear si se pulsó un botón
+            const tr = ev.target.closest('tr');
+            if (!tr || tr.dataset.monto === undefined) return; // fila de total u otra sin monto
+            tr.classList.toggle('fila-sel');
+            recomputarSubtotalSel(tbodyId);
+        }
+        function conectarSeleccionSubtotales() {
+            Object.keys(TABLAS_SUMABLES).forEach(tbodyId => {
+                const tb = document.getElementById(tbodyId);
+                if (tb && !tb.dataset.selWired) {
+                    tb.dataset.selWired = '1';
+                    tb.addEventListener('click', ev => onClickFilaSel(ev, tbodyId));
+                }
+            });
+        }
+        function resetSubtotalesSel() {
+            Object.keys(TABLAS_SUMABLES).forEach(tbodyId => {
+                const cont = document.getElementById('subtotalSel-' + tbodyId);
+                if (cont) { cont.style.display = 'none'; cont.innerHTML = ''; }
+            });
+        }
+
         function filtrarDatos() {
             const elBusqueda = document.getElementById('inputBusqueda');
             const terminoBusqueda = elBusqueda ? elBusqueda.value.toLowerCase() : '';
@@ -1945,6 +2012,7 @@ function ejecutarEditarCobro() {
             tbodyNC.innerHTML = '';
             tbodyPendientesCero.innerHTML = '';
             tbodyHistorial.innerHTML = '';
+            resetSubtotalesSel(); // se re-dibujan las filas: limpia selección/subtotales previos
 
             let sumaFacturas = 0, countFacturas = 0;
             let sumaFacturasVencidas = 0, countFacturasVencidas = 0;
@@ -2002,6 +2070,8 @@ function ejecutarEditarCobro() {
                         sumaNC += montoOriginal;
                         
                         const tr = document.createElement('tr');
+                        tr.classList.add('sel-row');
+                        tr.dataset.monto = montoOriginal; // para sumar el subtotal seleccionado
                         tr.innerHTML = `
                             <td>${cliente}</td>
                             <td class="text-center font-mono">${nroFactura}</td>
@@ -2016,7 +2086,8 @@ function ejecutarEditarCobro() {
                             sumaBasePendientesCero += montoBase;
                             sumaIVAPendientesCero += montoIVA;
                             const tr = document.createElement('tr');
-                            tr.className = "bg-amber-row";
+                            tr.className = "bg-amber-row sel-row";
+                            tr.dataset.monto = montoBase; // para sumar el subtotal seleccionado
                             tr.innerHTML = `
                                 <td>${cliente}</td>
                                 <td class="text-center font-mono">${nroFactura}</td>
@@ -2049,6 +2120,8 @@ function ejecutarEditarCobro() {
                             const montoPorPagarFormateado = `$ ${montoPorPagar.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
                             const tr = document.createElement('tr');
+                            tr.classList.add('sel-row');
+                            tr.dataset.monto = montoPorPagar; // para sumar el subtotal seleccionado
                             tr.innerHTML = `
                                 <td>${cliente}</td>
                                 <td class="text-center font-mono">${nroFactura}</td>
