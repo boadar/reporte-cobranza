@@ -187,7 +187,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v83</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v84</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -1080,8 +1080,11 @@
 
                         for (let i = 0; i < Math.min(matriz.length, 15); i++) {
                             const filaTest = matriz[i];
-                            const idxDenominacion = filaTest.findIndex(c => String(c).trim() === 'Denominación social');
-                            const idxCliente = filaTest.findIndex(c => String(c).trim() === 'Cliente'); // compatibilidad con plantillas anteriores
+                            // Detección tolerante del encabezado del cliente: acepta "Denominación social",
+                            // la variante mal escrita "Denomimación Social", mayúsculas/minúsculas y acentos.
+                            const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                            const idxDenominacion = filaTest.findIndex(c => { const n = norm(c); return n.includes('denom') && n.includes('social'); });
+                            const idxCliente = filaTest.findIndex(c => norm(c) === 'cliente'); // compatibilidad con plantillas anteriores
 
                             if (idxDenominacion !== -1 || idxCliente !== -1) {
                                 filasCrudasMatriz = matriz;
@@ -1091,7 +1094,11 @@
                                     if (nombre !== "") mapaColumnas[nombre] = idx;
                                 });
 
-                                if (idxDenominacion === -1) {
+                                if (idxDenominacion !== -1) {
+                                    // Clave canónica del cliente aunque el encabezado venga mal escrito
+                                    // (p. ej. "Denomimación Social"): así el resto de la app la encuentra.
+                                    mapaColumnas['Denominación social'] = idxDenominacion;
+                                } else {
                                     // Layout anterior: "Cliente" en vez de "Denominación social", y el vendedor
                                     // va en la columna inmediatamente a la derecha de "Cliente".
                                     mapaColumnas['Denominación social'] = idxCliente;
