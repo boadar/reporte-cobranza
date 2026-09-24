@@ -187,7 +187,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v82</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v83</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -482,14 +482,14 @@
         const CARTERA_URL = 'cartera.json';
         const TASAS_URL = 'tasas.json';
 
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             conectarEventoInput();
             conectarSeleccionSubtotales(); // clic en filas para sumar subtotales
             if (registrosOriginales.length > 0) {
                 inicializarInterfazConDatos();
                 traerTasasDeGitHub().then(revisarTasasFaltantes); // tasas frescas + aviso de faltantes
             } else if (typeof snapshotDatosInyectados === 'undefined') {
-                const local = leerCarteraManual();
+                const local = await leerCarteraManual();
                 if (local) {
                     // se cargó un archivo en este equipo: se conserva hasta que se cargue otro o se quite.
                     registrosOriginales = local.registros;
@@ -544,16 +544,52 @@
             if (texto) { const t = document.getElementById('overlayProcesandoTxt'); if (t) t.textContent = texto; }
             el.style.display = mostrar ? 'flex' : 'none';
         }
-        function guardarCarteraManual(cargado, registros, nombre) {
-            try { localStorage.setItem('carteraManual', JSON.stringify({ cargado: cargado || '', registros: registros, nombre: nombre || '', ts: new Date().toISOString() })); }
-            catch (e) { alert('No se pudo guardar la cartera en este equipo (memoria llena). Se usará solo en esta sesión.'); }
+        // La cartera puede pesar varios MB (miles de facturas con todos los campos), más de lo que
+        // aguanta localStorage (~5 MB). Por eso se guarda en IndexedDB, que maneja mucho más.
+        // Helper mínimo clave-valor sobre IndexedDB; devuelve una promesa y nunca lanza (resuelve
+        // null si algo falla), para no romper la carga si el navegador no lo soporta.
+        function idbCartera(modo, valor) {
+            return new Promise((resolve) => {
+                let req;
+                try { req = indexedDB.open('cobranzaDB', 1); } catch (e) { return resolve(null); }
+                req.onupgradeneeded = () => { try { req.result.createObjectStore('kv'); } catch (e) {} };
+                req.onerror = () => resolve(null);
+                req.onsuccess = () => {
+                    const db = req.result;
+                    try {
+                        const tx = db.transaction('kv', modo === 'get' ? 'readonly' : 'readwrite');
+                        const store = tx.objectStore('kv');
+                        const r = (modo === 'get') ? store.get('carteraManual')
+                            : (modo === 'set') ? store.put(valor, 'carteraManual')
+                                : store.delete('carteraManual');
+                        r.onsuccess = () => resolve(modo === 'get' ? (r.result || null) : true);
+                        r.onerror = () => resolve(null);
+                        tx.oncomplete = () => { try { db.close(); } catch (e) {} };
+                    } catch (e) { resolve(null); }
+                };
+            });
         }
-        function leerCarteraManual() {
-            try { const o = JSON.parse(localStorage.getItem('carteraManual') || 'null'); if (o && Array.isArray(o.registros) && o.registros.length) return o; } catch (e) {}
+        async function guardarCarteraManual(cargado, registros, nombre) {
+            const obj = { cargado: cargado || '', registros: registros, nombre: nombre || '', ts: new Date().toISOString() };
+            const ok = await idbCartera('set', obj);
+            if (ok) {
+                try { localStorage.removeItem('carteraManual'); } catch (e) {} // limpia el guardado viejo si lo había
+            } else {
+                // Respaldo por si IndexedDB no está disponible (poco común): se intenta localStorage.
+                try { localStorage.setItem('carteraManual', JSON.stringify(obj)); }
+                catch (e) { console.warn('No se pudo guardar la cartera en este equipo; se usará solo en esta sesión.'); }
+            }
+        }
+        async function leerCarteraManual() {
+            const o = await idbCartera('get');
+            if (o && Array.isArray(o.registros) && o.registros.length) return o;
+            // Respaldo/migración: cartera guardada antes en localStorage.
+            try { const s = JSON.parse(localStorage.getItem('carteraManual') || 'null'); if (s && Array.isArray(s.registros) && s.registros.length) return s; } catch (e) {}
             return null;
         }
-        function quitarCarteraManual() {
+        async function quitarCarteraManual() {
             if (!confirm('¿Quitar el archivo cargado en este equipo y volver a la cartera publicada en GitHub?')) return;
+            await idbCartera('del');
             try { localStorage.removeItem('carteraManual'); } catch (e) {}
             location.reload();
         }
