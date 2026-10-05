@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v85</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v86</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -823,29 +823,34 @@
             if (!token) throw new Error('Se necesita un token de GitHub para subir la tasa.');
             const apiUrl = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/tasas.json';
             const cab = { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-            // 1) Traer tasas.json actual (contenido + sha) para no perder el histórico.
-            let sha = undefined, base = {};
-            const resGet = await fetch(apiUrl + '?ref=' + GH_BRANCH + '&_=' + Date.now(), { headers: cab, cache: 'no-store' });
-            if (resGet.status === 401) { localStorage.removeItem('ghToken'); throw new Error('Token inválido. Vuelve a intentar y pega un token válido.'); }
-            if (resGet.ok) {
-                const j = await resGet.json();
-                sha = j.sha;
-                try { base = JSON.parse(decodeURIComponent(escape(atob((j.content || '').replace(/\n/g, ''))))) || {}; } catch (_) { base = {}; }
+            // Lee (sha+contenido) -> mezcla sin pisar -> sube. Si el remoto cambió entre leer y
+            // escribir (409/422: otro publicador se adelantó), relee la última versión y reintenta.
+            for (let intento = 0; intento < 5; intento++) {
+                let sha = undefined, base = {};
+                const resGet = await fetch(apiUrl + '?ref=' + GH_BRANCH + '&_=' + Date.now(), { headers: cab, cache: 'no-store' });
+                if (resGet.status === 401) { localStorage.removeItem('ghToken'); throw new Error('Token inválido. Vuelve a intentar y pega un token válido.'); }
+                if (resGet.ok) {
+                    const j = await resGet.json();
+                    sha = j.sha;
+                    try { base = JSON.parse(decodeURIComponent(escape(atob((j.content || '').replace(/\n/g, ''))))) || {}; } catch (_) { base = {}; }
+                }
+                // Agregar solo las fechas que NO existan (las existentes no se tocan: manda la rutina diaria).
+                const merged = Object.assign({}, base);
+                const agregadas = [], yaExistian = [];
+                for (const k in nuevas) { if (k in base) yaExistian.push(k); else { merged[k] = nuevas[k]; agregadas.push(k); } }
+                if (!agregadas.length) return { agregadas: [], yaExistian: yaExistian };
+                const contenidoB64 = btoa(unescape(encodeURIComponent(JSON.stringify(merged))));
+                const resPut = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
+                    body: JSON.stringify({ message: 'tasas BCV (referencial): ' + agregadas.join(', '), content: contenidoB64, sha: sha, branch: GH_BRANCH })
+                });
+                if (resPut.status === 401 || resPut.status === 403) { localStorage.removeItem('ghToken'); throw new Error('El token no tiene permiso de escritura (Contents: write) en el repo. Detalle: ' + (await resPut.text()).slice(0, 140)); }
+                if (resPut.status === 409 || resPut.status === 422) { await new Promise(r => setTimeout(r, 600)); continue; } // el remoto cambió: releer y reintentar
+                if (!resPut.ok) throw new Error('GitHub respondió ' + resPut.status + ': ' + (await resPut.text()).slice(0, 180));
+                return { agregadas: agregadas, yaExistian: yaExistian };
             }
-            // 2) Agregar solo las fechas que NO existan (las existentes no se tocan: manda la rutina diaria).
-            const merged = Object.assign({}, base);
-            const agregadas = [], yaExistian = [];
-            for (const k in nuevas) { if (k in base) yaExistian.push(k); else { merged[k] = nuevas[k]; agregadas.push(k); } }
-            if (!agregadas.length) return { agregadas: [], yaExistian: yaExistian };
-            const contenidoB64 = btoa(unescape(encodeURIComponent(JSON.stringify(merged))));
-            const resPut = await fetch(apiUrl, {
-                method: 'PUT',
-                headers: Object.assign({ 'Content-Type': 'application/json' }, cab),
-                body: JSON.stringify({ message: 'tasas BCV (referencial): ' + agregadas.join(', '), content: contenidoB64, sha: sha, branch: GH_BRANCH })
-            });
-            if (resPut.status === 401 || resPut.status === 403) { localStorage.removeItem('ghToken'); throw new Error('El token no tiene permiso de escritura (Contents: write) en el repo. Detalle: ' + (await resPut.text()).slice(0, 140)); }
-            if (!resPut.ok) throw new Error('GitHub respondió ' + resPut.status + ': ' + (await resPut.text()).slice(0, 180));
-            return { agregadas: agregadas, yaExistian: yaExistian };
+            throw new Error('No se pudo subir la tasa: el remoto cambió varias veces seguidas. Intenta de nuevo en un momento.');
         }
 
         // Flujo automático: consulta el BCV de hoy, confirma con el usuario, lo sube a GitHub y lo
