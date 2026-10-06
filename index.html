@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v86</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v87</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -209,6 +209,7 @@
         </header>
 
         <div id="avisoTasasFaltantes" class="no-print" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:8px;background:#fef3c7;border:1px solid #f59e0b;color:#92400e;font-size:0.8rem;font-weight:600;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap"></div>
+        <div id="notaCobranzas" class="no-print" style="display:none;margin:0 0 12px;padding:8px 14px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;font-size:0.8rem;font-weight:600"></div>
 
         <div class="barra-herramientas no-print">
             <div id="contenedorCampoArchivo" class="campo-control">
@@ -486,6 +487,12 @@
         // sigue permitiendo cargar el Excel manualmente, como antes.
         const CARTERA_URL = 'cartera.json';
         const TASAS_URL = 'tasas.json';
+        const COBRANZAS_URL = 'cobranzas.json';
+
+        // Pagos reportados con comprobante (overlay sobre la cartera del ERP). Mapa: nroFactura -> USD acumulado.
+        // Se arma de los cobros locales (localStorage 'cobranzas') + los publicados en cobranzas.json.
+        let cobranzasReportadas = {};
+        let cobranzasRemotas = {};   // { id: {factura, usd, ts, anulado} } traído de cobranzas.json
 
         window.addEventListener('DOMContentLoaded', async () => {
             conectarEventoInput();
@@ -493,6 +500,7 @@
             if (registrosOriginales.length > 0) {
                 inicializarInterfazConDatos();
                 traerTasasDeGitHub().then(revisarTasasFaltantes); // tasas frescas + aviso de faltantes
+                cargarYAplicarCobranzas();                        // pagos reportados con comprobante
             } else if (typeof snapshotDatosInyectados === 'undefined') {
                 const local = await leerCarteraManual();
                 if (local) {
@@ -505,12 +513,76 @@
                     inicializarInterfazConDatos();
                     mostrarFechaCarga(fechaCargaArchivo, local.registros.length, 'archivo cargado en este equipo', true);
                     traerTasasDeGitHub().then(revisarTasasFaltantes); // tasas frescas + aviso de faltantes
+                    cargarYAplicarCobranzas();                        // pagos reportados con comprobante
                 } else {
                     // si no hay archivo local guardado, se trae la cartera publicada en GitHub.
                     cargarDatosDesdeGitHub();
                 }
             }
         });
+
+        // Trae cobranzas.json del repo, recalcula el overlay y refresca las tablas.
+        async function cargarYAplicarCobranzas() {
+            await traerCobranzasDeGitHub();
+            recalcularCobranzasReportadas();
+            if (typeof filtrarDatos === 'function') filtrarDatos();
+        }
+
+        // Lee cobranzas.json (pagos reportados con comprobante) del repositorio: { actualizado, cobros:{id:{...}} }.
+        async function traerCobranzasDeGitHub() {
+            try {
+                const r = await fetch(COBRANZAS_URL + '?t=' + Date.now(), { cache: 'no-store' });
+                if (r.ok) {
+                    const j = await r.json();
+                    if (j && j.cobros && typeof j.cobros === 'object') cobranzasRemotas = j.cobros;
+                }
+            } catch (e) { /* sin señal / aún no existe: solo se usan los cobros locales */ }
+        }
+
+        // Une cobros remotos (cobranzas.json) + locales (localStorage 'cobranzas') por id y arma el mapa
+        // nroFactura -> USD. Regla anti-doble-conteo: solo cuenta cobros registrados DESPUÉS de la fecha de
+        // la cartera vigente (si el ERP ya reflejó el pago en una carga más nueva, no se resta otra vez).
+        function recalcularCobranzasReportadas() {
+            const porId = {};
+            // remotos
+            for (const id in (cobranzasRemotas || {})) {
+                const c = cobranzasRemotas[id] || {};
+                porId[id] = { factura: String(c.factura || '').trim(), usd: Number(c.usd) || 0, ts: Number(c.ts) || 0, anulado: !!c.anulado };
+            }
+            // locales (este equipo manda sobre su propio id)
+            try {
+                const loc = JSON.parse(localStorage.getItem('cobranzas') || '[]');
+                if (Array.isArray(loc)) loc.forEach(r => {
+                    const id = String(r.id);
+                    porId[id] = { factura: String(r.factura || '').trim(), usd: Number(r.pagoAplicadoUsd) || 0, ts: Number(r.id) || 0, anulado: !!r.anulado };
+                });
+            } catch (e) { /* localStorage no disponible */ }
+            // fecha de corte: la cartera vigente (cargado) a medianoche; sin fecha => contar todo
+            let corteMs = 0;
+            if (fechaCargaArchivo && /^\d{4}-\d{2}-\d{2}$/.test(fechaCargaArchivo)) {
+                const [Y, M, D] = fechaCargaArchivo.split('-').map(Number);
+                corteMs = new Date(Y, M - 1, D).getTime();
+            }
+            const mapa = {}; let n = 0; let totalUsd = 0;
+            for (const id in porId) {
+                const c = porId[id];
+                if (c.anulado || !c.factura || !(c.usd > 0)) continue;
+                if (corteMs && c.ts && c.ts <= corteMs) continue; // ya absorbido por el ERP
+                mapa[c.factura] = (mapa[c.factura] || 0) + c.usd;
+                n++; totalUsd += c.usd;
+            }
+            cobranzasReportadas = mapa;
+            mostrarNotaCobranzas(n, totalUsd);
+        }
+
+        function mostrarNotaCobranzas(n, totalUsd) {
+            const el = document.getElementById('notaCobranzas');
+            if (!el) return;
+            if (!n) { el.style.display = 'none'; el.innerHTML = ''; return; }
+            const t = '$ ' + totalUsd.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            el.innerHTML = '💵 Incluye ' + n + ' pago' + (n > 1 ? 's' : '') + ' reportado' + (n > 1 ? 's' : '') + ' con comprobante (−' + t + ' aplicado al Por Pagar).';
+            el.style.display = 'block';
+        }
 
         // Trae cartera.json (facturas) y tasas.json (tasas BCV) del repositorio y arranca la app.
         // Cada archivo se valida por separado: si uno falla, no daña al otro. No pisa datos que ya
@@ -638,6 +710,7 @@
                     const sub = document.querySelector('header div p');
                     if (sub) sub.textContent = '✔ Cartera al día desde GitHub · ' + registros.length + ' documentos.';
                     mostrarFechaCarga(cargado, registros.length, 'desde GitHub');
+                    cargarYAplicarCobranzas(); // pagos reportados con comprobante
                 }
             } catch (e) { /* sin señal / archivo dañado: queda la carga manual */ }
         }
@@ -2154,9 +2227,10 @@ function ejecutarEditarCobro() {
                         } else {
                             countFacturas++;
                             
-                            let abonoAsignado = pagosAbonadosEnSesion[nroFactura] || 0;
+                            // abono = lo cobrado dentro de esta app + lo reportado con comprobante (overlay, en USD)
+                            let abonoAsignado = (pagosAbonadosEnSesion[nroFactura] || 0) + (cobranzasReportadas[nroFactura] || 0);
                             let montoPorPagar = montoOriginal - abonoAsignado;
-                            if(montoPorPagar < 0) montoPorPagar = 0; 
+                            if(montoPorPagar < 0) montoPorPagar = 0;
 
                             sumaFacturas += montoPorPagar; 
                             

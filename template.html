@@ -990,12 +990,22 @@ function ivaYaCobrado(factura,cod){
     return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.iva25Aplicado||0):0);
   },0);
 }
-/* Base ya cobrada de una factura en cobranzas anteriores ($) */
+/* Base ya cobrada de una factura en cobranzas anteriores ($): cobros locales + los reportados
+   en otros equipos (cobranzas.json). Los pagos anteriores a la cartera vigente no se cuentan
+   (el ERP ya los reflejó) para no restar doble. */
 function baseYaCobrado(factura,cod){
   if(!factura)return 0;
-  return loadDb().reduce(function(a,r){
-    return a+((r.factura===factura && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.pagoAplicadoUsd||0):0);
+  const f=String(factura).trim();
+  let tot=loadDb().reduce(function(a,r){
+    return a+((String(r.factura||'').trim()===f && (!cod||r.cliCod===cod) && r.id!==editingId)?(r.pagoAplicadoUsd||0):0);
   },0);
+  if(cobrosRemotos && cobrosRemotos.length){
+    for(let i=0;i<cobrosRemotos.length;i++){
+      const c=cobrosRemotos[i];
+      if(c.factura===f && (!cod||c.cliCod===cod) && (!corteCarteraMs || !c.ts || c.ts>corteCarteraMs)) tot+=c.usd;
+    }
+  }
+  return tot;
 }
 /* Ya cobrado/registrado de un concepto (iva25 | retencion) de una factura, en Bs. */
 function cobradoConcepto(factura,cod,tipo){
@@ -1153,6 +1163,71 @@ function iniciarReparto(){
 const selected=new Set();
 function loadDb(){try{return JSON.parse(localStorage.getItem('cobranzas')||'[]');}catch(e){return[];}}
 function saveDb(a){localStorage.setItem('cobranzas',JSON.stringify(a));}
+
+/* ===== Sincronizacion de pagos reportados (cobranzas.json en GitHub) =====
+   Los pagos registrados aqui se publican en cobranzas.json para que el Control de
+   Cobranza (y otros equipos) descuenten el saldo. Usa el mismo token 'ghToken' del
+   boton "CARGAR CARTERA" (mismo origen). Si no hay token/internet, el pago queda
+   local en este equipo y se vera igual aqui. */
+const GH_OWNER='boadar', GH_REPO='reporte-cobranza', GH_BRANCH='main', GH_COB_PATH='cobranzas.json';
+let cobrosRemotos=[];   // cobros de OTROS equipos (de cobranzas.json) para reflejar su saldo
+let corteCarteraMs=0;   // fecha de la cartera vigente (ms); cobros anteriores ya los tiene el ERP
+
+// Proyeccion slim de los cobros locales para publicar (keyed por id).
+function proyectarCobrosLocales(){
+  const out={};
+  try{loadDb().forEach(function(r){
+    const id=String(r.id);
+    out[id]={factura:String(r.factura||'').trim(), cliCod:r.cliCod||'',
+             usd:Number(r.pagoAplicadoUsd)||0, iva25Bs:Number(r.iva25Aplicado)||0,
+             retBs:(r.cobroTipo==='retencion'?(Number(r.montoAplicadoBs)||0):0),
+             ts:Number(r.id)||0, estatus:r.estatus||'', anulado:!!r.anulado};
+  });}catch(e){}
+  return out;
+}
+
+// Publica (merge por id) los cobros locales en cobranzas.json. conPrompt=true pide el token si falta.
+async function publicarCobranzasAGitHub(conPrompt){
+  let token=(localStorage.getItem('ghToken')||'').trim();
+  if(!token){
+    if(!conPrompt)return false;
+    token=(prompt('Para sincronizar los pagos con el Control de Cobranza y otros equipos, pega tu TOKEN de GitHub (fine-grained, Contents: Read and write) del repo '+GH_REPO+'.\n\nSe guarda SOLO en este equipo; uselo solo en equipos de la oficina. Si lo dejas vacio, el pago queda solo en este equipo.')||'').trim();
+    if(!token)return false;
+    localStorage.setItem('ghToken',token);
+  }
+  const apiUrl='https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_COB_PATH;
+  const cab={'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  const mios=proyectarCobrosLocales();
+  for(let intento=0;intento<5;intento++){
+    let sha=undefined, base={cobros:{}};
+    try{
+      const resGet=await fetch(apiUrl+'?ref='+GH_BRANCH+'&_='+Date.now(),{headers:cab,cache:'no-store'});
+      if(resGet.status===401){localStorage.removeItem('ghToken');console.warn('Token invalido.');return false;}
+      if(resGet.ok){const j=await resGet.json();sha=j.sha;try{base=JSON.parse(decodeURIComponent(escape(atob((j.content||'').replace(/\n/g,'')))))||{cobros:{}};}catch(_){base={cobros:{}};}}
+    }catch(e){console.warn('No se pudo leer cobranzas.json:',e);return false;}
+    if(!base||typeof base!=='object'||!base.cobros||typeof base.cobros!=='object')base={cobros:{}};
+    const merged=Object.assign({},base.cobros,mios); // los de este equipo pisan por id; se conservan los de otros
+    const cuerpo={actualizado:new Date().toISOString(),cobros:merged};
+    const contenidoB64=btoa(unescape(encodeURIComponent(JSON.stringify(cuerpo))));
+    let resPut;
+    try{resPut=await fetch(apiUrl,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},cab),body:JSON.stringify({message:'cobranzas reportadas ('+Object.keys(mios).length+')',content:contenidoB64,sha:sha,branch:GH_BRANCH})});}
+    catch(e){console.warn('No se pudo subir cobranzas.json:',e);return false;}
+    if(resPut.status===401||resPut.status===403){localStorage.removeItem('ghToken');console.warn('El token no tiene permiso de escritura.');return false;}
+    if(resPut.status===409||resPut.status===422){await new Promise(function(r){setTimeout(r,600);});continue;}
+    if(!resPut.ok){console.warn('GitHub respondio '+resPut.status);return false;}
+    return true;
+  }
+  console.warn('No se pudo publicar cobranzas tras varios intentos.');
+  return false;
+}
+
+// Tras guardar: publica. Solo pide el token UNA vez por equipo (para no molestar en cada guardado).
+function sincronizarCobranzasTrasGuardar(){
+  let hayToken=!!(localStorage.getItem('ghToken')||'').trim();
+  let preguntar=false;
+  if(!hayToken && !localStorage.getItem('cobSyncAsked')){localStorage.setItem('cobSyncAsked','1');preguntar=true;}
+  publicarCobranzasAGitHub(preguntar);   // fire-and-forget; si falla queda local
+}
 function compressImg(dataUrl,maxDim,q){
   return new Promise(res=>{
     if(!dataUrl||!/^data:image\//.test(dataUrl)){res(dataUrl||'');return;}
@@ -1255,6 +1330,7 @@ async function saveCobranza(enReparto){
     return;
   }
   btn.textContent=lbl;btn.disabled=false;
+  sincronizarCobranzasTrasGuardar();   // publica el pago para que baje el saldo en el Control de Cobranza
   editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;
   if(enReparto){
     // se guardó la parte de IVA de esta factura; ahora se reabre para aplicar el sobrante a otra.
@@ -1794,8 +1870,29 @@ function carteraToFacturas(data){
   return Object.keys(fac).length?fac:null;
 }
 async function refrescarDatos(){
-  const [tas,cli,fac,cart]=await Promise.all([bajarJson('tasas.json'),bajarJson('clientes.json'),bajarJson('facturas.json'),bajarJson('cartera.json')]);
+  const [tas,cli,fac,cart,cob]=await Promise.all([bajarJson('tasas.json'),bajarJson('clientes.json'),bajarJson('facturas.json'),bajarJson('cartera.json'),bajarJson('cobranzas.json')]);
   let cambio=false;
+  // fecha de la cartera vigente (para no restar pagos que el ERP ya refleja)
+  corteCarteraMs=0;
+  if(cart && cart.cargado && /^\d{4}-\d{2}-\d{2}$/.test(String(cart.cargado).slice(0,10))){
+    const p=String(cart.cargado).slice(0,10).split('-').map(Number);
+    corteCarteraMs=new Date(p[0],p[1]-1,p[2]).getTime();
+  }
+  // cobranzas.json: pagos reportados en OTROS equipos. Se reflejan en el "Saldo $" (base en $),
+  // sin tocar la lista local de "reportar". Los ids que ya existen localmente no se duplican.
+  if(cob && cob.cobros && typeof cob.cobros==='object'){
+    let idsLocales={};
+    try{loadDb().forEach(function(r){idsLocales[String(r.id)]=1;});}catch(e){}
+    const arr=[];
+    for(const id in cob.cobros){
+      if(idsLocales[id])continue;              // ya está local: no duplicar
+      const c=cob.cobros[id]||{};
+      if(c.anulado)continue;
+      const usd=Number(c.usd)||0; if(!(usd>0))continue;
+      arr.push({factura:String(c.factura||'').trim(),cliCod:String(c.cliCod||''),usd:usd,ts:Number(c.ts)||0});
+    }
+    cobrosRemotos=arr; cambio=true;
+  }
   // tasas: se mezclan los dias nuevos con los que ya trae la app
   if(tas){
     for(const k in tas){
