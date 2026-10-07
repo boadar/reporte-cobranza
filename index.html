@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v87</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v88</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -2066,6 +2066,17 @@ function ejecutarEditarCobro() {
             tb.querySelectorAll('tr.fila-sel').forEach(tr => tr.classList.remove('fila-sel'));
             recomputarSubtotalSel(tbodyId);
         }
+        // Quita la selección (y su subtotal) de TODOS los cuadros. Devuelve cuántas filas había seleccionadas.
+        function limpiarTodaSeleccionSel() {
+            let n = 0;
+            Object.keys(TABLAS_SUMABLES).forEach(tbodyId => {
+                const tb = document.getElementById(tbodyId);
+                if (!tb) return;
+                const sel = tb.querySelectorAll('tr.fila-sel');
+                if (sel.length) { n += sel.length; sel.forEach(tr => tr.classList.remove('fila-sel')); recomputarSubtotalSel(tbodyId); }
+            });
+            return n;
+        }
         function onClickFilaSel(ev, tbodyId) {
             if (ev.target.closest('button')) return;          // no togglear si se pulsó un botón
             const tr = ev.target.closest('tr');
@@ -2081,6 +2092,13 @@ function ejecutarEditarCobro() {
                     tb.addEventListener('click', ev => onClickFilaSel(ev, tbodyId));
                 }
             });
+            // Escape: quita la selección de todas las filas de todos los cuadros.
+            if (!window.__escSelWired) {
+                window.__escSelWired = true;
+                document.addEventListener('keydown', ev => {
+                    if (ev.key === 'Escape') limpiarTodaSeleccionSel();
+                });
+            }
         }
         function resetSubtotalesSel() {
             Object.keys(TABLAS_SUMABLES).forEach(tbodyId => {
