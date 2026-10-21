@@ -1132,6 +1132,23 @@ let editingId=null, editingCreado=null, editingEstatus=null, editingFechaReporte
 let repartoGrupo=null, repartoLeftover=0;
 function bannerReparto(txt){const b=document.getElementById('repartoBanner');if(!b)return;if(txt){b.innerHTML=txt;b.style.display='';}else{b.style.display='none';b.innerHTML='';}}
 function limpiarReparto(){repartoGrupo=null;repartoLeftover=0;bannerReparto('');}
+/* Reabre la pantalla de cobro con un SOBRANTE en Bs para aplicarlo a otra factura del mismo
+   cliente (reinicia el proceso). Usado por el reparto por IVA y por el aviso automático de sobrante. */
+function reabrirConSobrante(leftoverBs){
+  const ref=document.getElementById('fRef').value.trim();
+  repartoGrupo=repartoGrupo||(ref||('G'+Date.now()));
+  repartoLeftover=0;
+  selFactura=null;
+  document.getElementById('fFactura').value='';
+  document.getElementById('fMonto').value=fmtBs(leftoverBs);
+  obsManual=false; document.getElementById('fObs').value='';
+  document.getElementById('fAgenteRet').checked=chosenCli?esAgentePref(chosenCli.cod):true;
+  document.getElementById('fCobrarIva').checked=true;
+  refreshAgenteState();
+  renderFacturas(); calcUsd();
+  bannerReparto('&#8618; Repartiendo el pago (Ref <b>'+esc(ref||'&mdash;')+'</b>). Sobrante por aplicar: <b>Bs '+fmtUsd(leftoverBs)+'</b>.<br>Elige la siguiente factura y usa <b>"Guardar"</b> para aplicar el resto a su base, o <b>"Repartir"</b> para cobrar su IVA.');
+  go('scResult');setTab('tabList');window.scrollTo(0,0);
+}
 /* Cobra SOLO el IVA de la factura elegida (25% si es agente, 100% si no) y lleva el sobrante
    a la siguiente factura, guardando esta parte como un renglón ligado al mismo comprobante. */
 function iniciarReparto(){
@@ -1275,6 +1292,14 @@ async function saveCobranza(enReparto){
   const dup=findDup();
   if(dup){alert('Esta cobranza ya fue registrada (ref '+(dup.ref||'—')+', cliente '+(dup.cliNom||'—')+(dup.fecha?' · '+dup.fecha:'')+').\n\nNo se puede duplicar el registro.');return;}
   if(!ref){if(!confirm('No hay número de referencia. ¿Guardar de todos modos?'))return;}
+  // Sobrante (Bs) del pago ANTES de guardar: si el pago supera lo pendiente de la factura, luego
+  // se ofrece aplicarlo a otra factura. Se calcula aquí porque tras guardar el saldo ya cambia.
+  const sobranteBsPago = (function(){
+    const a = aplicacionPago(); if(!a) return 0;
+    if(a.soloIva) return r2(a.sobranteBs||0);
+    if(a.tasa==null) return 0;
+    return r2((a.diferencial||0) * a.tasa);
+  })();
   const db=loadDb();
   const btn=document.getElementById('btnSave');const lbl=btn.textContent;btn.textContent='Guardando…';btn.disabled=true;
   const oc=matchOficaCuenta(dest)||{};
@@ -1334,18 +1359,17 @@ async function saveCobranza(enReparto){
   editingId=null;editingCreado=null;editingEstatus=null;editingFechaReporte=null;
   if(enReparto){
     // se guardó la parte de IVA de esta factura; ahora se reabre para aplicar el sobrante a otra.
-    const left=repartoLeftover||0; repartoLeftover=0;
-    selFactura=null;
-    document.getElementById('fFactura').value='';
-    document.getElementById('fMonto').value=fmtBs(left);
-    obsManual=false; document.getElementById('fObs').value='';
-    document.getElementById('fAgenteRet').checked=chosenCli?esAgentePref(chosenCli.cod):true;
-    document.getElementById('fCobrarIva').checked=true;
-    refreshAgenteState();
-    renderFacturas(); calcUsd();
-    bannerReparto('&#8618; Repartiendo el pago (Ref <b>'+esc(document.getElementById('fRef').value.trim()||'&mdash;')+'</b>). Sobrante por aplicar: <b>Bs '+fmtUsd(left)+'</b>.<br>Elige la siguiente factura y usa <b>"Repartir"</b> para cobrar su IVA, o <b>"Guardar"</b> para aplicar el resto a su base.');
-    go('scResult');setTab('tabList');window.scrollTo(0,0);
+    const left=repartoLeftover||0;
+    reabrirConSobrante(left);
     return;
+  }
+  // Si el pago superó lo pendiente de la factura, preguntar si el SOBRANTE va a otra factura
+  // y, de ser así, reiniciar el proceso con ese sobrante ya cargado.
+  if(chosenCli && sobranteBsPago>0.01){
+    if(confirm('El pago supera lo pendiente de la factura '+(rec.factura||'')+'.\n\nSobrante: Bs '+fmtUsd(sobranteBsPago)+'\n\n¿Aplicar ese sobrante a OTRA factura del mismo cliente?')){
+      reabrirConSobrante(sobranteBsPago);
+      return;
+    }
   }
   current=null;
   limpiarReparto();
