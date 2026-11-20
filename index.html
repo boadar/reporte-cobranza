@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v91</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v92</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -2263,24 +2263,85 @@ function ejecutarEditarCobro() {
         }
         function slugArchivoCalc(s) { return String(s || 'cliente').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'cliente'; }
 
-        function descargarCalcExcel() {
-            if (!calcPagoEstado || typeof XLSX === 'undefined') { alert('No hay datos para exportar.'); return; }
+        // Carga perezosa de xlsx-js-style (fork de SheetJS con estilos) SOLO al exportar; NO toca el
+        // XLSX que la app usa para LEER (se restaura window.XLSX tras capturar el de estilos).
+        let XLSXStyle = null;
+        function cargarXlsxStyle() {
+            return new Promise((resolve, reject) => {
+                if (XLSXStyle) return resolve(XLSXStyle);
+                const orig = window.XLSX;
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+                s.onload = () => { XLSXStyle = window.XLSX; window.XLSX = orig; resolve(XLSXStyle); };
+                s.onerror = () => { window.XLSX = orig; reject(new Error('No se pudo cargar la librería de estilos.')); };
+                document.head.appendChild(s);
+            });
+        }
+
+        // Construye las filas (5 columnas) con un bloque por factura: título, encabezado y 5 renglones.
+        function construirFilasExcelCalc() {
             const { items, td, especial, clientes } = calcPagoEstado;
-            const aoa = [];
-            aoa.push(['Monto a pagar — ' + clientes.join(', ')]);
-            aoa.push(['Tasa del día', fmtFechaISO(td.fecha), Math.round(td.tasa * 10000) / 10000]);
-            aoa.push(['Contribuyente especial', especial ? 'Sí (25% IVA)' : 'No (100% IVA)']);
-            aoa.push([]);
-            aoa.push(['Factura', 'Vence', 'Concepto', 'Monto $', 'Tasa', 'Fecha tasa', 'Total Bs']);
+            const rows = [], merges = [];
+            const push = (vals, meta) => { rows.push({ vals: vals, meta: meta }); return rows.length - 1; };
+            let r;
+            r = push(['ESTADO DE CUENTA — ' + clientes.join(', '), '', '', '', ''], 'title'); merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 4 } });
+            r = push(['Tasa del día ' + fmtFechaISO(td.fecha) + ':  Bs ' + fmtNum(td.tasa, 4) + '   ·   ' + (especial ? 'Contribuyente especial (paga 25% del IVA)' : 'IVA 100%'), '', '', '', ''], 'sub'); merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 4 } });
+            push(['', '', '', '', ''], 'blank');
             let gU = 0, gB = 0;
-            items.forEach(x => { const r = filasCalcFactura(x, td, especial); r.rows.forEach(row => aoa.push(row)); gU += r.totU; gB += r.totB; });
-            aoa.push([]);
-            aoa.push(['', '', 'TOTAL A PAGAR', Math.round(gU * 100) / 100, '', '', Math.round(gB * 100) / 100]);
-            const ws = XLSX.utils.aoa_to_sheet(aoa);
-            ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 11 }, { wch: 12 }, { wch: 16 }];
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'A pagar');
-            XLSX.writeFile(wb, 'A_pagar_' + slugArchivoCalc(clientes[0]) + '.xlsx');
+            items.forEach(x => {
+                const fr = filasCalcFactura(x, td, especial); gU += fr.totU; gB += fr.totB;
+                r = push(['Factura ' + x.f + '   ·   vence ' + x.vence, '', '', '', ''], 'factTitle'); merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 4 } });
+                push(['Concepto', 'Monto $', 'Tasa', 'Fecha tasa', 'Total Bs'], 'header');
+                fr.rows.forEach((row, idx) => push(row.slice(2), idx === 2 ? 'subtotal' : (idx === 4 ? 'totpagar' : 'data')));
+                push(['', '', '', '', ''], 'blank');
+            });
+            push(['TOTAL A PAGAR', Math.round(gU * 100) / 100, '', '', Math.round(gB * 100) / 100], 'grand');
+            return { rows: rows, merges: merges, clientes: clientes };
+        }
+
+        async function descargarCalcExcel() {
+            if (!calcPagoEstado) { alert('No hay datos para exportar.'); return; }
+            const data = construirFilasExcelCalc();
+            const nombre = 'Estado_cuenta_' + slugArchivoCalc(data.clientes[0]) + '.xlsx';
+            let XS; try { XS = await cargarXlsxStyle(); } catch (e) { XS = null; }
+            if (!XS) { escribirExcelPlano(data, nombre); return; }   // respaldo sin estilos
+            const aoa = data.rows.map(r => r.vals);
+            const ws = XS.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 11 }, { wch: 13 }, { wch: 17 }];
+            ws['!merges'] = data.merges;
+            const thin = { style: 'thin', color: { rgb: '94A3B8' } };
+            const bAll = { top: thin, bottom: thin, left: thin, right: thin };
+            data.rows.forEach((ro, ri) => {
+                for (let ci = 0; ci < 5; ci++) {
+                    const addr = XS.utils.encode_cell({ r: ri, c: ci });
+                    if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+                    const cell = ws[addr]; const m = ro.meta; const alinea = { horizontal: ci === 0 ? 'left' : 'right', vertical: 'center' };
+                    if (m === 'title') { cell.s = { font: { bold: true, sz: 14 }, alignment: { horizontal: 'left' } }; }
+                    else if (m === 'sub') { cell.s = { font: { sz: 10, color: { rgb: '475569' } }, alignment: { horizontal: 'left' } }; }
+                    else if (m === 'blank') { cell.s = {}; }
+                    else if (m === 'factTitle') { cell.s = { font: { bold: true, color: { rgb: '0F172A' } }, fill: { fgColor: { rgb: 'E2E8F0' } }, border: bAll, alignment: { horizontal: 'left' } }; }
+                    else if (m === 'header') { cell.s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '0F766E' } }, border: bAll, alignment: alinea }; }
+                    else {
+                        cell.s = { border: bAll, alignment: alinea };
+                        if (m === 'subtotal') { cell.s.fill = { fgColor: { rgb: 'F1F5F9' } }; cell.s.font = { bold: true }; }
+                        if (m === 'totpagar') { cell.s.fill = { fgColor: { rgb: 'FEF9C3' } }; cell.s.font = { bold: true }; }
+                        if (m === 'grand') { cell.s.fill = { fgColor: { rgb: 'DBEAFE' } }; cell.s.font = { bold: true, color: { rgb: '1E3A8A' } }; }
+                        if ((ci === 1 || ci === 4) && typeof cell.v === 'number') { cell.t = 'n'; cell.s.numFmt = '#,##0.00'; }
+                        if (ci === 2 && typeof cell.v === 'number') { cell.t = 'n'; cell.s.numFmt = '#,##0.0000'; }
+                    }
+                }
+            });
+            const wb = XS.utils.book_new(); XS.utils.book_append_sheet(wb, ws, 'Estado de cuenta');
+            XS.writeFile(wb, nombre);
+        }
+
+        // Respaldo (sin estilos): mantiene los bloques separados con títulos y encabezados por factura.
+        function escribirExcelPlano(data, nombre) {
+            const ws = XLSX.utils.aoa_to_sheet(data.rows.map(r => r.vals));
+            ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 11 }, { wch: 13 }, { wch: 17 }];
+            ws['!merges'] = data.merges;
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Estado de cuenta');
+            XLSX.writeFile(wb, nombre);
         }
 
         function descargarCalcPDF() {
