@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v90</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v91</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -2245,6 +2245,63 @@ function ejecutarEditarCobro() {
                 '</tbody></table></div>', totU: totU, totB: totB };
         }
 
+        let calcPagoEstado = null;   // { items, td, especial, clientes } del último cálculo (para Excel/PDF)
+
+        // Filas numéricas del cálculo de una factura (para exportar).
+        function filasCalcFactura(x, td, especial) {
+            const pct = especial ? 0.25 : 1;
+            const exB = x.exenta * td.tasa, impB = x.imponible * td.tasa, baseB = x.base * td.tasa;
+            const ivaU = x.ivaUsd * pct, ivaBs = x.ivaUsd * x.tasaF * pct, totU = x.base + ivaU, totB = baseB + ivaBs;
+            const r2 = n => Math.round((Number(n) || 0) * 100) / 100, r4 = n => Math.round((Number(n) || 0) * 10000) / 10000;
+            return { totU: totU, totB: totB, rows: [
+                [x.f, x.vence, 'Base exenta', r2(x.exenta), r4(td.tasa), fmtFechaISO(td.fecha), r2(exB)],
+                [x.f, '', 'Base imponible', r2(x.imponible), r4(td.tasa), fmtFechaISO(td.fecha), r2(impB)],
+                [x.f, '', 'Total base', r2(x.base), '', '', r2(baseB)],
+                [x.f, '', 'IVA (' + (especial ? '25%' : '100%') + ')', r2(ivaU), r4(x.tasaF), fmtFechaISO(x.fechaF), r2(ivaBs)],
+                [x.f, '', 'Total a pagar', r2(totU), '', '', r2(totB)]
+            ] };
+        }
+        function slugArchivoCalc(s) { return String(s || 'cliente').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'cliente'; }
+
+        function descargarCalcExcel() {
+            if (!calcPagoEstado || typeof XLSX === 'undefined') { alert('No hay datos para exportar.'); return; }
+            const { items, td, especial, clientes } = calcPagoEstado;
+            const aoa = [];
+            aoa.push(['Monto a pagar — ' + clientes.join(', ')]);
+            aoa.push(['Tasa del día', fmtFechaISO(td.fecha), Math.round(td.tasa * 10000) / 10000]);
+            aoa.push(['Contribuyente especial', especial ? 'Sí (25% IVA)' : 'No (100% IVA)']);
+            aoa.push([]);
+            aoa.push(['Factura', 'Vence', 'Concepto', 'Monto $', 'Tasa', 'Fecha tasa', 'Total Bs']);
+            let gU = 0, gB = 0;
+            items.forEach(x => { const r = filasCalcFactura(x, td, especial); r.rows.forEach(row => aoa.push(row)); gU += r.totU; gB += r.totB; });
+            aoa.push([]);
+            aoa.push(['', '', 'TOTAL A PAGAR', Math.round(gU * 100) / 100, '', '', Math.round(gB * 100) / 100]);
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 11 }, { wch: 12 }, { wch: 16 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'A pagar');
+            XLSX.writeFile(wb, 'A_pagar_' + slugArchivoCalc(clientes[0]) + '.xlsx');
+        }
+
+        function descargarCalcPDF() {
+            if (!calcPagoEstado) { alert('No hay datos para exportar.'); return; }
+            const { items, td, especial, clientes } = calcPagoEstado;
+            let cards = '', gU = 0, gB = 0;
+            items.forEach(x => { const r = tarjetaCalcFactura(x, td, especial); cards += r.html; gU += r.totU; gB += r.totB; });
+            const win = window.open('', '_blank');
+            if (!win) { alert('Permite las ventanas emergentes del navegador para generar el PDF.'); return; }
+            win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>A pagar - ' + escCalc(clientes.join(', ')) + '</title>' +
+                '<style>body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:18px;font-size:12px}h1{font-size:16px;margin:0 0 4px}.muted{color:#475569;font-size:11px;margin-bottom:14px}@media print{.noimp{display:none}}</style></head><body>' +
+                '<h1>Monto a pagar — ' + escCalc(clientes.join(', ')) + '</h1>' +
+                '<div class="muted">Tasa del día (' + fmtFechaISO(td.fecha) + '): Bs ' + fmtNum(td.tasa, 4) + ' · ' + (especial ? 'Contribuyente especial (25% IVA)' : 'IVA 100%') + ' · ' + items.length + ' factura(s)</div>' +
+                cards +
+                '<div style="display:flex;justify-content:space-between;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-top:6px;font-weight:bold;color:#1e3a8a"><span>Total a pagar</span><span>$ ' + fmtNum(gU, 2) + ' &nbsp;&nbsp; Bs ' + fmtNum(gB, 2) + '</span></div>' +
+                '<button class="noimp" onclick="window.print()" style="margin-top:16px;padding:9px 16px;border:1px solid #0f766e;background:#0f766e;color:#fff;border-radius:6px;cursor:pointer">Imprimir / Guardar como PDF</button>' +
+                '</body></html>');
+            win.document.close();
+            setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 500);
+        }
+
         function renderCalculoPago(items, td) {
             const clientes = Array.from(new Set(items.map(x => x.cliente)));
             const codPrincipal = items[0].cod;
@@ -2260,10 +2317,15 @@ function ejecutarEditarCobro() {
             function pintar() {
                 let gU = 0, gB = 0, cards = '';
                 items.forEach(x => { const r = tarjetaCalcFactura(x, td, especial); cards += r.html; gU += r.totU; gB += r.totB; });
+                calcPagoEstado = { items: items, td: td, especial: especial, clientes: clientes };
                 document.getElementById('calcPagoBox').innerHTML =
-                    '<div style="background:#0f766e;color:#fff;padding:12px 16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+                    '<div style="background:#0f766e;color:#fff;padding:12px 16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">' +
                     '<span>💵 Monto a pagar — ' + escCalc(clientes.join(', ')) + '</span>' +
-                    '<button onclick="cerrarCalcPago()" aria-label="Cerrar" style="background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">✕</button></div>' +
+                    '<span style="display:flex;gap:6px;align-items:center">' +
+                    '<button onclick="descargarCalcExcel()" style="background:#fff;color:#0f766e;border:none;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer">⬇ Excel</button>' +
+                    '<button onclick="descargarCalcPDF()" style="background:#fff;color:#0f766e;border:none;border-radius:6px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer">⬇ PDF</button>' +
+                    '<button onclick="cerrarCalcPago()" aria-label="Cerrar" style="background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;margin-left:2px">✕</button>' +
+                    '</span></div>' +
                     '<div style="padding:14px 16px;max-height:72vh;overflow:auto">' +
                     '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.78rem;color:#475569;margin-bottom:10px">' +
                     '<span>🪙 Tasa del día (' + fmtFechaISO(td.fecha) + '): <b>Bs ' + fmtNum(td.tasa, 4) + '</b></span><span>' + items.length + ' factura(s) pendiente(s)</span></div>' +
