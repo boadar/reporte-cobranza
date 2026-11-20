@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v89</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v90</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -240,6 +240,7 @@
                     <input type="text" id="inputBusqueda" oninput="filtrarDatos()" disabled placeholder="Cargue archivo..." style="cursor: not-allowed;"/>
                     <button id="btnCobranza" onclick="ejecutarReportarCobranza()" class="btn-reportar-cobranza">💰 Reportar Cobranza</button>
                     <a href="comprobante.html" class="btn-ocr-comprobante" onclick="return reportarConComprobante(event)" title="Abre el lector de comprobantes (foto/PDF con OCR)">📸 Reportar con Comprobante</a>
+                    <button id="btnCalcularPagar" onclick="abrirCalculoPago()" class="btn-reportar-cobranza" style="display:none;background-color:#059669;border-color:#047857" title="Calcula el monto a pagar por factura: base a la tasa de hoy e IVA a la tasa de la factura">💵 Calcular a pagar (tasa de hoy)</button>
                 </div>
             </div>
         </div>
@@ -2134,6 +2135,8 @@ function ejecutarEditarCobro() {
             });
         }
 
+        let datosFiltradosUltimo = [];   // último conjunto filtrado (para "Calcular a pagar")
+
         function filtrarDatos() {
             const elBusqueda = document.getElementById('inputBusqueda');
             const terminoBusqueda = elBusqueda ? elBusqueda.value.toLowerCase() : '';
@@ -2167,6 +2170,114 @@ function ejecutarEditarCobro() {
             });
 
             distribuirYMostrarTablas(datosFiltrados, terminoBusqueda, secretarioSeleccionado);
+
+            // Botón "Calcular a pagar": visible solo cuando se está filtrando por cliente (hay texto de búsqueda).
+            datosFiltradosUltimo = datosFiltrados;
+            const btnCalc = document.getElementById('btnCalcularPagar');
+            if (btnCalc) btnCalc.style.display = (terminoBusqueda.trim() !== '' && datosFiltrados.length > 0) ? '' : 'none';
+        }
+
+        // ===== Calcular monto a pagar (base a la tasa de HOY + IVA a la tasa de la FACTURA) =====
+        // "Total Fac X Pagar" es la BASE pendiente en $ (el IVA va aparte, en $, columna IVA).
+        // Base exenta/imponible se derivan con IVA al 16%: imponible = IVA$ / 0,16 ; exenta = base − imponible.
+        // Total a pagar = base(Bs a hoy) + IVA(Bs a la tasa de la factura) × (25% si es contribuyente especial, si no 100%).
+        function getEspecial(cod) { try { return !!(JSON.parse(localStorage.getItem('contribEspecial') || '{}')[cod]); } catch (e) { return false; } }
+        function setEspecial(cod, val) { try { const m = JSON.parse(localStorage.getItem('contribEspecial') || '{}'); m[cod] = !!val; localStorage.setItem('contribEspecial', JSON.stringify(m)); } catch (e) {} }
+        function fmtNum(n, dec) { return (Number(n) || 0).toLocaleString('es-VE', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+        function escCalc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+        function cerrarCalcPago() { const o = document.getElementById('overlayCalcPago'); if (o) o.remove(); }
+
+        // Tasa del día: hoy si está en tasasPorFecha; si no, se consulta al BCV; si no hay internet, la última publicada.
+        async function tasaDelDia() {
+            const hoyIso = isoDeFecha(new Date());
+            if (tasasPorFecha[hoyIso] != null) return { tasa: Number(tasasPorFecha[hoyIso]), fecha: hoyIso };
+            try { const t = await obtenerBcvHoy(); if (t && t.usd) { const iso = (t.fechaApi && /^\d{4}-\d{2}-\d{2}$/.test(t.fechaApi)) ? t.fechaApi : hoyIso; tasasPorFecha[iso] = Number(t.usd); return { tasa: Number(t.usd), fecha: iso }; } } catch (e) {}
+            const ks = Object.keys(tasasPorFecha).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+            if (ks.length) { const k = ks[ks.length - 1]; return { tasa: Number(tasasPorFecha[k]), fecha: k }; }
+            return null;
+        }
+        function isoFacturaDe(fila) { const d = parsearFechaSegura(fila['FechaFactura'] || fila['Fecha de Ven']); return d ? isoDeFecha(d) : ''; }
+
+        async function abrirCalculoPago() {
+            const btn = document.getElementById('btnCalcularPagar'); const lbl = btn ? btn.textContent : '';
+            if (btn) { btn.textContent = '💵 Consultando tasa…'; btn.disabled = true; }
+            let td; try { td = await tasaDelDia(); } finally { if (btn) { btn.textContent = lbl; btn.disabled = false; } }
+            if (!td) { alert('No hay tasa de cambio disponible. Carga las tasas e intenta de nuevo.'); return; }
+            const items = [];
+            (datosFiltradosUltimo || []).forEach(fila => {
+                const tipo = String(fila['Tipo de documento'] || '').trim().toUpperCase();
+                if (tipo.includes('CRÉDITO') || tipo === 'NC') return;
+                if (String(fila['ESTATUS'] || '').trim().toUpperCase() === 'PAGADO') return;
+                const nro = String(fila['Numero de Factura'] || '').trim();
+                const baseOrig = parseFloat(String(fila['Base'] || '').replace(/[^0-9.-]/g, '')) || 0;
+                const totPorPagar = parseFloat(String(fila['Total Fac X Pagar'] || '').replace(/[^0-9.-]/g, '')) || 0;
+                const abono = (pagosAbonadosEnSesion[nro] || 0) + (cobranzasReportadas[nro] || 0);
+                let base = totPorPagar - abono; if (base < 0) base = 0;
+                if (base <= 0.01) return;
+                const ivaOrig = parseFloat(String(fila['IVA'] || '').replace(/[^0-9.-]/g, '')) || 0;
+                const factor = baseOrig > 0.01 ? Math.min(1, base / baseOrig) : 1;
+                let imponible = (ivaOrig / 0.16) * factor; if (imponible > base) imponible = base; if (imponible < 0) imponible = 0;
+                const exenta = Math.max(0, base - imponible);
+                const isoF = isoFacturaDe(fila);
+                const tasaF = (isoF && tasasPorFecha[isoF] != null) ? Number(tasasPorFecha[isoF]) : td.tasa;
+                const dVen = parsearFechaSegura(fila['Fecha de Ven']);
+                items.push({ cliente: String(fila['Denominación social'] || ''), cod: String(fila['Codigo'] || '') || nro, f: nro, vence: dVen ? fmtFechaISO(isoDeFecha(dVen)) : '—', base: base, exenta: exenta, imponible: imponible, ivaUsd: ivaOrig * factor, tasaF: tasaF, fechaF: isoF || td.fecha });
+            });
+            if (!items.length) { alert('No hay facturas pendientes con monto por pagar en el filtro actual.'); return; }
+            renderCalculoPago(items, td);
+        }
+
+        function tarjetaCalcFactura(x, td, especial) {
+            const pct = especial ? 0.25 : 1;
+            const exB = x.exenta * td.tasa, impB = x.imponible * td.tasa, baseB = x.base * td.tasa;
+            const ivaU = x.ivaUsd * pct, ivaBs = x.ivaUsd * x.tasaF * pct, totU = x.base + ivaU, totB = baseB + ivaBs;
+            const row = (c, m, tv, tf, b, extra) => '<tr style="' + (extra || '') + '"><td style="padding:4px 6px;border-bottom:1px solid #f1f5f9">' + c + '</td><td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:right">' + m + '</td><td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:right;color:#64748b;font-size:11px">' + (tv ? (tv + '<br><span style="color:#94a3b8">' + tf + '</span>') : '—') + '</td><td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;text-align:right">' + b + '</td></tr>';
+            const sub = 'background:#f8fafc;font-weight:700', tot = 'background:#fef9c3;font-weight:700';
+            return { html: '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;margin-bottom:10px">' +
+                '<div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">Factura ' + escCalc(x.f) + ' <span style="color:#64748b;font-weight:400">· vence ' + escCalc(x.vence) + '</span></div>' +
+                '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:#64748b;text-align:left">' +
+                '<th style="padding:4px 6px;font-weight:600">Concepto</th><th style="padding:4px 6px;font-weight:600;text-align:right">Monto $</th><th style="padding:4px 6px;font-weight:600;text-align:right">Tasa · fecha</th><th style="padding:4px 6px;font-weight:600;text-align:right">Total Bs</th></tr></thead><tbody>' +
+                row('Base exenta', '$ ' + fmtNum(x.exenta, 2), fmtNum(td.tasa, 4), fmtFechaISO(td.fecha), 'Bs ' + fmtNum(exB, 2)) +
+                row('Base imponible', '$ ' + fmtNum(x.imponible, 2), fmtNum(td.tasa, 4), fmtFechaISO(td.fecha), 'Bs ' + fmtNum(impB, 2)) +
+                row('Total base', '$ ' + fmtNum(x.base, 2), '', '', 'Bs ' + fmtNum(baseB, 2), sub) +
+                row('IVA (' + (especial ? '25%' : '100%') + ')', '$ ' + fmtNum(ivaU, 2), fmtNum(x.tasaF, 4), fmtFechaISO(x.fechaF), 'Bs ' + fmtNum(ivaBs, 2)) +
+                row('Total a pagar', '$ ' + fmtNum(totU, 2), '', '', 'Bs ' + fmtNum(totB, 2), tot) +
+                '</tbody></table></div>', totU: totU, totB: totB };
+        }
+
+        function renderCalculoPago(items, td) {
+            const clientes = Array.from(new Set(items.map(x => x.cliente)));
+            const codPrincipal = items[0].cod;
+            let especial = getEspecial(codPrincipal);
+            cerrarCalcPago();
+            const overlay = document.createElement('div');
+            overlay.id = 'overlayCalcPago';
+            overlay.className = 'no-print';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px';
+            overlay.addEventListener('click', e => { if (e.target === overlay) cerrarCalcPago(); });
+            overlay.innerHTML = '<div id="calcPagoBox" style="background:#fff;max-width:720px;width:100%;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 20px 40px rgba(0,0,0,.25);overflow:hidden"></div>';
+            document.body.appendChild(overlay);
+            function pintar() {
+                let gU = 0, gB = 0, cards = '';
+                items.forEach(x => { const r = tarjetaCalcFactura(x, td, especial); cards += r.html; gU += r.totU; gB += r.totB; });
+                document.getElementById('calcPagoBox').innerHTML =
+                    '<div style="background:#0f766e;color:#fff;padding:12px 16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+                    '<span>💵 Monto a pagar — ' + escCalc(clientes.join(', ')) + '</span>' +
+                    '<button onclick="cerrarCalcPago()" aria-label="Cerrar" style="background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">✕</button></div>' +
+                    '<div style="padding:14px 16px;max-height:72vh;overflow:auto">' +
+                    '<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.78rem;color:#475569;margin-bottom:10px">' +
+                    '<span>🪙 Tasa del día (' + fmtFechaISO(td.fecha) + '): <b>Bs ' + fmtNum(td.tasa, 4) + '</b></span><span>' + items.length + ' factura(s) pendiente(s)</span></div>' +
+                    '<label style="display:flex;align-items:center;gap:8px;font-size:0.8rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:12px;cursor:pointer">' +
+                    '<input type="checkbox" id="calcEspecial" ' + (especial ? 'checked' : '') + ' style="width:auto"> El cliente es <b>&nbsp;contribuyente especial&nbsp;</b> (paga solo el 25% del IVA)</label>' +
+                    cards +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-top:6px">' +
+                    '<span style="font-weight:800;color:#1e3a8a">Total a pagar del cliente</span>' +
+                    '<span style="text-align:right"><span style="color:#1e3a8a;font-size:0.8rem;margin-right:10px">$ ' + fmtNum(gU, 2) + '</span><span style="color:#1e3a8a;font-weight:800;font-size:1.1rem">Bs ' + fmtNum(gB, 2) + '</span></span></div>' +
+                    '<div style="font-size:0.7rem;color:#94a3b8;margin-top:10px;line-height:1.5">Base exenta/imponible derivadas con IVA al 16%. La base usa la tasa del día; el IVA, la tasa de la fecha de la factura.</div>' +
+                    '</div>';
+                document.getElementById('calcEspecial').addEventListener('change', function () { especial = this.checked; items.forEach(x => setEspecial(x.cod, especial)); pintar(); });
+            }
+            pintar();
         }
 
         function distribuirYMostrarTablas(listaDatos, terminoBusqueda, secretarioSeleccionado) {
