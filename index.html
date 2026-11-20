@@ -192,7 +192,7 @@
     <div class="container">
         <header class="no-print">
             <div>
-                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v92</span></h1>
+                <h1>Control de Cobranza Local <span style="font-size:.5em;font-weight:400;opacity:.55;vertical-align:middle">v93</span></h1>
                 <p>Análisis interno en tiempo real sin transferencia de datos.</p>
             </div>
             
@@ -2351,9 +2351,9 @@ function ejecutarEditarCobro() {
             items.forEach(x => { const r = tarjetaCalcFactura(x, td, especial); cards += r.html; gU += r.totU; gB += r.totB; });
             const win = window.open('', '_blank');
             if (!win) { alert('Permite las ventanas emergentes del navegador para generar el PDF.'); return; }
-            win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>A pagar - ' + escCalc(clientes.join(', ')) + '</title>' +
+            win.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Estado de cuenta - ' + escCalc(clientes.join(', ')) + '</title>' +
                 '<style>body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:18px;font-size:12px}h1{font-size:16px;margin:0 0 4px}.muted{color:#475569;font-size:11px;margin-bottom:14px}@media print{.noimp{display:none}}</style></head><body>' +
-                '<h1>Monto a pagar — ' + escCalc(clientes.join(', ')) + '</h1>' +
+                '<h1>Estado de cuenta — ' + escCalc(clientes.join(', ')) + '</h1>' +
                 '<div class="muted">Tasa del día (' + fmtFechaISO(td.fecha) + '): Bs ' + fmtNum(td.tasa, 4) + ' · ' + (especial ? 'Contribuyente especial (25% IVA)' : 'IVA 100%') + ' · ' + items.length + ' factura(s)</div>' +
                 cards +
                 '<div style="display:flex;justify-content:space-between;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin-top:6px;font-weight:bold;color:#1e3a8a"><span>Total a pagar</span><span>$ ' + fmtNum(gU, 2) + ' &nbsp;&nbsp; Bs ' + fmtNum(gB, 2) + '</span></div>' +
